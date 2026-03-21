@@ -20,7 +20,6 @@ class EvolutionConfig(BaseModel):
     auto_evolution: bool = False
     max_generations: int | None = None  # None or 0 means unlimited
     archive_enabled: bool = True
-    model_name: str | None = None  # None = use active model
     # Manual archive management, no max_archives limit
 
 

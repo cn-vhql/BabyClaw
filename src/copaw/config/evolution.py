@@ -22,7 +22,3 @@ class EvolutionConfig(BaseModel):
         default=True,
         description="Enable archiving of evolution snapshots",
     )
-    model_name: Optional[str] = Field(
-        default=None,
-        description="Model to use for evolution (None = use active model)",
-    )

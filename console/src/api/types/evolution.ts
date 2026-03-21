@@ -10,7 +10,6 @@ export interface EvolutionConfig {
   auto_evolution: boolean;
   max_generations: number | null;  // null or 0 means unlimited
   archive_enabled: boolean;
-  model_name?: string | null;  // Model to use for evolution (null = use active model)
 }
 
 export interface EvolutionRecord {

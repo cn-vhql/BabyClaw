@@ -1,10 +1,8 @@
-import { Modal, InputNumber, message, Select } from "@agentscope-ai/design";
+import { Modal, InputNumber, message } from "@agentscope-ai/design";
 import { Form, Switch } from "antd";
 import { useEffect, useState } from "react";
 import { evolutionApi } from "../../../../api/modules/evolution";
-import { providerApi } from "../../../../api/modules/provider";
 import type { EvolutionConfig } from "../../../../api/types/evolution";
-import type { ProviderInfo } from "../../../../api/types";
 
 interface Props {
   open: boolean;

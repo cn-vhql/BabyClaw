@@ -88,9 +88,6 @@ class EvolutionExecutor:
         try:
             start_time = datetime.now()
 
-            # Get evolution model or use default
-            evolution_model = self.workspace.config.evolution.model_name
-
             # Execute agent reasoning
             agent_request = {
                 "input": [
@@ -102,10 +99,6 @@ class EvolutionExecutor:
                 "session_id": f"evolution:{self._current_record.id}",
                 "user_id": "evolution_system",
             }
-
-            # Add model if specified in evolution config
-            if evolution_model:
-                agent_request["model"] = evolution_model
 
             async for event in self.workspace.runner.stream_query(agent_request):
                 await self._process_event(event)
