@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import List
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 
 from ...config.config import save_agent_config
 from ..evolution.models import EvolutionArchive, EvolutionRecord, EvolutionRunRequest
@@ -93,19 +93,48 @@ async def get_evolution_archive(
 async def run_evolution(
     request: Request,
     req: EvolutionRunRequest,
+    background_tasks: BackgroundTasks,
 ) -> dict:
-    """Manually trigger evolution."""
+    """Manually trigger evolution (runs in background)."""
     from ..agent_context import get_agent_for_request
 
     workspace = await get_agent_for_request(request)
+    repo = workspace.evolution_repo
 
-    executor = EvolutionExecutor(
-        workspace=workspace,
-        repo=workspace.evolution_repo,
+    # Get current generation for the new record
+    generation = await repo.get_current_generation()
+
+    # Create a running record immediately
+    from .models import EvolutionRecord
+    from datetime import datetime
+
+    record = EvolutionRecord(
+        generation=generation + 1,
+        agent_id=workspace.agent_id,
+        agent_name=workspace.config.name,
+        timestamp=datetime.now(),
+        trigger_type=req.trigger_type,
+        status="running",
     )
 
-    # Execute evolution
-    record = await executor.execute(req)
+    # Save the running record
+    await repo.save_record(record)
+
+    # Run evolution in background
+    async def run_evolution_background():
+        try:
+            executor = EvolutionExecutor(
+                workspace=workspace,
+                repo=repo,
+            )
+            await executor.execute(req)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Background evolution failed: {e}", exc_info=True)
+
+    background_tasks.add_task(run_evolution_background)
+
+    # Return immediately with the record
     return record.model_dump(mode="json")
 
 
@@ -126,3 +155,34 @@ async def get_archive_file(
         raise HTTPException(status_code=404, detail="File not found")
 
     return {"filename": filename, "content": content}
+
+
+@router.delete("/records/{record_id}")
+async def delete_evolution_record(
+    record_id: str,
+    request: Request,
+) -> dict:
+    """Delete a failed evolution record."""
+    from ..agent_context import get_agent_for_request
+
+    workspace = await get_agent_for_request(request)
+    repo = workspace.evolution_repo
+
+    # Check if record exists
+    record = await repo.get_record(record_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Record not found")
+
+    # Only allow deleting failed records
+    if record.status != "failed":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Can only delete failed records, current status: {record.status}"
+        )
+
+    # Delete the record
+    success = await repo.delete_record(record_id)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to delete record")
+
+    return {"message": "Record deleted successfully"}

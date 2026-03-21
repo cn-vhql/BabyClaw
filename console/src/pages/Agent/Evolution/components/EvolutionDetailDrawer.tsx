@@ -73,11 +73,15 @@ export function EvolutionDetailDrawer({ open, record, onClose }: Props) {
           </p>
           <p>使用的工具:</p>
           <ul>
-            {record.tools_used.map((tool) => (
-              <li key={tool}>
-                <Tag>{tool}</Tag>
-              </li>
-            ))}
+            {record.tools_used.length > 0 ? (
+              record.tools_used.map((tool) => (
+                <li key={tool}>
+                  <Tag>{tool}</Tag>
+                </li>
+              ))
+            ) : (
+              <li style={{ color: "#999" }}>暂无工具使用记录</li>
+            )}
           </ul>
         </Card>
 
@@ -86,11 +90,28 @@ export function EvolutionDetailDrawer({ open, record, onClose }: Props) {
             {archive.tool_execution_log.map((log, index) => (
               <div key={index} className={styles.toolLog}>
                 <p>
-                  <strong>{log.tool}</strong> - {log.timestamp}
+                  <strong>{log.tool}</strong> - {new Date(log.timestamp).toLocaleString()}
                 </p>
-                <pre className={styles.fileContent}>
-                  {JSON.stringify(log.args || log.result, null, 2)}
-                </pre>
+
+                {log.args && Object.keys(log.args).length > 0 && (
+                  <div style={{ marginTop: 8 }}>
+                    <strong>参数:</strong>
+                    <pre className={styles.fileContent}>
+                      {JSON.stringify(log.args, null, 2)}
+                    </pre>
+                  </div>
+                )}
+
+                {log.result !== undefined && log.result !== null && (
+                  <div style={{ marginTop: 8 }}>
+                    <strong>结果:</strong>
+                    <pre className={styles.fileContent}>
+                      {typeof log.result === "string"
+                        ? log.result
+                        : JSON.stringify(log.result, null, 2)}
+                    </pre>
+                  </div>
+                )}
               </div>
             ))}
           </Card>
@@ -101,9 +122,18 @@ export function EvolutionDetailDrawer({ open, record, onClose }: Props) {
 
   const renderOutputTab = () => {
     const output = archive?.full_output || record?.output_summary || "";
+    const outputLength = output?.length || 0;
+
     return (
-      <Card title="智能体输出" size="small">
-        <pre className={styles.fileContent}>{output || "无输出"}</pre>
+      <Card
+        title={`智能体输出 ${outputLength > 0 ? `(${outputLength} 字符)` : ""}`}
+        size="small"
+      >
+        {output ? (
+          <pre className={styles.fileContent}>{output}</pre>
+        ) : (
+          <Empty description="无输出" />
+        )}
       </Card>
     );
   };

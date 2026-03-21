@@ -235,38 +235,49 @@ class EvolutionExecutor:
             return
 
         for msg in event.output:
-            msg_type = getattr(msg, "type", None)
+            # Msg.content is a list of blocks (ToolUseBlock, ToolResultBlock, TextBlock, etc.)
+            content = getattr(msg, "content", None)
+            if not content or not isinstance(content, list):
+                continue
 
-            # Tool call event
-            if msg_type == "function_call":
-                self._current_record.tool_calls_count += 1
-                tool_name = getattr(msg, "name", None)
-                if tool_name and tool_name not in self._current_record.tools_used:
-                    self._current_record.tools_used.append(tool_name)
+            for block in content:
+                # Each block should have a 'type' field
+                block_type = block.get("type") if isinstance(block, dict) else getattr(block, "type", None)
 
-                # Record to tool log
-                self._tool_execution_log.append({
-                    "tool": tool_name,
-                    "args": getattr(msg, "arguments", None),
-                    "timestamp": datetime.now().isoformat(),
-                })
+                # Tool use block (tool call)
+                if block_type == "tool_use":
+                    self._current_record.tool_calls_count += 1
+                    tool_name = block.get("name") if isinstance(block, dict) else getattr(block, "name", None)
+                    tool_input = block.get("input") if isinstance(block, dict) else getattr(block, "input", {})
 
-            # Tool result event
-            elif msg_type == "function_call_output":
-                if self._tool_execution_log:
-                    self._tool_execution_log[-1]["result"] = getattr(msg, "content", None)
+                    if tool_name and tool_name not in self._current_record.tools_used:
+                        self._current_record.tools_used.append(tool_name)
 
-            # Text output event
-            elif msg_type == "message":
-                content = getattr(msg, "content", [])
-                if isinstance(content, list):
-                    for item in content:
-                        item_type = getattr(item, "type", "")
-                        if item_type == "text":
-                            text = getattr(item, "text", "")
-                            self._full_output += text + "\n"
-                            if len(self._current_record.output_summary) < 500:
-                                self._current_record.output_summary += text[:200]
+                    # Record to tool log
+                    self._tool_execution_log.append({
+                        "tool": tool_name,
+                        "args": tool_input,
+                        "timestamp": datetime.now().isoformat(),
+                    })
+
+                # Tool result block
+                elif block_type == "tool_result":
+                    tool_name = block.get("name") if isinstance(block, dict) else getattr(block, "name", None)
+                    output = block.get("output") if isinstance(block, dict) else getattr(block, "output", None)
+
+                    # Find the most recent tool call log for this tool and add the result
+                    if tool_name and self._tool_execution_log:
+                        for log in reversed(self._tool_execution_log):
+                            if log["tool"] == tool_name and "result" not in log:
+                                log["result"] = output
+                                break
+
+                # Text block
+                elif block_type == "text":
+                    text = block.get("text") if isinstance(block, dict) else getattr(block, "text", "")
+                    self._full_output += text + "\n"
+                    if len(self._current_record.output_summary) < 500:
+                        self._current_record.output_summary += text[:200]
 
     async def _create_archive(self) -> None:
         """Create complete archive."""

@@ -157,3 +157,57 @@ class JsonEvolutionRepository:
         except Exception as e:
             logger.error(f"Failed to get archive file {archive_id}/{filename}: {e}")
         return None
+
+    async def delete_record(self, record_id: str) -> bool:
+        """Delete a failed evolution record by ID."""
+        if not self.index_file.exists():
+            return False
+
+        try:
+            data = json.loads(self.index_file.read_text(encoding="utf-8"))
+            records = data.get("records", [])
+
+            # Find and remove the record
+            original_length = len(records)
+            records = [r for r in records if r.get("id") != record_id]
+
+            if len(records) == original_length:
+                # Record not found
+                return False
+
+            # Update and write back
+            data["records"] = records
+            self.index_file.write_text(
+                json.dumps(data, indent=2, ensure_ascii=False),
+                encoding="utf-8",
+            )
+
+            # Try to delete associated archive if exists
+            self._delete_archive_by_record_id(record_id)
+
+            logger.info(f"Deleted evolution record: {record_id}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to delete record {record_id}: {e}")
+            return False
+
+    def _delete_archive_by_record_id(self, record_id: str) -> None:
+        """Delete archive directory associated with a record ID."""
+        try:
+            for archive_dir in self.archives_dir.iterdir():
+                if not archive_dir.is_dir():
+                    continue
+                meta_file = archive_dir / "meta.json"
+                if meta_file.exists():
+                    try:
+                        meta = json.loads(meta_file.read_text(encoding="utf-8"))
+                        if meta.get("evolution_id") == record_id:
+                            # Delete the entire archive directory
+                            import shutil
+                            shutil.rmtree(archive_dir)
+                            logger.info(f"Deleted archive: {archive_dir.name}")
+                    except Exception as e:
+                        logger.warning(f"Failed to delete archive {archive_dir.name}: {e}")
+        except Exception as e:
+            logger.warning(f"Failed to scan archives for deletion: {e}")

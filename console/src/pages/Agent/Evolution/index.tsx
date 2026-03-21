@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Button,
   Card,
   Table,
-  Modal,
   message,
   Tag,
+  Modal,
+  Popconfirm,
 } from "@agentscope-ai/design";
 import { useTranslation } from "react-i18next";
 import { useAgentStore } from "../../../stores/agentStore";
@@ -20,12 +21,20 @@ function EvolutionPage() {
   const { selectedAgent } = useAgentStore();
   const [records, setRecords] = useState<EvolutionRecord[]>([]);
   const [loading, setLoading] = useState(false);
+  const [evolving, setEvolving] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<EvolutionRecord | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     loadRecords();
+    return () => {
+      // Cleanup polling on unmount
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+      }
+    };
   }, [selectedAgent]);
 
   const loadRecords = async () => {
@@ -34,6 +43,14 @@ function EvolutionPage() {
     try {
       const records = await evolutionApi.listRecords(50);
       setRecords(records || []);
+
+      // Check if there's a running record
+      const runningRecord = records?.find(r => r.status === "running");
+      if (runningRecord && !pollingRef.current) {
+        startPolling();
+      } else if (!runningRecord && pollingRef.current) {
+        stopPolling();
+      }
     } catch (error) {
       message.error("加载进化记录失败");
     } finally {
@@ -41,25 +58,49 @@ function EvolutionPage() {
     }
   };
 
+  const startPolling = () => {
+    if (pollingRef.current) return;
+    setEvolving(true);
+    pollingRef.current = setInterval(() => {
+      loadRecords();
+    }, 3000); // Poll every 3 seconds
+  };
+
+  const stopPolling = () => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+    setEvolving(false);
+  };
+
   const handleRunEvolution = async () => {
-    Modal.confirm({
-      title: "执行进化",
-      content: "确认要立即执行一次进化吗？智能体将自主探索并更新配置。",
-      onOk: async () => {
-        try {
-          await evolutionApi.runEvolution({ trigger_type: "manual" });
-          message.success("进化任务已启动");
-          loadRecords();
-        } catch (error) {
-          message.error("启动进化失败");
-        }
-      },
-    });
+    try {
+      setEvolving(true);
+      await evolutionApi.runEvolution({ trigger_type: "manual" });
+      message.success("进化任务已启动");
+      startPolling();
+      loadRecords();
+    } catch (error) {
+      message.error("启动进化失败");
+      setEvolving(false);
+    }
   };
 
   const handleViewDetail = (record: EvolutionRecord) => {
     setSelectedRecord(record);
     setDrawerOpen(true);
+  };
+
+  const handleDeleteRecord = async (record: EvolutionRecord) => {
+    try {
+      await evolutionApi.deleteRecord(record.id);
+      message.success("记录已删除");
+      loadRecords();
+    } catch (error: any) {
+      const errorMsg = error?.response?.data?.detail || "删除失败";
+      message.error(errorMsg);
+    }
   };
 
   const getStatusTag = (status: string) => {
@@ -104,15 +145,30 @@ function EvolutionPage() {
     {
       title: "操作",
       key: "actions",
-      width: 100,
+      width: 150,
       render: (_: unknown, record: EvolutionRecord) => (
-        <Button
-          type="link"
-          size="small"
-          onClick={() => handleViewDetail(record)}
-        >
-          查看详情
-        </Button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <Button
+            type="link"
+            size="small"
+            onClick={() => handleViewDetail(record)}
+          >
+            查看详情
+          </Button>
+          {record.status === "failed" && (
+            <Popconfirm
+              title="确认删除"
+              description="确定要删除这条失败的进化记录吗？"
+              onConfirm={() => handleDeleteRecord(record)}
+              okText="确定"
+              cancelText="取消"
+            >
+              <Button type="link" size="small" danger>
+                删除
+              </Button>
+            </Popconfirm>
+          )}
+        </div>
       ),
     },
   ];
@@ -128,8 +184,13 @@ function EvolutionPage() {
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <Button onClick={() => setSettingsOpen(true)}>设置</Button>
-          <Button type="primary" onClick={handleRunEvolution}>
-            立即进化
+          <Button
+            type="primary"
+            onClick={handleRunEvolution}
+            disabled={evolving}
+            loading={evolving}
+          >
+            {evolving ? "进化中..." : "立即进化"}
           </Button>
         </div>
       </div>

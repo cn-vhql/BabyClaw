@@ -35,4 +35,9 @@ export const evolutionApi = {
     request<{ filename: string; content: string }>(
       `/evolution/archives/${archiveId}/files/${filename}`
     ),
+
+  deleteRecord: (recordId: string) =>
+    request<{ message: string }>(`/evolution/records/${recordId}`, {
+      method: "DELETE",
+    }),
 };
