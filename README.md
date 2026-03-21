@@ -2,18 +2,6 @@
 
 # BabyClaw
 
-[![GitHub 仓库](https://img.shields.io/badge/GitHub-仓库-black.svg?logo=github)](https://github.com/agentscope-ai/CoPaw)
-[![PyPI](https://img.shields.io/pypi/v/copaw?color=3775A9&label=PyPI&logo=pypi)](https://pypi.org/project/copaw/)
-[![文档](https://img.shields.io/badge/文档-在线-green.svg?logo=readthedocs&label=Docs)](https://copaw.agentscope.io/)
-[![Python 版本](https://img.shields.io/badge/python-3.10%20~%20%3C3.14-blue.svg?logo=python&label=Python)](https://www.python.org/downloads/)
-[![最后提交](https://img.shields.io/github/last-commit/agentscope-ai/CoPaw)](https://github.com/agentscope-ai/CoPaw)
-[![许可证](https://img.shields.io/badge/license-Apache%202.0-red.svg?logo=apache&label=%E8%AE%B8%E5%8F%AF%E8%AF%81)](LICENSE)
-[![代码风格](https://img.shields.io/badge/code%20style-black-black.svg?logo=python&label=%E4%BB%A3%E7%A0%81%E9%A3%8E%E6%A0%BC)](https://github.com/psf/black)
-[![GitHub Star](https://img.shields.io/github/stars/agentscope-ai/CoPaw?style=flat&logo=github&color=yellow&label=Star)](https://github.com/agentscope-ai/CoPaw/stargazers)
-[![GitHub Fork](https://img.shields.io/github/forks/agentscope-ai/CoPaw?style=flat&logo=github&color=purple&label=Fork)](https://github.com/agentscope-ai/CoPaw/network)
-
-[[English](README.md)] [[日本語](README_ja.md)]
-
 <p align="center">
   <img src="/babyclaw.png" alt="BabyClaw Logo" width="120">
 </p>
@@ -300,8 +288,8 @@ BabyClaw会自动创建三个预置文件：
 
 ## 📮 联系我们
 
-| [Discord](https://discord.gg/eYMpfnkG8h)                     | [X (Twitter)](https://x.com/agentscope_ai)                   | [钉钉](https://qr.dingtalk.com/action/joingroup?code=v1,k1,OmDlBXpjW+I2vWjKDsjvI9dhcXjGZi3bQiojOq3dlDw=&_dt_no_comment=1&origin=11) |
-| ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| [Discord](https://discord.gg/eYMpfnkG8h)                                                                                                                                      | [X (Twitter)](https://x.com/agentscope_ai)                                                                                                | [钉钉](https://qr.dingtalk.com/action/joingroup?code=v1,k1,OmDlBXpjW+I2vWjKDsjvI9dhcXjGZi3bQiojOq3dlDw=&_dt_no_comment=1&origin=11)                                                                                                                                       |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [<img src="https://gw.alicdn.com/imgextra/i1/O1CN01hhD1mu1Dd3BWVUvxN_!!6000000000238-2-tps-400-400.png" width="80" height="80" alt="Discord">](https://discord.gg/eYMpfnkG8h) | [<img src="https://img.shields.io/badge/X-black.svg?logo=x&logoColor=white" width="80" height="80" alt="X">](https://x.com/agentscope_ai) | [<img src="https://img.alicdn.com/imgextra/i2/O1CN01vCWI8a1skHtLGXEMQ_!!6000000005804-2-tps-458-460.png" width="80" height="80" alt="钉钉">](https://qr.dingtalk.com/action/joingroup?code=v1,k1,OmDlBXpjW+I2vWjKDsjvI9dhcXjGZi3bQiojOq3dlDw=&_dt_no_comment=1&origin=11) |
 
 ---
@@ -332,6 +320,7 @@ BabyClaw 采用 [Apache License 2.0](LICENSE) 开源协议。
 感谢 [AgentScope 社区](https://github.com/agentscope-ai) 的所有贡献者，以及为技能生态、工具开发做出贡献的开发者们。
 
 特别感谢：
+
 - **[AgentScope 团队](https://github.com/agentscope-ai)** - 提供强大的框架支持
 - **OpenClaw 社区** - 提供丰富的技能资源
 - **所有 BabyClaw 的用户和反馈者** - 你们的建议和反馈让产品不断完善
