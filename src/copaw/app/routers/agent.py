@@ -3,8 +3,14 @@
 
 import asyncio
 import logging
+import os
+import shutil
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Optional
 
-from fastapi import APIRouter, Body, HTTPException, Request
+from fastapi import APIRouter, Body, HTTPException, Request, UploadFile, File
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from ...config import (
@@ -18,6 +24,35 @@ from ...agents.utils import copy_md_files
 from ..agent_context import get_agent_for_request
 
 router = APIRouter(prefix="/agent", tags=["agent"])
+
+
+# Preset files and directories that should not be deletable
+PRESET_FILES = {
+    "copaw.db",
+    "copaw.db-journal",
+    "agent.json",
+    # Core markdown files
+    "AGENTS.md",
+    "SOUL.md",
+    "PROFILE.md",
+    "MEMORY.md",
+    "BOOTSTRAP.md",
+    "HEARTBEAT.md",
+    # Working and memory directories
+    "working_dir",
+    "memory",
+}
+
+
+class FileTreeNode(BaseModel):
+    """File tree node."""
+
+    name: str = Field(..., description="File or folder name")
+    path: str = Field(..., description="Relative path from workspace root")
+    type: str = Field(..., description="Type: 'file' or 'folder'")
+    size: int = Field(..., description="Size in bytes (files only)")
+    modified_time: str = Field(..., description="Modified time")
+    children: Optional[list["FileTreeNode"]] = Field(None, description="Child nodes (folders only)")
 
 
 class MdFileInfo(BaseModel):
@@ -521,3 +556,276 @@ async def put_system_prompt_files(
     asyncio.create_task(reload_in_background())
 
     return files
+
+
+# ---------------------------------------------------------------------------
+# File Management API
+# ---------------------------------------------------------------------------
+
+
+def _build_file_tree(
+    root: Path,
+    current: Path,
+    relative_path: str = "",
+) -> dict:
+    """Build file tree structure for a directory."""
+    name = current.name
+    rel_path = str(Path(relative_path) / name) if relative_path else name
+
+    if current.is_file():
+        stat = current.stat()
+        return {
+            "name": name,
+            "path": rel_path,
+            "type": "file",
+            "size": stat.st_size,
+            "modified_time": datetime.fromtimestamp(
+                stat.st_mtime,
+                tz=timezone.utc,
+            ).isoformat(),
+            "children": None,
+        }
+    elif current.is_dir():
+        children = []
+        try:
+            for item in sorted(current.iterdir(), key=lambda x: (not x.is_dir(), x.name)):
+                children.append(_build_file_tree(root, item, rel_path))
+        except PermissionError:
+            pass
+        return {
+            "name": name,
+            "path": rel_path,
+            "type": "folder",
+            "size": 0,
+            "modified_time": "",
+            "children": children,
+        }
+    else:
+        return None
+
+
+@router.get(
+    "/file-tree",
+    response_model=FileTreeNode,
+    summary="Get workspace file tree",
+    description="Get all files and folders in workspace (tree structure)",
+)
+async def get_file_tree(request: Request) -> dict:
+    """Get complete file tree of workspace."""
+    try:
+        workspace = await get_agent_for_request(request)
+        workspace_dir = workspace.workspace_dir
+
+        if not workspace_dir.exists():
+            return {
+                "name": workspace_dir.name,
+                "path": "",
+                "type": "folder",
+                "size": 0,
+                "modified_time": "",
+                "children": [],
+            }
+
+        # Build children of workspace root (don't include root itself)
+        children = []
+        try:
+            for item in sorted(workspace_dir.iterdir(), key=lambda x: (not x.is_dir(), x.name)):
+                node = _build_file_tree(workspace_dir, item, "")
+                if node:
+                    children.append(node)
+        except PermissionError:
+            pass
+
+        return {
+            "name": workspace_dir.name,
+            "path": "",
+            "type": "folder",
+            "size": 0,
+            "modified_time": "",
+            "children": children,
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.get(
+    "/file-content",
+    summary="Get file content",
+    description="Get content of a specific file for preview",
+)
+async def get_file_content(
+    request: Request,
+    path: str,
+) -> dict:
+    """Get content of a file."""
+    try:
+        workspace = await get_agent_for_request(request)
+        file_path = workspace.workspace_dir / path
+
+        logging.getLogger(__name__).info(f"Loading file content: path={path}, file_path={file_path}, exists={file_path.exists()}")
+
+        # Security check: ensure path is within workspace
+        if not str(file_path.resolve()).startswith(str(workspace.workspace_dir.resolve())):
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        if not file_path.exists() or not file_path.is_file():
+            logging.getLogger(__name__).error(f"File not found: {file_path}")
+            # List workspace dir for debugging
+            if workspace.workspace_dir.exists():
+                files = list(workspace.workspace_dir.rglob("*"))
+                logging.getLogger(__name__).info(f"Workspace files: {[str(f.relative_to(workspace.workspace_dir)) for f in files[:20]]}")
+            raise HTTPException(status_code=404, detail="File not found")
+
+        # Check if file is text-based (preview supported)
+        text_extensions = {
+            ".txt", ".md", ".py", ".js", ".ts", ".tsx", ".jsx", ".json",
+            ".yaml", ".yml", ".xml", ".html", ".css", ".less", ".scss",
+            ".sh", ".bash", ".zsh", ".fish", ".cfg", ".conf", ".ini",
+            ".toml", ".csv", ".log", ".sql", ".r", ".rb", ".go", ".rs",
+            ".java", ".c", ".cpp", ".h", ".hpp", ".cs", ".php", ".vue",
+        }
+        is_text = file_path.suffix.lower() in text_extensions
+
+        content = None
+        if is_text:
+            try:
+                # Try to read as text with UTF-8
+                with open(file_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+            except UnicodeDecodeError:
+                is_text = False
+
+        return {
+            "path": path,
+            "name": file_path.name,
+            "size": file_path.stat().st_size,
+            "is_text": is_text,
+            "content": content if is_text else None,
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.delete(
+    "/file",
+    summary="Delete file or folder",
+    description="Delete a file or folder from workspace",
+)
+async def delete_file(
+    request: Request,
+    path: str,
+) -> dict:
+    """Delete a file or folder."""
+    try:
+        workspace = await get_agent_for_request(request)
+        file_path = workspace.workspace_dir / path
+
+        logging.getLogger(__name__).info(f"Deleting file: path={path}, file_path={file_path}, exists={file_path.exists()}")
+
+        # Security check
+        if not str(file_path.resolve()).startswith(str(workspace.workspace_dir.resolve())):
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        if not file_path.exists():
+            logging.getLogger(__name__).error(f"File not found: {file_path}")
+            raise HTTPException(status_code=404, detail="File not found")
+
+        # Check if preset file (not deletable)
+        if file_path.name in PRESET_FILES:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Cannot delete preset file: {file_path.name}",
+            )
+
+        # Delete file or directory
+        if file_path.is_file():
+            file_path.unlink()
+        elif file_path.is_dir():
+            shutil.rmtree(file_path)
+
+        return {"deleted": True, "path": path}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.post(
+    "/file-upload",
+    summary="Upload single file",
+    description="Upload a single file to workspace",
+)
+async def upload_file(
+    request: Request,
+    file: UploadFile = File(...),
+    path: str = Body("", description="Target path relative to workspace root"),
+) -> dict:
+    """Upload a single file to workspace."""
+    try:
+        workspace = await get_agent_for_request(request)
+
+        # Build target path
+        if path:
+            target_path = workspace.workspace_dir / path / file.filename
+        else:
+            target_path = workspace.workspace_dir / file.filename
+
+        # Security check
+        if not str(target_path.resolve()).startswith(str(workspace.workspace_dir.resolve())):
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        # Create parent directories if needed
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Write file
+        with open(target_path, "wb") as f:
+            content = await file.read()
+            f.write(content)
+
+        return {
+            "uploaded": True,
+            "filename": file.filename,
+            "path": str(target_path.relative_to(workspace.workspace_dir)),
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.get(
+    "/file-download",
+    summary="Download single file",
+    description="Download a single file from workspace",
+)
+async def download_file(request: Request, path: str):
+    """Download a single file from workspace."""
+    try:
+        workspace = await get_agent_for_request(request)
+        file_path = workspace.workspace_dir / path
+
+        # Security check
+        if not str(file_path.resolve()).startswith(str(workspace.workspace_dir.resolve())):
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        if not file_path.exists() or not file_path.is_file():
+            raise HTTPException(status_code=404, detail="File not found")
+
+        def iter_file():
+            with open(file_path, "rb") as f:
+                while chunk := f.read(8192):
+                    yield chunk
+
+        return StreamingResponse(
+            iter_file(),
+            media_type="application/octet-stream",
+            headers={
+                "Content-Disposition": f'attachment; filename="{file_path.name}"',
+            },
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc

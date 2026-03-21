@@ -1423,3 +1423,99 @@
     - "\\bss\\s+.*-t\\s+ulpn"
   description: "Detects network diagnostic tools"
   remediation: "Allow. Network tools are used for troubleshooting."
+
+# ── Workspace Isolation: Path Traversal Detection ──────────────────────────
+- id: TOOL_CMD_PATH_TRAVERSAL
+  tools: [execute_shell_command]
+  params: [command]
+  category: data_destruction
+  severity: HIGH
+  patterns:
+    - "\\.{2,}/{2,}"  # ../ or ..\
+    - "\\.{2,}\\\\.{2,}" # ..\..\
+    - "/\\.{2,}/"  # /../
+    - "\\\\\\.{2,}\\\\\\"  # \..\
+  description: "Detects path traversal attempts (../..) to escape workspace"
+  remediation: "Block operation. Agent should only work within the assigned workspace directory."
+
+# ── Workspace Isolation: Absolute Path Detection ────────────────────────────
+- id: TOOL_CMD_SYSTEM_ABSOLUTE_PATH
+  tools: [execute_shell_command]
+  params: [command]
+  category: privilege_escalation
+  severity: HIGH
+  patterns:
+    - "\\s+/(home|root|etc|var|usr|bin|sbin|lib|boot|sys|proc|dev|opt|srv|run)/"
+    - "^(cd|cat|ls|rm|cp|mv|chmod|chown|mkdir|touch|echo|write|find|grep)\\s+/+(home|root|etc|var|usr|bin|sbin|lib|boot|sys|proc|dev|opt|srv|run)/"
+  description: "Detects attempts to access system directories outside workspace"
+  remediation: "Block operation. Agent should use relative paths and stay within workspace."
+
+# ── Workspace Isolation: Parent Directory Escape ────────────────────────────
+- id: TOOL_CMD_PARENT_DIR_ESCAPE
+  tools: [execute_shell_command]
+  params: [command]
+  category: data_destruction
+  severity: HIGH
+  patterns:
+    - "cd\\s+\\.\\."
+    - "(ls|cat|rm|cp|mv|chmod|chown)\\s+.*\\.\\./.*"
+    - "find\\s+.*\\.\\."
+  description: "Detects parent directory access to escape workspace"
+  remediation: "Block operation. Agent should not access parent directories of workspace."
+
+# ── Workspace Isolation: Sensitive System Paths ───────────────────────────────
+- id: TOOL_CMD_SENSITIVE_SYSTEM_PATHS
+  tools: [execute_shell_command]
+  params: [command]
+  category: sensitive_file_access
+  severity: CRITICAL
+  patterns:
+    - "/etc/(passwd|shadow|group|sudoers|ssh/|hosts|fstab|cron\\.)"
+    - "/root/\\."
+    - "/home/[^/]+/\\.ssh/"
+    - "/home/[^/]+/\\.gnupg/"
+    - "/var/log/"
+    - "/boot/"
+    - "/sys/"
+    - "/proc/"
+    - "/dev/"
+  description: "Detects access to sensitive system files and directories"
+  remediation: "Block operation. Agent should not access sensitive system files."
+
+# ── Workspace Isolation: Symlink to System ────────────────────────────────────
+- id: TOOL_CMD_SYMLINK_SYSTEM
+  tools: [execute_shell_command]
+  params: [command]
+  category: persistence_mechanism
+  severity: HIGH
+  patterns:
+    - "ln\\s+-s\\s+/(etc|root|home|usr|var|bin|sbin)"
+    - "ln\\s+-s\\s+/.*\\s+/(etc|root|home|usr|var|bin|sbin)"
+  description: "Detects symlink creation to or from system directories"
+  remediation: "Block operation. Agent should not create symlinks to system directories."
+
+# ── Workspace Isolation: Environment Manipulation ────────────────────────────
+- id: TOOL_CMD_ENV_WORKSPACE_ESCAPE
+  tools: [execute_shell_command]
+  params: [command]
+  category: persistence_mechanism
+  severity: MEDIUM
+  patterns:
+    - "export\\s+HOME=/(root|home|etc|usr|var)"
+    - "export\\s+PATH=.*:/(root|home|etc|usr|var|bin|sbin)"
+    - "export\\s+WORKDIR=/(root|home|etc|usr|var|sys|proc|dev)"
+  description: "Detects environment variable changes to escape workspace"
+  remediation: "Review and block. Agent should not modify environment to access system directories."
+
+# ── Workspace Isolation: Write Operations Outside Workspace ─────────────────
+- id: TOOL_CMD_WRITE_OUTSIDE_WORKSPACE
+  tools: [execute_shell_command]
+  params: [command]
+  category: data_destruction
+  severity: HIGH
+  patterns:
+    - "(echo|printf|cat|write|tee)\\s+.*>\\s+/(home|root|etc|var|usr|opt|srv)/"
+    - "(echo|printf|cat|write|tee)\\s+.*>>\\s+/(home|root|etc|var|usr|opt|srv)/"
+    - "dd\\s+.*of=/(home|root|etc|var|usr|opt|srv)/"
+  description: "Detects write operations to system directories"
+  remediation: "Block operation. Agent should only write files within workspace."

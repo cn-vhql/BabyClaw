@@ -68,7 +68,21 @@
     "configUpdateFailed": "更新系统提示词配置失败",
     "attribution": "工作区设计部分灵感源自 OpenClaw 项目，在此表示感谢 🐾",
     "saveSuccess": "保存成功",
-    "saveFailed": "保存失败"
+    "saveFailed": "保存失败",
+    "openFolder": "打开文件夹",
+    "fileExplorer": "文件浏览器",
+    "files": "文件",
+    "preview": "预览",
+    "preset": "预置",
+    "loadFileTreeFailed": "加载文件树失败",
+    "loadFileContentFailed": "加载文件内容失败",
+    "cannotDeletePreset": "无法删除预置文件",
+    "deleteConfirm": "确认删除",
+    "deleteConfirmDesc": "确定要删除 {path} 吗？此操作无法撤销。",
+    "deleteSuccess": "删除成功",
+    "deleteFailed": "删除失败",
+    "binaryFile": "二进制文件 - 无法预览",
+    "selectFile": "选择文件进行预览"
   },
   "agent": {
     "management": "智能体管理",
@@ -736,6 +750,7 @@
       "actionApproval": "等待审批",
       "allTools": "所有工具",
       "allParams": "所有参数",
+      "total": "共 {{count}} 条",
       "descriptions": {
         "TOOL_CMD_DANGEROUS_RM": "检测可能导致数据丢失的 rm 命令",
         "TOOL_CMD_DANGEROUS_MV": "检测可能意外移动或覆盖文件的 mv 命令",

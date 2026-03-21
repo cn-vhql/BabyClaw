@@ -19,3 +19,20 @@ export interface DailyMemoryFile extends MdFileInfo {
   date: string;
   updated_at: number;
 }
+
+export interface FileTreeNode {
+  name: string;
+  path: string;
+  type: "file" | "folder";
+  size: number;
+  modified_time: string;
+  children?: FileTreeNode[];
+}
+
+export interface FileContentResult {
+  path: string;
+  name: string;
+  size: number;
+  is_text: boolean;
+  content: string | null;
+}

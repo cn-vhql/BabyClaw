@@ -163,7 +163,11 @@ export function RuleTable({
       dataSource={rules}
       columns={columns}
       rowKey="id"
-      pagination={false}
+      pagination={{
+        pageSize: 10,
+        showSizeChanger: false,
+        showTotal: (total) => t("security.rules.total", { count: total }),
+      }}
       size="small"
       className={styles.ruleTable}
     />

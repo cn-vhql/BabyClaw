@@ -102,7 +102,21 @@
     "configUpdateFailed": "Failed to update system prompt configuration",
     "attribution": "Workspace design partly inspired by the OpenClaw project — thank you! 🐾",
     "saveSuccess": "Saved successfully",
-    "saveFailed": "Save failed"
+    "saveFailed": "Save failed",
+    "openFolder": "Open Folder",
+    "fileExplorer": "File Explorer",
+    "files": "Files",
+    "preview": "Preview",
+    "preset": "Preset",
+    "loadFileTreeFailed": "Failed to load file tree",
+    "loadFileContentFailed": "Failed to load file content",
+    "cannotDeletePreset": "Cannot delete preset file",
+    "deleteConfirm": "Confirm Delete",
+    "deleteConfirmDesc": "Are you sure you want to delete {path}? This action cannot be undone.",
+    "deleteSuccess": "Deleted successfully",
+    "deleteFailed": "Delete failed",
+    "binaryFile": "Binary file - preview not available",
+    "selectFile": "Select a file to preview"
   },
   "agent": {
     "management": "Agent Management",
@@ -770,6 +784,7 @@
       "actionApproval": "Require Approval",
       "allTools": "All tools",
       "allParams": "All parameters",
+      "total": "Total {{count}}",
       "descriptions": {
         "TOOL_CMD_DANGEROUS_RM": "Detects 'rm' command that may cause data loss",
         "TOOL_CMD_DANGEROUS_MV": "Detects 'mv' command that may move or overwrite files unexpectedly",

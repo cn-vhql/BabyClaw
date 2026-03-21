@@ -2,6 +2,23 @@ import { request } from "../request";
 import { getApiUrl, getApiToken } from "../config";
 import type { MdFileInfo, MdFileContent, DailyMemoryFile } from "../types";
 
+export interface FileTreeNode {
+  name: string;
+  path: string;
+  type: "file" | "folder";
+  size: number;
+  modified_time: string;
+  children?: FileTreeNode[];
+}
+
+export interface FileContentResult {
+  path: string;
+  name: string;
+  size: number;
+  is_text: boolean;
+  content: string | null;
+}
+
 function buildHeaders(): HeadersInit {
   const headers: Record<string, string> = {};
 
@@ -168,4 +185,53 @@ export const workspaceApi = {
       method: "PUT",
       body: JSON.stringify(files),
     }),
+
+  // File management API
+  getFileTree: () => request<FileTreeNode>("/agent/file-tree"),
+
+  getFileContent: (path: string) =>
+    request<FileContentResult>(`/agent/file-content?path=${encodeURIComponent(path)}`),
+
+  deleteFile: (path: string) =>
+    request<{ deleted: boolean; path: string }>(`/agent/file?path=${encodeURIComponent(path)}`, {
+      method: "DELETE",
+    }),
+
+  uploadSingleFile: async (file: File, targetPath: string = ""): Promise<{ uploaded: boolean; filename: string; path: string }> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (targetPath) {
+      formData.append("path", targetPath);
+    }
+
+    const response = await fetch(getApiUrl("/agent/file-upload"), {
+      method: "POST",
+      headers: buildHeaders(),
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `Upload failed: ${response.status} ${response.statusText} - ${errorText}`,
+      );
+    }
+
+    return await response.json();
+  },
+
+  downloadSingleFile: async (path: string): Promise<Blob> => {
+    const response = await fetch(getApiUrl(`/agent/file-download?path=${encodeURIComponent(path)}`), {
+      method: "GET",
+      headers: buildHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `Download failed: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    return await response.blob();
+  },
 };

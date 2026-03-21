@@ -405,6 +405,227 @@
   flex-shrink: 0;
 }
 
+/* ─── File Explorer Modal ───────────────────────────────────────────────────── */
+
+.fileExplorerModal {
+  :global {
+    .copaw-modal-body {
+      padding: 16px;
+    }
+
+    .copaw-modal-header {
+      padding: 12px 16px;
+    }
+
+    .copaw-modal-title {
+      font-size: 16px;
+    }
+  }
+}
+
+.fileExplorerContent {
+  display: flex;
+  gap: 16px;
+  height: 480px;
+}
+
+.fileTreePanel {
+  flex: 0 0 350px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.filePreviewPanel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.panelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fafafa;
+  flex-shrink: 0;
+}
+
+.panelActions {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid #f0f0f0;
+  background: #fafafa;
+  flex-shrink: 0;
+}
+
+.treeContainer {
+  flex: 1;
+  overflow: auto;
+  padding: 4px 0;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #d9d9d9;
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  :global {
+    .copaw-tree {
+      background: transparent;
+      font-size: 13px;
+
+      .copaw-tree-treenode {
+        padding: 2px 0;
+      }
+
+      .copaw-tree-node-content-wrapper {
+        display: flex;
+        align-items: center;
+        padding: 2px 8px;
+        margin: 0 4px;
+        border-radius: 4px;
+        line-height: 24px;
+        min-height: 24px;
+
+        &:hover {
+          background: #f5f5f5;
+        }
+
+        &.copaw-tree-node-selected {
+          background: #e6f4ff;
+        }
+      }
+
+      .copaw-tree-switcher {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        margin-right: 4px;
+        line-height: 20px;
+        transition: transform 0.2s;
+
+        &:hover {
+          background: rgba(0, 0, 0, 0.04);
+          border-radius: 2px;
+        }
+
+        .anticon {
+          font-size: 10px;
+          color: #666;
+        }
+      }
+
+      .copaw-tree-switcher_open {
+        .anticon {
+          transform: rotate(90deg);
+        }
+      }
+
+      .copaw-tree-iconEle {
+        display: flex;
+        align-items: center;
+        margin-right: 6px;
+        font-size: 14px;
+      }
+
+      .copaw-tree-title {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 13px;
+      }
+    }
+  }
+}
+
+.previewContainer {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+  background: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #d9d9d9;
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  :global {
+    .copaw-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+}
+
+.previewTextarea {
+  font-family: "SF Mono", "Menlo", "Consolas", monospace;
+  font-size: 13px;
+  background: #fff !important;
+  border: none !important;
+  resize: none;
+}
+
+.treeNode {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.nodeName {
+  font-size: 13px;
+}
+
+.presetBadge {
+  font-size: 11px;
+  color: #999;
+  margin-left: 4px;
+}
+
+.fileMeta {
+  font-size: 12px;
+}
+
+.centerState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
 /* ─── Dark mode ─────────────────────────────────────────────────────────────── */
 :global(.dark-mode) {
   .description {
@@ -530,5 +751,91 @@
     background: #2a2a2a !important;
     color: rgba(255, 255, 255, 0.85) !important;
     border-color: rgba(255, 255, 255, 0.1) !important;
+  }
+
+  /* File Explorer Modal */
+  .fileTreePanel,
+  .filePreviewPanel {
+    background: #2a2a2a;
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .panelHeader,
+  .panelActions {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .panelHeader {
+    :global {
+      .copaw-typography {
+        color: rgba(255, 255, 255, 0.85);
+      }
+    }
+  }
+
+  .fileMeta {
+    color: rgba(255, 255, 255, 0.3);
+  }
+
+  .presetBadge {
+    color: rgba(255, 255, 255, 0.3);
+    margin-left: 4px;
+  }
+
+  .nodeName {
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  .treeContainer {
+    :global {
+      .copaw-tree {
+        background: transparent;
+        color: rgba(255, 255, 255, 0.85);
+
+        .copaw-tree-switcher {
+          &:hover {
+            background: rgba(255, 255, 255, 0.08);
+          }
+
+          .anticon {
+            color: rgba(255, 255, 255, 0.45);
+          }
+        }
+
+        .copaw-tree-node-content-wrapper {
+          &:hover {
+            background: rgba(255, 255, 255, 0.06);
+          }
+
+          &.copaw-tree-node-selected {
+            background: rgba(97, 92, 237, 0.2) !important;
+          }
+        }
+
+        .copaw-tree-title {
+          color: rgba(255, 255, 255, 0.85);
+        }
+      }
+    }
+  }
+
+  .previewContainer {
+    background: #1f1f1f;
+  }
+
+  .previewTextarea {
+    background: #2a2a2a !important;
+    color: rgba(255, 255, 255, 0.85) !important;
+  }
+
+  .centerState {
+    :global {
+      .copaw-spin {
+        .copaw-spin-dot-item {
+          background-color: rgba(255, 255, 255, 0.45);
+        }
+      }
+    }
   }
 }

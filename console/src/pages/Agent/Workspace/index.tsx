@@ -1,13 +1,14 @@
-import { useAgentsData, FileListPanel, FileEditor } from "./components";
+import { useAgentsData, FileListPanel, FileEditor, FileExplorerModal } from "./components";
 import styles from "./index.module.less";
-import { UploadOutlined, DownloadOutlined } from "@ant-design/icons";
+import { UploadOutlined, DownloadOutlined, FolderOpenOutlined } from "@ant-design/icons";
 import { Button, Tooltip, message } from "@agentscope-ai/design";
 import { workspaceApi } from "../../../api/modules/workspace";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 export default function WorkspacePage() {
   const { t } = useTranslation();
+  const [fileExplorerOpen, setFileExplorerOpen] = useState(false);
   const {
     files,
     selectedFile,
@@ -114,6 +115,13 @@ export default function WorkspacePage() {
               : workspacePath || t("workspace.noFiles")}
           </p>
           <div className={styles.actionButtons}>
+            <Button
+              size="small"
+              icon={<FolderOpenOutlined />}
+              onClick={() => setFileExplorerOpen(true)}
+            >
+              {t("workspace.openFolder") || "Open Folder"}
+            </Button>
             <Tooltip
               title={t("workspace.uploadTooltip")}
               placement="top"
@@ -174,6 +182,12 @@ export default function WorkspacePage() {
         style={{ display: "none" }}
         accept=".zip"
         title="Select a ZIP file (max 100MB)"
+      />
+
+      {/* File Explorer Modal */}
+      <FileExplorerModal
+        open={fileExplorerOpen}
+        onClose={() => setFileExplorerOpen(false)}
       />
     </div>
   );
