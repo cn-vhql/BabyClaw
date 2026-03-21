@@ -655,7 +655,7 @@
     }
   },
   "chat": {
-    "disclaimer": "あなたのために働き、あなたと共に成長します",
+    "disclaimer": "BabyClaw と共に成長する",
     "greeting": "こんにちは、今日はどんなお手伝いができますか？",
     "description": "私はあなたの質問をサポートするAIアシスタントです。",
     "prompt1": "新しい旅を始めましょう！",
@@ -786,7 +786,7 @@
     }
   },
   "login": {
-    "title": "CoPaw にログイン",
+    "title": "BabyClaw にログイン",
     "registerTitle": "アカウント作成",
     "firstUserHint": "管理者アカウントを作成して始めましょう",
     "usernamePlaceholder": "ユーザー名",

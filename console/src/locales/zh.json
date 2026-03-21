@@ -332,7 +332,7 @@
     "welcomeGreeting": "欢迎语",
     "welcomeText": "欢迎消息",
     "welcomeTextTooltip": "用户当天首次进入机器人单聊会话时机器人自动发送的消息",
-    "welcomeTextPlaceholder": "例如：你好！我是 CoPaw，有什么可以帮你的？",
+    "welcomeTextPlaceholder": "例如：你好！我是 BabyClaw，有什么可以帮你的？",
     "loginWeCom": "扫码授权企业微信机器人",
     "wecomAuthHint": "点击按钮后会弹出企业微信二维码窗口，扫码确认后 Bot ID 与 Secret 将自动填入。",
     "wecomAuthSuccess": "企业微信机器人授权成功",
@@ -669,7 +669,7 @@
     }
   },
   "chat": {
-    "disclaimer": "懂你所需，伴你左右",
+    "disclaimer": "与 BabyClaw 共同成长",
     "greeting": "你好，我今天能帮你做什么？",
     "description": "我是一个智能助手，可以帮助你解答问题。",
     "prompt1": "让我们开启一段新的旅程吧！",
@@ -800,7 +800,7 @@
     }
   },
   "login": {
-    "title": "登录 CoPaw",
+    "title": "登录 BabyClaw",
     "registerTitle": "创建账户",
     "firstUserHint": "创建管理员账户以开始使用",
     "usernamePlaceholder": "用户名",

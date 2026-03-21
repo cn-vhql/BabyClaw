@@ -33,6 +33,18 @@ export default defineConfig(({ mode }) => {
     server: {
       host: "0.0.0.0",
       port: 5173,
+      proxy: {
+        // Proxy API requests to backend
+        '/api': {
+          target: 'http://127.0.0.1:8088',
+          changeOrigin: true,
+        },
+        '/console': {
+          target: 'http://127.0.0.1:8088',
+          changeOrigin: true,
+          ws: true, // WebSocket support for SSE
+        },
+      },
     },
     optimizeDeps: {
       include: ["diff"],

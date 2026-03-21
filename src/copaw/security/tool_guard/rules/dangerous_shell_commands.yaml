@@ -118,3 +118,1308 @@
     - "\\bbase64\\s+(-d|--decode)\\s*\\|\\s*\\b(bash|sh|zsh)\\b"
   description: "Detects execution of base64 encoded strings passed directly to a shell interpreter"
   remediation: "Block execution. Agents should use plain text commands."
+
+# ── System Power & Reboot ───────────────────────────────────────────────
+- id: TOOL_CMD_SYSTEM_REBOOT
+  tools: [execute_shell_command]
+  params: [command]
+  category: resource_abuse
+  severity: HIGH
+  patterns:
+    - "\\b(shutdown|reboot|poweroff|halt)\\b.*(-h\\s+now|-r\\s+now|now)"
+    - "\\bsystemctl\\s+(poweroff|reboot|halt)"
+    - "\\binit\\s+0"
+    - "\\btelinit\\s+0"
+  description: "Detects system shutdown, reboot, or halt commands"
+  remediation: "Confirm with user. These commands will immediately interrupt system availability."
+
+# ── User & Group Management ───────────────────────────────────────────────
+- id: TOOL_CMD_USER_MANAGEMENT
+  tools: [execute_shell_command]
+  params: [command]
+  category: privilege_escalation
+  severity: HIGH
+  patterns:
+    - "\\b(userdel|groupdel)\\b"
+    - "\\bpasswd\\b"
+    - "\\busermod\\b.*(-aG|-G|-aG|-G)"
+    - "\\bgpasswd\\b"
+    - "\\bchage\\b"
+  description: "Detects user deletion, password changes, or group modifications"
+  remediation: "Confirm with user. User and credential management requires explicit approval."
+
+# ── Privilege Escalation ───────────────────────────────────────────────────
+- id: TOOL_CMD_PRIVILEGE_ESCALATION
+  tools: [execute_shell_command]
+  params: [command]
+  category: privilege_escalation
+  severity: HIGH
+  patterns:
+    - "\\b(su\\s+-|sudo\\s+(-i|su|-u\\s+root))"
+    - "\\bsudo\\s+.*\\b(visudo|vi|nano|vim)\\s+/etc/(sudoers|passwd|shadow)"
+    - "\\bpolkit\\b.*add-action"
+  description: "Detects privilege escalation attempts or sudoers file modifications"
+  remediation: "Block or require explicit user confirmation for privilege elevation."
+
+# ── Process Management ───────────────────────────────────────────────────
+- id: TOOL_CMD_PROCESS_KILL
+  tools: [execute_shell_command]
+  params: [command]
+  category: resource_abuse
+  severity: MEDIUM
+  patterns:
+    - "\\b(killall|pkill)\\b.*(-9|KILL|TERM)"
+    - "\\bsystemctl\\s+(stop|kill|restart|reload)"
+    - "\\bservice\\s+.+(stop|kill|restart)"
+  description: "Detects mass process termination or service stoppage"
+  remediation: "Confirm with user before terminating processes or stopping services."
+
+# ── Firewall & Network Configuration ───────────────────────────────────
+- id: TOOL_CMD_FIREWALL_MODIFICATION
+  tools: [execute_shell_command]
+  params: [command]
+  category: network_abuse
+  severity: HIGH
+  patterns:
+    - "\\b(iptables|ip6tables)\\s+.*(-F|--flush)"
+    - "\\bufw\\s+(disable|reset)"
+    - "\\bfirewall-cmd\\s+.*--remove-port"
+    - "\\biptables\\s+.*-P\\s+DROP"
+  description: "Detects firewall rule flushing or disabling security protections"
+  remediation: "Confirm with user. Firewall changes may expose the system to attacks."
+
+# ── Data Wiping & File Overwrite ──────────────────────────────────────────
+- id: TOOL_CMD_FILE_WIPE
+  tools: [execute_shell_command]
+  params: [command]
+  category: data_destruction
+  severity: CRITICAL
+  patterns:
+    - "\\bdd\\s+.*if=\\/dev\\/(zero|random|urandom)\\s+of="
+    - "\\bshred\\s+.*(-u|-z|-n\\s+0)"
+    - "\\bwipe\\s+.*(-s quick|-s zero)"
+    - "\\bsrm\\b"
+  description: "Detects disk wiping, secure deletion, or data destruction commands"
+  remediation: "Block operation. These commands cause irreversible data loss."
+
+# ── File Content Overwrite ───────────────────────────────────────────────
+- id: TOOL_CMD_FILE_OVERWRITE
+  tools: [execute_shell_command]
+  params: [command]
+  category: data_destruction
+  severity: HIGH
+  patterns:
+    - ">\\s*\\/dev\\/null"
+    - ":\\s*>\\s*\\/.*\\.(conf|config|json|yaml|yml|xml|env)"
+    - "\\bcat\\s+.*>\\s*\\/.*\\.(conf|config|json|yaml|yml|xml|env)"
+    - "\\becho\\s+.*>\\s*\\/.*\\.(conf|config|json|yaml|yml|xml|env)"
+  description: "Detects configuration file overwrite or truncation"
+  remediation: "Confirm with user before overwriting critical configuration files."
+
+# ── Package Management ────────────────────────────────────────────────────
+- id: TOOL_CMD_PACKAGE_INSTALL
+  tools: [execute_shell_command]
+  params: [command]
+  category: code_execution
+  severity: MEDIUM
+  patterns:
+    - "\\b(apt-get|apt|yum|dnf|pacman|zypper)\\s+.*install"
+    - "\\bpip\\s+install"
+    - "\\bnpm\\s+(install|g\\s+install)"
+    - "\\bcurl\\s+.*\\|.*\\b(bash|sh|python|node)\\b"
+    - "\\bwget\\s+.*\\|.*\\b(bash|sh|python|node)\\b"
+  description: "Detects package installation or remote script execution"
+  remediation: "Confirm with user before installing packages or executing remote code."
+
+# ── System Configuration Modification ───────────────────────────────────
+- id: TOOL_CMD_SYSTEM_CONFIG
+  tools: [execute_shell_command]
+  params: [command]
+  category: sensitive_file_access
+  severity: HIGH
+  patterns:
+    - "\\bsysctl\\s+.*-w"
+    - "\\becho\\s+.*>\\s*/proc/sys/"
+    - "\\bmodprobe\\s+( -r|-v)"
+  description: "Detects kernel parameter modifications or module unloading"
+  remediation: "Confirm with user. Kernel changes can affect system stability and security."
+
+# ── SSH & Remote Access ───────────────────────────────────────────────────
+- id: TOOL_CMD_SSH_CONFIG
+  tools: [execute_shell_command]
+  params: [command]
+  category: network_abuse
+  severity: HIGH
+  patterns:
+    - "\\bsshd\\b.*(-D\\s+|PermitRootLogin)"
+    - "\\bcp\\s+.*\\/etc\\/ssh\\/sshd_config"
+    - "\\bsed\\s+.*\\/etc\\/ssh\\/sshd_config"
+    - "\\bvi?m?\\s+.*\\/etc\\/ssh\\/sshd_config"
+  description: "Detects SSH daemon configuration modifications"
+  remediation: "Block or require explicit approval. SSH changes affect remote access security."
+
+# ── History & Log Clearing ────────────────────────────────────────────────
+- id: TOOL_CMD_LOG_CLEARING
+  tools: [execute_shell_command]
+  params: [command]
+  category: evidence_destruction
+  severity: MEDIUM
+  patterns:
+    - "\\b(history\\s+-c|unset\\s+HISTFILE)"
+    - "\\brm\\s+.*\\.(bash_history|zsh_history|history)"
+    - "\\btruncate\\s+.*\\.(log|history)"
+    - "\\b>\\s+.*\\.(log|history)"
+    - "\\bjournalctl\\s+.*--rotate"
+  description: "Detects attempts to clear command history or log files"
+  remediation: "Alert user. Log clearing may indicate suspicious activity."
+
+# ── Kernel & Init System ─────────────────────────────────────────────────
+- id: TOOL_CMD_KERNEL_MODIFICATION
+  tools: [execute_shell_command]
+  params: [command]
+  category: resource_abuse
+  severity: CRITICAL
+  patterns:
+    - "\\b(insmod|rmmod|modprobe)\\s+.*(-f|--force)"
+    - "\\bekernel\\s+.*panic"
+    - "\\bsystemctl\\s+.*default"
+    - "\\bln\\s+-sf.*(/bin/|/sbin/)"
+  description: "Detects forced kernel module operations or init system changes"
+  remediation: "Block operation. These can crash or destabilize the system."
+
+# ── Database Destruction ────────────────────────────────────────────────
+- id: TOOL_CMD_DATABASE_DROP
+  tools: [execute_shell_command]
+  params: [command]
+  category: data_destruction
+  severity: CRITICAL
+  patterns:
+    - "\\b(mysql|psql|mongo|redis-cli)\\s+.*\\b(DROP|TRUNCATE|DELETE\\s+FROM)\\b"
+    - "\\brm\\s+.*\\/(var/lib/mysql|var/lib/postgresql|var/lib/redis)"
+  description: "Detects database dropping, truncation, or data directory removal"
+  remediation: "Block operation. Database data loss is irreversible without backups."
+
+# ── Network Scanning & Attack Tools ────────────────────────────────────
+- id: TOOL_CMD_NETWORK_ATTACK
+  tools: [execute_shell_command]
+  params: [command]
+  category: network_abuse
+  severity: HIGH
+  patterns:
+    - "\\b(nmap|masscan|zmap)\\s+.*(-sS|-p-)"
+    - "\\bhping3?\\s+.*flood"
+    - "\\bslowhttptest\\b"
+    - "\\b(metasploit|msfconsole|msfvenom)\\b"
+    - "\\b(sqlmap)\\b"
+  description: "Detects network scanning tools, DoS attacks, or penetration testing tools"
+  remediation: "Block or require explicit approval. Network attacks may be illegal."
+
+# ── Symbolic Link & Device File Creation ─────────────────────────────
+- id: TOOL_CMD_LINK_CREATION
+  tools: [execute_shell_command]
+  params: [command]
+  category: sensitive_file_access
+  severity: HIGH
+  patterns:
+    - "\\bln\\s+-s.*\\/(etc/passwd|etc/shadow|etc/sudoers)"
+    - "\\blink\\s+.*\\/(etc/passwd|etc/shadow|etc/sudoers)"
+    - "\\bmknod\\s+.*\\s+\\/(dev/sd|dev/vd|dev/nvme)"
+  description: "Detects creation of device files or symlinks to critical system files"
+  remediation: "Block operation. These can be used for privilege escalation or data theft."
+
+# ── Archive & Compression Operations ────────────────────────────────────
+- id: TOOL_CMD_ARCHIVE_EXTRACTION
+  tools: [execute_shell_command]
+  params: [command]
+  category: data_destruction
+  severity: MEDIUM
+  patterns:
+    - "\\b(tar\\s+.*-xf|unzip|gunzip|bunzip2)\\s+.*\\.tar\\.(gz|bz2|xz)"
+    - "\\b7z\\s+x.*\\.(zip|rar|tar|7z)"
+    - "\\bunzip\\s+.*\\.zip"
+  description: "Detects archive extraction which may overwrite existing files"
+  remediation: "Confirm with user. Extracting archives may overwrite files without warning."
+
+# ── Backup & Restore ────────────────────────────────────────────────────
+- id: TOOL_CMD_BACKUP_RESTORE
+  tools: [execute_shell_command]
+  params: [command]
+  category: data_destruction
+  severity: MEDIUM
+  patterns:
+    - "\\b(rsync|scp|cp)\\s+.*-a(--delete|--del)"
+    - "\\bmv\\s+.*\\/.*\\/\\.\\."
+    - "\\brm\\s+.*\\/-rf"
+  description: "Detects backup operations that may delete source data or mirror deletions"
+  remediation: "Confirm with user. Backup operations with deletion flags can cause data loss."
+
+# ── Container & Orchestration ────────────────────────────────────────────
+- id: TOOL_CMD_CONTAINER_DANGER
+  tools: [execute_shell_command]
+  params: [command]
+  category: resource_abuse
+  severity: HIGH
+  patterns:
+    - "\\bdocker\\s+(rm|stop|kill|pause)\\s+(-f|.*--force)"
+    - "\\bdocker\\s+system\\s+(prune|prune -a)"
+    - "\\bkubectl\\s+(delete|drain|cordon)\\s+.*--all"
+    - "\\bdocker\\s+rmi\\s+-f"
+    - "\\brm\\s+-rf\\s+.*\\/var\\/lib\\/docker"
+  description: "Detects container deletion, image removal, or Docker data cleanup"
+  remediation: "Confirm with user. Container operations can terminate critical workloads."
+
+# ── Certificate & Key Management ────────────────────────────────────────
+- id: TOOL_CMD_KEY_ACCESS
+  tools: [execute_shell_command]
+  params: [command]
+  category: sensitive_file_access
+  severity: HIGH
+  patterns:
+    - "\\bcat\\s+.*\\/(\\.ssh\\/id_rsa|\\.ssh\\/id_ed25519|\\.ssh\\/id_ecdsa)"
+    - "\\bssh-keygen\\s+-p.*\\/(id_rsa|id_ed25519|id_ecdsa)"
+    - "\\bopenssl\\s+(rsa|pkey|dgst)\\s+-in.*\\/(\\.ssh|private)"
+    - "\\bchmod\\s+600.*\\/(\\.ssh|.*private)"
+  description: "Detects access to SSH private keys or generation of new key pairs"
+  remediation: "Block access. Private keys must never be exposed or logged."
+
+# ── System Information Disclosure ────────────────────────────────────────
+- id: TOOL_CMD_INFO_DISCLOSURE
+  tools: [execute_shell_command]
+  params: [command]
+  category: sensitive_file_access
+  severity: MEDIUM
+  patterns:
+    - "\\bcat\\s+.*\\/(etc/passwd|etc/shadow|etc/gshadow)"
+    - "\\bgetent\\s+(passwd|shadow|group)"
+    - "\\benv\\s+\\|\\s+grep\\s+-i\\s+(pass|key|secret|token)"
+    - "\\bps\\s+aux.*\\b(grep|egrep)\\s+(pass|key|secret|token)"
+  description: "Detects attempts to read sensitive system files or extract credentials"
+  remediation: "Block or alert. Reading credential files may indicate reconnaissance."
+
+# ── Scheduled Jobs & Init Scripts ──────────────────────────────────────
+- id: TOOL_CMD_PERSISTENCE
+  tools: [execute_shell_command]
+  params: [command]
+  category: persistence
+  severity: HIGH
+  patterns:
+    - "\\becho\\s+.*\\|\\s*crontab\\s+-"
+    - "\\b(crontab\\s+-e|at\\s+)"
+    - "\\bln\\s+-sf.*\\/(etc\\/rc\\.d\\/init\\.d|systemd\\/system)"
+    - "\\bupdate-rc\\.d\\s+(defaults|disable|enable)"
+  description: "Detects creation of scheduled tasks or init script modifications"
+  remediation: "Block or require approval. Persistence mechanisms are common attack vectors."
+
+# ── System Monitoring Interference ─────────────────────────────────────
+- id: TOOL_CMD_MONITORING_TAMPERING
+  tools: [execute_shell_command]
+  params: [command]
+  category: evidence_destruction
+  severity: MEDIUM
+  patterns:
+    - "\\bkillall\\s+.+(auditd|rsyslog|syslog-ng|auditd)"
+    - "\\brm\\s+.*\\/(var\\/log\\/audit|var\\/run\\/utmp)"
+    - "\\bsetenforce\\s+1"
+    - "\\bapparmor_parser\\s+.*-R"
+  description: "Detects attempts to disable auditing, logging, or security policies"
+  remediation: "Block operation. Disabling security monitoring is highly suspicious."
+
+# ── Package Repository Modification ────────────────────────────────────
+- id: TOOL_CMD_REPO_MODIFICATION
+  tools: [execute_shell_command]
+  params: [command]
+  category: code_execution
+  severity: HIGH
+  patterns:
+    - "\\bapt\\s+(add-repository|key\\s+adv)"
+    - "\\brpm\\s+(--import|--importkeys|-Uvh.*\\.rpm)"
+    - "\\byum\\s+(--import|--enablerepo|install.*\\.rpm)"
+    - "\\becho\\s+.*>\\s*/etc\\/apt\\/sources\\.list\\.d"
+  description: "Detects addition of third-party repositories or package imports"
+  remediation: "Confirm with user. Untrusted repos may contain malicious packages."
+
+# ── Data Exfiltration ───────────────────────────────────────────────────
+- id: TOOL_CMD_DATA_EXFILTRATION
+  tools: [execute_shell_command]
+  params: [command]
+  category: data_exfiltration
+  severity: HIGH
+  patterns:
+    - "\\bnc\\s+.*-l\\s+\\d+.*</dev/"
+    - "\\bbind\\s+.*\\/(dev/|lo:)"
+    - "\\bsocat\\s+.*TCP-L:"
+    - "\\b(curl|wget)\\s+.*--upload"
+    - "\\bftp\\s+(put|mput)"
+  description: "Detects file transfers to external systems or network listeners"
+  remediation: "Block operation. Data exfiltration indicates potential data theft."
+
+# ── Hard Disk Operations ───────────────────────────────────────────────────
+- id: TOOL_CMD_DISK_OPS
+  tools: [execute_shell_command]
+  params: [command]
+  category: data_destruction
+  severity: CRITICAL
+  patterns:
+    - "\\b(fdisk|parted|gdisk)\\s+.*(w|wipe|mklabel)"
+    - "\\bpartprobe\\s+.*--wipe"
+    - "\\brm\\s+.*\\/(dev\\/sd|dev\\/vd|dev\\/nvme)"
+    - "\\bblkdiscard\\s+.*-f"
+  description: "Detects disk partitioning, wiping, or raw device operations"
+  remediation: "Block operation. These commands can destroy all data on a disk."
+
+# ── Text Editor in Scripts ───────────────────────────────────────────────
+- id: TOOL_CMD_EDITOR_SCRIPTING
+  tools: [execute_shell_command]
+  params: [command]
+  category: sensitive_file_access
+  severity: MEDIUM
+  patterns:
+    - "\\b(vi|vim|nano|emacs|ed)\\s+.*\\/(etc\\/|usr\\/bin\\/|usr\\/sbin\\/|usr\\/local\\/bin\\/)"
+    - "\\bsed\\s+.*-i.*\\/(etc\\/|usr\\/bin\\/|usr\\/sbin\\/)"
+    - "\\bawk\\s+.*\\{print\\s+.*system\\(\\)"
+  description: "Detects use of interactive editors or sed/awk backdoors in scripts"
+  remediation: "Review command. Interactive editors in scripts may hang or corrupt files."
+
+# ── Password Hashing & Encryption ────────────────────────────────────────
+- id: TOOL_CMD_ENCRYPTION
+  tools: [execute_shell_command]
+  params: [command]
+  category: sensitive_file_access
+  severity: MEDIUM
+  patterns:
+    - "\\b(mkpasswd|openssl\\s+passwd)\\s+"
+    - "\\bpython\\s+.*\\bcrypt\\.hashpw|crypt\\.crypt"
+    - "\\bperl\\s+.*crypt.*\\("
+  description: "Detects password hashing or encryption operations"
+  remediation: "Monitor operation. Legitimate use is rare in normal automation."
+
+# ── Service Account Manipulation ────────────────────────────────────────
+- id: TOOL_CMD_SERVICE_ACCOUNT
+  tools: [execute_shell_command]
+  params: [command]
+  category: privilege_escalation
+  severity: HIGH
+  patterns:
+    - "\\buseradd\\s+.*-u\\s+0"
+    - "\\bedit\\s+.*\\/(etc\\/passwd|etc\\/shadow|etc\\/group)"
+    - "\\bnewusers\\s+.*-m\\s+0"
+    - "\\badduser\\s+.*--uid\\s+0"
+  description: "Detects creation of root-equivalent accounts or direct file edits"
+  remediation: "Block operation. Creating UID 0 users bypasses standard access controls."
+
+# ── Resource Exhaustion ───────────────────────────────────────────────────
+- id: TOOL_CMD_RESOURCE_EXHAUSTION
+  tools: [execute_shell_command]
+  params: [command]
+  category: resource_abuse
+  severity: HIGH
+  patterns:
+    - "\\bwhile\\s+true.*do.*(dd\\s+if=\\/dev\\/zero|:>\\/dev\\/null)"
+    - "\\bfork\\s+.*\\bwhile\\s+true"
+    - "\\bcat\\s+\\/dev\\/urandom\\s+.*\\|\\s*gzip"
+    - "\\byes\\s+.*\\|\\s*(bzip2|xz|gzip)"
+  description: "Detects resource exhaustion attacks (CPU, disk, memory)"
+  remediation: "Block operation. These commands will degrade or crash the system."
+
+# ── Web Shell Upload ──────────────────────────────────────────────────────
+- id: TOOL_CMD_WEB_SHELL
+  tools: [execute_shell_command]
+  params: [command]
+  category: code_execution
+  severity: CRITICAL
+  patterns:
+    - "\\becho\\s+.*\\>\\s*\\.(php|jsp|asp|aspx|sh)"
+    - "\\bprintf\\s+.*\\>\\s*\\.(php|jsp|asp|aspx|sh)"
+    - "\\bbase64\\s+.*-d\\s*\\|\\s*(dd\\s+of=|printf)"
+    - "\\bwget\\s+.*-O\\s+\\/(var\\/www|/srv\\/http|/home\\/.*public_html)"
+  description: "Detects web shell upload or backdoor installation"
+  remediation: "Block immediately. Web shells allow remote code execution."
+
+# ── File Permission Manipulation ────────────────────────────────────────
+- id: TOOL_CMD_PERMISSIONS
+  tools: [execute_shell_command]
+  params: [command]
+  category: privilege_escalation
+  severity: MEDIUM
+  patterns:
+    - "\\bchmod\\s+000\\s+/"
+    - "\\bchown\\s+(root|0:0)\\s+.*\\/(usr\\/bin|usr\\/sbin|\\/bin|\\/sbin)"
+    - "\\bsetfacl\\s+-m\\s+rwx"
+    - "\\bchmod\\s+[ug]+s+.*\\/(etc\\/|usr\\/bin|usr\\/sbin)"
+  description: "Detects permission changes that could enable privilege escalation"
+  remediation: "Confirm with user. Changing binary or config permissions is risky."
+
+# ── Network Interface Configuration ──────────────────────────────────────
+- id: TOOL_CMD_NETWORK_CONFIG
+  tools: [execute_shell_command]
+  params: [command]
+  category: network_abuse
+  severity: MEDIUM
+  patterns:
+    - "\\bifconfig\\s+.*(down|0\\.0\\.0\\.0)"
+    - \\bip\\s+link\\s+set\\s+down"
+    - "\\bnmcli\\s+connection\\s+down"
+    - "\\broute\\s+add\\s+.*blackhole"
+  description: "Detects network interface shutdown or routing table manipulation"
+  remediation: "Confirm with user. Network changes can isolate the system."
+
+# ── Time Manipulation ───────────────────────────────────────────────────────
+- id: TOOL_CMD_TIME_MANIPULATION
+  tools: [execute_shell_command]
+  params: [command]
+  category: resource_abuse
+  severity: MEDIUM
+  patterns:
+    - "\\bdate\\s+.*\\d+:\\d+:\\d+"
+    - "\\bhwclock\\s+--set"
+    - "\\btimedatectl\\s+set-ntp\\s+false"
+    - "\\bsystemd-timedated\\s+set-ntp\\s+(false|0)"
+  description: "Detects system time manipulation"
+  remediation: "Alert user. Time changes can break authentication and auditing."
+
+# ── Mount & Unmount Operations ───────────────────────────────────────────
+- id: TOOL_CMD_MOUNT_OPS
+  tools: [execute_shell_command]
+  params: [command]
+  category: data_destruction
+  severity: MEDIUM
+  patterns:
+    - "\\bumount\\s+.*(-l|-f|-n)"
+    - "\\bmount\\s+.*-o\\s+(remount|bind)"
+    - "\\bmount\\s+.*\\/(proc|sys|dev)\\s+.*hidepid=2"
+    - "\\bmount\\s+--bind\\s+.*\\/(root|home)"
+  description: "Detects unmount operations or bind mounts that can hide files or data"
+  remediation: "Confirm with user. Mount operations can affect system stability."
+
+# ── DNS Configuration ────────────────────────────────────────────────────
+- id: TOOL_CMD_DNS_MODIFICATION
+  tools: [execute_shell_command]
+  params: [command]
+  category: network_abuse
+  severity: MEDIUM
+  patterns:
+    - "\\becho\\s+.*>\\s*/etc\\/resolv\\.conf"
+    - "\\bnmcli\\s+connection\\s+modify\\s+.*ipv4\\.dns"
+    - "\\bsed\\s+.*-i.*nameserver"
+    - "\\bdocker\\s+run.*--dns.*\\|(cat\\s+.*nameserver)"
+  description: "Detects DNS configuration changes"
+  remediation: "Confirm with user. DNS changes can redirect traffic or break name resolution."
+
+# ── Core System Binaries Replacement ────────────────────────────────────────
+- id: TOOL_CMD_BINARY_REPLACEMENT
+  tools: [execute_shell_command]
+  params: [command]
+  category: persistence
+  severity: CRITICAL
+  patterns:
+    - "\\bcp\\s+.*\\s+\\/(usr\\/bin|usr\\/sbin|\\/bin|\\/sbin)"
+    - "\\bmv\\s+.*\\s+\\/(usr\\/bin|usr\\/sbin|\\/bin|\\/sbin)"
+    - "\\bcat\\s+.*>\\s+\\/(usr\\/bin|usr\\/sbin|\\/bin|\\/sbin)"
+    - "\\bcurl\\s+.*>\\s+\\/(usr\\/bin|usr\\/sbin|\\/bin|\\/sbin)"
+  description: "Detects replacement of core system binaries"
+  remediation: "Block immediately. Binary replacement is a common persistence technique."
+
+# ── SELinux & AppArmor Manipulation ──────────────────────────────────────
+- id: TOOL_CMD_SECURITY_FRAMEWORK
+  tools: [execute_shell_command]
+  params: [command]
+  category: privilege_escalation
+  severity: HIGH
+  patterns:
+    - "\\bsetenforce\\s+0"
+    - "\\bselinuxconfigured\\s+0"
+    - "\\baa-complain\\s+.*-d"
+    - "\\bapparmor_parser\\s+.*-R"
+    - "\\b(aa-disable|aa-remove)\\s+.*"
+  description: "Detects disabling or weakening of SELinux or AppArmor security modules"
+  remediation: "Block or require explicit approval. Disabling security frameworks exposes the system."
+
+# ── Web Server Configuration ──────────────────────────────────────────────
+- id: TOOL_CMD_WEB_SERVER
+  tools: [execute_shell_command]
+  params: [command]
+  category: sensitive_file_access
+  severity: MEDIUM
+  patterns:
+    - "\\b(chmod\\s+777|chown\\s+www-data)\\s+.*\\/(var\\/www|public_html)"
+    - "\\bsed\\s+.*DocumentRoot.*\\/(httpd\\.conf|apache2|nginx\\.conf)"
+    - "\\bvi?m?\\s+.*\\/(etc\\/httpd|etc\\/apache2|etc\\/nginx)"
+  description: "Detects web root permission changes or configuration modifications"
+  remediation: "Review and confirm. Web server changes can expose the site to attacks."
+
+# ── Log Rotation & Archive ────────────────────────────────────────────────
+- id: TOOL_CMD_LOG_ROTATION
+  tools: [execute_shell_command]
+  params: [command]
+  category: evidence_destruction
+  severity: MEDIUM
+  patterns:
+    - "\\blogrotate\\s+.*--force"
+    - "\\bjournalctl\\s+.*--vacuum-time\\s+\\d+s"
+    - "\\brm\\s+.*\\/var\\/log\\/.*\\.(gz|bz2|old|\\d+)"
+  description: "Detects forced log rotation or log archive deletion"
+  remediation: "Alert user. Aggressive log cleanup may hide malicious activity."
+
+# ── Download & Execution Chain ────────────────────────────────────────
+- id: TOOL_CMD_DOWNLOAD_EXECUTE
+  tools: [execute_shell_command]
+  params: [command]
+  category: code_execution
+  severity: HIGH
+  patterns:
+    - "\\b(curl|wget|lwp-download)\\s+.*;.*\\b(bash|sh|python|perl|ruby|node)"
+    - "\\bgit\\s+clone\\s+.*\\|\\s*\\b(bash|sh|python)"
+    - "\\bscp\\s+.*~\\/\\."
+    - "\\bftp\\s+.*get\\s+.*;.*\\b(bash|sh|python|perl)"
+  description: "Detects download followed by execution (chain attack)"
+  remediation: "Block or require approval. Download-and-execute chains are common malware vectors."
+
+# ── Compression & Archive Bomb ──────────────────────────────────────────
+- id: TOOL_CMD_ARCHIVE_BOMB
+  tools: [execute_shell_command]
+  params: [command]
+  category: resource_abuse
+  severity: HIGH
+  patterns:
+    - "\\b(dd\\s+if=/dev/zero\\s+.*\\|(gzip|bzip2|xz)\\s+-c\\s+>\\s+.*\\.tar"
+    - "\\bpython\\s+.*compress.*\\>\\s+.*\\.(tar|gz|zip)"
+    - "\\byes\\s+.*\\|(compress|bzip2)\\s+>\\s+"
+  description: "Detects creation of compressed archives that may exhaust disk space"
+  remediation: "Block operation. Archive bombs can fill disk space and crash the system."
+
+# ── Binary Decompilation & Analysis ──────────────────────────────────────
+- id: TOOL_CMD_BINARY_ANALYSIS
+  tools: [execute_shell_command]
+  params: [command]
+  category: sensitive_file_access
+  severity: MEDIUM
+  patterns:
+    - "\\b(strings\\s+.*\\s*\\|\\s*(grep|egrep|awk)"
+    - "\\b(objdump|nm|readelf)\\s+.*\\s*\\|\\s*(grep|head|tail)"
+    - "\\bhexdump\\s+-n\\s+.*\\s*\\|\\s*(grep|cat)"
+    - "\\bgdb\\s+.*\\s*\\|\\s*(call|bt|quit)"
+  description: "Detects binary analysis or reverse engineering attempts"
+  remediation: "Monitor operation. Legitimate use is rare outside debugging."
+
+# ── Credential Dumping ────────────────────────────────────────────────────
+- id: TOOL_CMD_CREDENTIAL_DUMP
+  tools: [execute_shell_command]
+  params: [command]
+  category: sensitive_file_access
+  severity: CRITICAL
+  patterns:
+    - "\\bdump\\s+.*\\s+/etc\\/shadow"
+    - "\\bunshadow\\s+.*\\s*\\|\\s*awk"
+    - "\\bcat\\s+/etc\\/shadow"
+    - "\\bgetent\\s+shadow\\s+\\*"
+    - "\\b(cat\\s+/home/.*\\.ssh|ls\\s+/home/.*\\.ssh)"
+  description: "Detects attempts to dump password hashes or list SSH keys"
+  remediation: "Block immediately. Credential dumping enables offline cracking."
+
+# ── Certificate Signing Request ────────────────────────────────────────
+- id: TOOL_CMD_CSR_GENERATION
+  tools: [execute_shell_command]
+  params: [command]
+  category: code_execution
+  severity: MEDIUM
+  patterns:
+    - "\\bopenssl\\s+req\\s+-new"
+    - "\\bcertbot\\s+.*certonly"
+    - "\\bssh-keygen\\s+-t\\s+(rsa|ed25519|ecdsa)"
+  description: "Detects generation of new certificate signing requests or SSH keys"
+  remediation: "Monitor operation. Key generation should be tracked and approved."
+
+# ── Proxies & Tunnels ─────────────────────────────────────────────────────
+- id: TOOL_CMD_PROXY_TUNNEL
+  tools: [execute_shell_command]
+  params: [command]
+  category: network_abuse
+  severity: HIGH
+  patterns:
+    - "\\b(frpc|ngrok|proxychains|tor)\\s+"
+    - "\\bssh\\s+.*-D\\s+.*-N\\s+.*-L"
+    - "\\bnetcat\\s+.*-l\\s+-p"
+    - "\\bsocat\\s+.*TCP-LISTEN:"
+  description: "Detects proxy servers, tunneling tools, or port forwarders"
+  remediation: "Block or require approval. Unauthorized tunnels bypass network security."
+
+# ── Environment Variable Manipulation ──────────────────────────────────
+- id: TOOL_CMD_ENV_MANIPULATION
+  tools: [execute_shell_command]
+  params: [command]
+  category: privilege_escalation
+  severity: MEDIUM
+  patterns:
+    - "\\bexport\\s+.*(LD_PRELOAD|LD_LIBRARY_PATH|PATH)"
+    - "\\becho\\s+.*>\\s+/etc\\/environment"
+    - "\\bcrontab\\s+-l.*\\|.*cat\\s+.*>\\s+/etc\\/cron\\.d"
+  description: "Detects manipulation of environment variables or system-wide config"
+  remediation: "Review and confirm. Environment changes can affect all processes."
+
+# ── Clipboard & Input Hijacking ──────────────────────────────────────────
+- id: TOOL_CMD_INPUT_HIJACK
+  tools: [execute_shell_command]
+  params: [command]
+  category: resource_abuse
+  severity: MEDIUM
+  patterns:
+    - "\\bxdotool\\s+.*type"
+    - "\\bxdotool\\s+.*key\\s+.*\\+.*Window"
+    - "\\b(cat\\s+\\/dev\\/input\\/mice\\d+|/dev\\/input\\/event\\d+)"
+  description: "Detects automated input injection or mouse/keyboard simulation"
+  remediation: "Block operation. Automated input can interfere with user activity."
+
+# ── System Upgrade & Rollback ────────────────────────────────────────────
+- id: TOOL_CMD_SYSTEM_UPGRADE
+  tools: [execute_shell_command]
+  params: [command]
+  category: resource_abuse
+  severity: HIGH
+  patterns:
+    - "\\b(apt-get|yum|dnf)\\s+(dist-upgrade|upgrade|install.*-y)"
+    - "\\bdo-release-upgrade"
+    - "\\bpacman\\s+-Syu"
+    - "\\bzypper\\s+(dup|up)"
+  description: "Detects system-wide package upgrades"
+  remediation: "Confirm with user. Upgrades should be scheduled, not automated."
+
+# ── Backup Restoration ────────────────────────────────────────────────────
+- id: TOOL_CMD_BACKUP_RESTORE
+  tools: [execute_shell_command]
+  params: [command]
+  category: data_destruction
+  severity: HIGH
+  patterns:
+    - "\\b(tar\\s+-xp[f]{0,1}\\s+|restore\\s+.*\\/(home|root|etc))"
+    - "\\b(rsync\\s+--delete|cp\\s+-a.*--remove-destination)"
+    - "\\bmv\\s+.*\\s+\\/"
+    - "\\b(rm\\s+-rf\\s+)+\\s+.*\\s+\\bcmv\\s+.*\\s+/"
+  description: "Detects restoration of backups that may overwrite current files"
+  remediation: "Confirm with user. Backup restoration is destructive and irreversible."
+
+# ── Swap & Memory Management ─────────────────────────────────────────────
+- id: TOOL_CMD_MEMORY_OPS
+  tools: [execute_shell_command]
+  params: [command]
+  category: resource_abuse
+  severity: MEDIUM
+  patterns:
+    - "\\bswapoff\\s+-a"
+    - "\\bsysctl\\s+vm\\.swappiness.*=\\s*0"
+    - "\\becho\\s+3\\s*>\\s+/proc\\/sys\\/vm\\/drop_caches"
+    - "\\bfree\\s+-h.*&&\\bsync\\s+&&\\becho\\s+3"
+  description: "Detects swap manipulation or cache flushing"
+  remediation: "Monitor operation. Memory management changes can affect performance."
+
+# ── Device Mapper & LVM ────────────────────────────────────────────────
+- id: TOOL_CMD_LVM_OPS
+  tools: [execute_shell_command]
+  params: [command]
+  category: data_destruction
+  severity: HIGH
+  patterns:
+    - "\\blvremove\\b"
+    - "\\blvremove\\b"
+    - "\\blvchange\\s+-an"
+    - "\\bvgremove\\b"
+    - "\\bpvremove\\b"
+  description: "Detects LVM logical volume or volume group removal"
+  remediation: "Block operation. LVM removal destroys all data on volumes."
+
+# ── RAID Operations ──────────────────────────────────────────────────────
+- id: TOOL_CMD_RAID_OPS
+  tools: [execute_shell_command]
+  params: [command]
+  category: data_destruction
+  severity: HIGH
+  patterns:
+    - "\\bmdadm\\s+.*--stop"
+    - "\\bmdadm\\s+.*--remove"
+    - "\\bmdadm\\s+.*--zero-superblock"
+    - "\\braidstop\\b"
+  description: "Detects RAID array stopping or removal"
+  remediation: "Block operation. RAID operations can destroy data redundancy."
+
+# ── Kernel Module Signing ────────────────────────────────────────────────
+- id: TOOL_CMD_MODULE_SIGNING
+  tools: [execute_shell_command]
+  params: [command]
+  category: persistence
+  severity: HIGH
+  patterns:
+    - "\\b(keyctl\\s+.*add|sign-file\\s+.*\\.sig)"
+    - "\\bmodprobe\\s+.*--allow-unsupported"
+    - "\\bmodprobe\\s+.*-f"
+    - "\\becho\\s+.*>\\s+/sys/module/.*\\/parameters/sections"
+  description: "Detects kernel module signing or forced module loading"
+  remediation: "Block or require approval. Module signing bypass is a serious security risk."
+
+# ── Core Dump Manipulation ──────────────────────────────────────────────
+- id: TOOL_CMD_COREDUMP
+  tools: [execute_shell_command]
+  params: [command]
+  category: sensitive_file_access
+  severity: MEDIUM
+  patterns:
+    - "\\b(coredump\\s+.*\\b(grep|cat|strings))"
+    - "\\bcat\\s+/var\\/lib\\/systemd\\/coredump\\/.*"
+    - "\\bdebugfs\\s+.*\\/proc\\/kcore"
+  description: "Detects reading or analyzing core dump files"
+  remediation: "Alert user. Core dumps may contain sensitive data from memory."
+
+# ── Temporary File Cleanup ───────────────────────────────────────────────
+- id: TOOL_CMD_TEMP_CLEANUP
+  tools: [execute_shell_command]
+  params: [command]
+  category: evidence_destruction
+  severity: LOW
+  patterns:
+    - "\\brm\\s+-rf\\s+.*(\\/tmp|\\/var\\/tmp|\\/dev\\/shm)"
+    - "\\btmpwatch\\s+.*unlinked"
+  description: "Detects aggressive cleanup of temporary directories"
+  remediation: "Monitor operation. Cleaning /tmp may destroy evidence or active files."
+
+# ── SUID/SGID Binary Creation ────────────────────────────────────────────
+- id: TOOL_CMD_SUID_CREATION
+  tools: [execute_shell_command]
+  params: [command]
+  category: privilege_escalation
+  severity: HIGH
+  patterns:
+    - "\\bchmod\\s+[ug]s+s.*\\/(usr\\/bin|usr\\/sbin|\\/bin|\\/sbin)"
+    - "\\bchown\\s+root.*\\s+chmod\\s+[ug]s+s"
+    - "\\binstall\\s+.*-m\\s+4755"
+  description: "Detects creation of SUID/SGID binaries (privilege escalation backdoors)"
+  remediation: "Block operation. SUID binaries are a common persistence mechanism."
+
+# ── Script Interpreter Invocation ──────────────────────────────────────
+- id: TOOL_CMD_INTERPRETER_INVOCATION
+  tools: [execute_shell_command]
+  params: [command]
+  category: code_execution
+  severity: MEDIUM
+  patterns:
+    - "\\b(php\\s+-r|python\\s+-c|perl\\s+-e|ruby\\s+-e)\\s+.*\\<\\(http|ftp|file)"
+    - "\\beval\\s+.*\\$(curl|wget|cat)"
+    - "\\b\\$\\(curl|wget)\\s+.*\\|\\s*(bash|sh|python)"
+  description: "Detects dynamic code execution from remote sources"
+  remediation: "Block operation. Dynamic execution is a common malware technique."
+
+# ── Process Injection & Debugging ──────────────────────────────────────
+- id: TOOL_CMD_PROCESS_INJECTION
+  tools: [execute_shell_command]
+  params: [command]
+  category: resource_abuse
+  severity: HIGH
+  patterns:
+    - "\\b(gdb\\s+.*attach|strace\\s+.*-p|ltrace\\s+.*-p)"
+    - "\\b(gcore|kdumper|coredump)"
+    - "\\bptrace\\s+.*peek"
+    - "\\b/proc\\/\\d+\\/fd\\/.*\\b(cat|tail|less)"
+  description: "Detects process debugging, tracing, or memory dumping"
+  remediation: "Block operation. Process injection can intercept sensitive data."
+
+# ── Backup & Compression ─────────────────────────────────────────────────
+- id: TOOL_CMD_BACKUP_COMPRESSION
+  tools: [execute_shell_command]
+  params: [command]
+  category: data_destruction
+  severity: MEDIUM
+  patterns:
+    - "\\brsync\\s+.*-a\\s+--delete\\s+--exclude"
+    - "\\bborg\\s+.*--delete-excluded"
+    - "\\bcbackup\\s+--compress"
+  description: "Detects backup operations with deletion flags"
+  remediation: "Confirm with user. Backup with deletion can cause data loss."
+
+# ── Samba & Network Share ────────────────────────────────────────────────
+- id: TOOL_CMD_NETWORK_SHARE
+  tools: [execute_shell_command]
+  params: [command]
+  category: network_abuse
+  severity: MEDIUM
+  patterns:
+    - "\\b(smbpasswd|smbuseradd)\\s+.*-a"
+    - "\\bnet\\s+share\\s+(add|create).* Everyone=FULL"
+    - "\\bchmod\\s+777.*\\s+.*\\.(samba|nfs|cifs)"
+  description: "Detects creation of insecure network shares"
+  remediation: "Alert user. Unrestricted shares are a major security risk."
+
+# ── Secure Shell Utilities ───────────────────────────────────────────────
+- id: TOOL_CMD_SSH_UTILS
+  tools: [execute_shell_command]
+  params: [command]
+  category: network_abuse
+  severity: HIGH
+  patterns:
+    - "\\bssh\\s+(-o\\s+UserKnownHostsFile=no|-o\\s+StrictHostKeyChecking=no)"
+    - "\\bsftp\\s+.*-b"
+    - "\\bscp\\s+.*-o\\s*StrictHostKeyChecking=no"
+  description: "Detects SSH with host verification disabled"
+  remediation: "Block operation. Disabling host verification enables MITM attacks."
+
+# ── Database Backup Dump ────────────────────────────────────────────────
+- id: TOOL_CMD_DATABASE_BACKUP
+  tools: [execute_shell_command]
+  params: [command]
+  category: data_exfiltration
+  severity: HIGH
+  patterns:
+    - "\\b(mysqldump|pg_dump|mongoexport|redis-cli\\s+--save)\\s+.*>\\s+.*\\.(sql|json|bson)"
+    - "\\bcurl\\s+.*localhost:3306"
+    - "\\bpsql\\s+.*-c\\s+.*\\|\\s*gzip"
+  description: "Detects database dumps or data export to files"
+  remediation: "Confirm with user. Database dumps may contain sensitive information."
+
+# ── Service Restart Loops ───────────────────────────────────────────────
+- id: TOOL_CMD_SERVICE_LOOP
+  tools: [execute_shell_command]
+  params: [command]
+  category: resource_abuse
+  severity: HIGH
+  patterns:
+    - "\\bwatch\\s+-n\\s+\\d+.*systemctl\\s+restart"
+    - "\\bwhile\\s+true.*\\b(systemctl\\s+restart|service\\s+restart)"
+    - "\\bsleep\\s+.*\\s*;\\s*\\b(restart|reload)"
+  description: "Detects service restart loops that may cause instability"
+  remediation: "Block operation. Restart loops can degrade system performance."
+
+# ── Raw Socket Access ───────────────────────────────────────────────────
+- id: TOOL_CMD_RAW_SOCKET
+  tools: [execute_shell_command]
+  params: [command]
+  category: network_abuse
+  severity: HIGH
+  patterns:
+    - "\\bsocat\\s+.*SOCK-"
+    - "\\bnc\\s+.*-l\\s+-p\\s+.*-e\\s+.*(/bin/bash|/bin/sh)"
+    - "\\bpython\\s+-m\\s+socket.*\\.bind\\(\\s*0"
+  description: "Detects creation of raw sockets or network listeners"
+  remediation: "Block operation. Raw sockets can bypass firewall rules."
+
+# ── File Descriptor Manipulation ──────────────────────────────────────
+- id: TOOL_CMD_FD_MANIPULATION
+  tools: [execute_shell_command]
+  params: [command]
+  category: resource_abuse
+  severity: MEDIUM
+  patterns:
+    - "\\bulimit\\s+-n\\s+.*\\d+"
+    - "\\bprlimit\\s+.*nofile"
+    - "\\bclose\\s+.*\\d+>&-"
+  description: "Detects manipulation of file descriptor limits"
+  remediation: "Monitor operation. FD limits can affect system stability."
+
+# ── System Checksum Verification ────────────────────────────────────────
+- id: TOOL_CMD_CHECKSUM
+  tools: [execute_shell_command]
+  params: [command]
+  category: sensitive_file_access
+  severity: MEDIUM
+  patterns:
+    - "\\b(md5sum|sha1sum|sha256sum)\\s+.*\\s*\\|\\s*(head|awk|cut)"
+    - "\\bcksum\\s+.*\\s*\\|\\s*(cat|echo)"
+    - "\\bsha512sum\\s+.*\\s*\\|\\s*dd"
+  description: "Detects checksum verification or hash calculation"
+  remediation: "Monitor operation. Legitimate use is mostly verification tasks."
+
+# ── Git Repository Manipulation ────────────────────────────────────────
+- id: TOOL_CMD_GIT_MANIPULATION
+  tools: [execute_shell_command]
+  params: [command]
+  category: evidence_destruction
+  severity: MEDIUM
+  patterns:
+    - "\\bgit\\s+reset\\s+--hard"
+    - "\\bgit\\s+reflog\\s+expire"
+    - "\\bgit\\s+clean\\s+-fdx"
+    - "\\bgit\\s+filter-branch\\s+.*--force"
+  description: "Detects Git history destruction or repository cleanup"
+  remediation: "Alert user. Git history destruction loses all commit history."
+
+# ── Service Account Creation ────────────────────────────────────────────
+- id: TOOL_CMD_SERVICE_ACCOUNT
+  tools: [execute_shell_command]
+  params: [command]
+  category: privilege_escalation
+  severity: MEDIUM
+  patterns:
+    - "\\buseradd\\s+.*-r\\s+.*-s\\s+.*(bin\\/bash|\\/bin\\/sh)"
+    - "\\badduser\\s+.*--shell.*(bin\\/bash|\\/bin\\/sh)"
+    - "\\bnewusers\\s+.*-s.*\\/bin"
+  description: "Detects user account creation with shell access"
+  remediation: "Confirm with user. New shell accounts require approval."
+
+# ── Password Policy Manipulation ────────────────────────────────────────
+- id: TOOL_CMD_PASSWORD_POLICY
+  tools: [execute_shell_command]
+  params: [command]
+  category: privilege_escalation
+  severity: HIGH
+  patterns:
+    - "\\bchage\\s+.*-M\\s+\\d+.*-I\\s+-1"
+    - "\\bpasswd\\s+.*-e\\s+.*-n\\s+0"
+    - "\\busermod\\s+.*--lock\\s+.*unlock"
+  description: "Detects password policy weakening or account unlocking"
+  remediation: "Block operation. Weakening password policies is a security risk."
+
+# ── System Logging Bypass ───────────────────────────────────────────────
+- id: TOOL_CMD_LOGGING_BYPASS
+  tools: [execute_shell_command]
+  params: [command]
+  category: evidence_destruction
+  severity: MEDIUM
+  patterns:
+    - "\\bsystemctl\\s+stop\\s+(rsyslog|auditd|syslog-ng)"
+    - "\\bkillall\\s+.*-(syslog|auditd|rsyslog)"
+    - "\\brm\\s+.*\\/var\\/log\\/"
+  description: "Detects stopping of system logging services or log deletion"
+  remediation: "Block or alert. Logging bypass destroys audit trails."
+
+# ── Binary Instrumentation ──────────────────────────────────────────────
+- id: TOOL_CMD_BINARY_INSTRUMENTATION
+  tools: [execute_shell_command]
+  params: [command]
+  category: persistence
+  severity: HIGH
+  patterns:
+    - "\\bpatchelf\\s+.*--add-needed"
+    - "\\bfd\\s+.*\\bsuid"
+    - "\\bstrip\\s+.*\\s*/(usr\\/bin|usr\\/sbin)"
+    - "\\bobjcopy\\s+.*--strip-section"
+  description: "Detects binary instrumentation or stripping security features"
+  remediation: "Block operation. Binary modification is a persistence technique."
+
+# ── Symbolic Link Attacks ────────────────────────────────────────────────
+- id: TOOL_CMD_SYMLINK_ATTACK
+  tools: [execute_shell_command]
+  params: [command]
+  category: privilege_escalation
+  severity: HIGH
+  patterns:
+    - "\\blink\\s+-s.*\\/(etc\\/cron\\.d|systemd\\/system|\\/etc\\/init\\.d)"
+    - "\\blink\\s+-s.*\\/(usr\\/bin\\/.*|\\/usr\\/sbin\\/.*|\\/bin\\/.*|\\/sbin\\/.*\\s*)"
+    - "\\bfind\\s+.*\\-type\\s+f\\s+.*\\-exec\\s+ln\\s+-sf"
+  description: "Detects symlink creation to critical system paths or binaries"
+  remediation: "Block or require approval. Symlink attacks can escalate privileges."
+
+# ── Process Name Masquerading ────────────────────────────────────────────
+- id: TOOL_CMD_PROCESS_MASQUERADE
+  tools: [execute_shell_command]
+  params: [command]
+  category: persistence
+  severity: MEDIUM
+  patterns:
+    - "\\bmv\\s+.*(httpd|sshd|nginx)\\s+.*\\b(httpd|sshd|nginx)_old"
+    - "\\bcp\\s+.*(httpd|sshd|nginx)\\s+.*\\/tmp\\/.*(httpd|sshd|nginx)"
+    - "\\bexport\\s+HISTFILE=/dev/null"
+  description: "Detects binary renaming or history hiding to masquerade processes"
+  remediation: "Alert user. Process masquerading hides malicious activity."
+
+# ── Backup Restoration ───────────────────────────────────────────────────
+- id: TOOL_CMD_RESTORE
+  tools: [execute_shell_command]
+  params: [command]
+  category: data_destruction
+  severity: HIGH
+  patterns:
+    - "\\b(tar\\s+x(p|f)\\s+.*\\s*\\|\\s*\\b(tar\\s+x(p|f))"
+    - "\\brestore\\s+.*\\/.*\\s+(\\/|\\\\|~\\|home)"
+    - "\\brsync\\s+--delete\\s+.*\\s+.*\\/(root|home|etc)"
+    - "\\bcrobocopy\\s+.*\\/mir"
+  description: "Detects backup restoration or mirroring operations"
+  remediation: "Confirm with user. Restoration can overwrite current files."
+
+# ── Boot Configuration ────────────────────────────────────────────────────
+- id: TOOL_CMD_BOOT_CONFIG
+  tools: [execute_shell_command]
+  params: [command]
+  category: persistence
+  severity: HIGH
+  patterns:
+    - "\\bupdate-grub\\s+.*\\/etc\\/default\\/grub"
+    - "\\bgrub-mkconfig\\s+-o"
+    - "\\becho\\s+.*>\\s+\\/etc\\/default\\/grub"
+    - "\\bkernel\\s+.*\\/vmlinuz"
+  description: "Detects boot loader configuration modifications"
+  remediation: "Block or require approval. Boot config changes can prevent system startup."
+
+# ── Domain Name System ────────────────────────────────────────────────
+- id: TOOL_CMD_DNS_ATTACK
+  tools: [execute_shell_command]
+  params: [command]
+  category: network_abuse
+  severity: MEDIUM
+  patterns:
+    - "\\bnslookup\\s+.*\\|\\s*\\b(grep|awk|sed)"
+    - "\\bdig\\s+.*\\|\\s*\\b(axfr|dns|ns)"
+    - "\\bhost\\s+.*-t\\s+.*(axfr|ns|dns)"
+  description: "Detects DNS reconnaissance or zone transfer attempts"
+  remediation: "Alert user. DNS reconnaissance is common in attack preparation."
+
+# ── Network Port Scanning ──────────────────────────────────────────────
+- id: TOOL_CMD_PORT_SCAN
+  tools: [execute_shell_command]
+  params: [command]
+  category: network_abuse
+  severity: MEDIUM
+  patterns:
+    - "\\b(nc\\s+-z\\s+-v\\s+.*\\d+"
+    - "\\b(nmap|masscan)\\s+.*-p\\s+-"
+    - "\\bnetcat\\s+-z\\s+.*\\d+"
+  description: "Detects port scanning or network discovery"
+  remediation: "Alert user. Port scanning may precede attacks."
+
+# ── Database Connection ───────────────────────────────────────────────────
+- id: TOOL_CMD_DATABASE_CONNECTION
+  tools: [execute_shell_command]
+  params: [command]
+  category: data_exfiltration
+  severity: MEDIUM
+  patterns:
+    - "\\b(mysql|psql|redis-cli|mongo)\\s+.*-h.*-P"
+    - "\\bpsql\\s+.*-c.*\\\\\"(SELECT|INSERT|UPDATE|DELETE)"
+    - "\\bbcp\\s+.*copy.*database"
+  description: "Detects direct database connections or queries"
+  remediation: "Monitor operation. Direct DB access should be logged and approved."
+
+# ── File Transfer Protocol ────────────────────────────────────────────────
+- id: TOOL_CMD_FTP
+  tools: [execute_shell_command]
+  params: [command]
+  category: data_exfiltration
+  severity: MEDIUM
+  patterns:
+    - "\\b(ftp|tftp|sftp|lftp)\\s+.*put\\s+"
+    - "\\blftp\\s+.*mput\\s+"
+    - "\\bftp\\s+.*get\\s+.*\\/(\\/etc\\/|\\/home\\/|\\/root\\/)"
+  description: "Detects file transfers via FTP/TFTP"
+  remediation: "Confirm with user. FTP transfers are unencrypted and insecure."
+
+# ── Remote Code Execution ───────────────────────────────────────────────
+- id: TOOL_CMD_RCE
+  tools: [execute_shell_command]
+  params: [command]
+  category: code_execution
+  severity: CRITICAL
+  patterns:
+    - "\\b(eval\\s+\\$\\(curl|wget|cat)"
+    - "\\b\\$\\(curl|wget)\\s+.*\\|\\s*\\b(bash|sh|python|perl|ruby)"
+    - "\\bpowershell\\s+-c\\s+.*\\(curl|wget|iex)"
+    - "\\bpython\\s+-c\\s+.*import\\s+requests"
+  description: "Detects remote code execution patterns"
+  remediation: "Block immediately. RCE is the most critical vulnerability type."
+
+# ── Web Application Firewall ──────────────────────────────────────────────
+- id: TOOL_CMD_WAF
+  tools: [execute_shell_command]
+  params: [command]
+  category: network_abuse
+  severity: MEDIUM
+  patterns:
+    - "\\bmodsecurity\\s+(ctl\\s+--remove|disable)"
+    - "\\b(waf\\s+disable|firewall\\s+disable)"
+    - "\\baiptables\\s+.*-D\\s+INPUT\\s+-j\\s+DROP"
+  description: "Detects disabling of WAF or firewall rules"
+  remediation: "Block or alert. Disabling security protections exposes the system."
+
+# ── Intrusion Detection System ────────────────────────────────────────────
+- id: TOOL_CMD_IDS
+  tools: [execute_shell_command]
+  params: [command]
+  category: evidence_destruction
+  severity: HIGH
+  patterns:
+    - "\\bkillall\\s+.*-(ossec|fail2ban|snort|suricata)"
+    - "\\bservice\\s+(stop|disable|mask)"
+    - "\\bjournalctl\\s+.*disable"
+  description: "Detects stopping or disabling of IDS/IPS services"
+  remediation: "Block or alert. Disabling IDS prevents threat detection."
+
+# ── Security Information Event Management ──────────────────────────────
+- id: TOOL_CMD_SIEM
+  tools: [execute_shell_command]
+  params: [command]
+  category: evidence_destruction
+  severity: MEDIUM
+  patterns:
+    - "\\btruncate\\s+.*\\.(log|audit)"
+    - "\\brm\\s+.*\\/(var\\/log\\/audit|\\/var\\/log\\/secure)"
+    - "\\blogrotate\\s+.*--force"
+  description: "Detects forced log rotation or audit log deletion"
+  remediation: "Alert user. Audit log destruction destroys forensic evidence."
+
+# ── Privilege Escalation ────────────────────────────────────────────────
+- id: TOOL_CMD_ESCALATION
+  tools: [execute_shell_command]
+  params: [command]
+  category: privilege_escalation
+  severity: CRITICAL
+  patterns:
+    - "\\bsudo\\s+.*visudo"
+    - "\\bpolkit\\s+.*add-action"
+    - "\\busermod\\s+.*-aG\\s+sudo"
+    - "\\bgpasswd\\s+.*-a\\s+.*sudo"
+    - "\\bchown\\s+root:root"
+  description: "Detects privilege escalation attempts"
+  remediation: "Block immediately. Privilege escalation is a critical security threat."
+
+# ── Data Destruction ─────────────────────────────────────────────────────
+- id: TOOL_CMD_DATA_DESTRUCTION
+  tools: [execute_shell_command]
+  params: [command]
+  category: data_destruction
+  severity: CRITICAL
+  patterns:
+    - "\\bdd\\s+if=/dev\\/zero\\s+of=.*\\s+bs=\\d+"
+    - "\\bshred\\s+-u\\s+-z"
+    - "\\bwipe\\s+.*-s\\s+zero"
+    - "\\brm\\s+-rf\\s+.*\\s+(\\/|\\\\).*\\.(db|sql|mdb)"
+  description: "Detects data wiping or destruction commands"
+  remediation: "Block immediately. Data destruction is irreversible."
+
+# ── System Shutdown ───────────────────────────────────────────────────────
+- id: TOOL_CMD_SHUTDOWN
+  tools: [execute_shell_command]
+  params: [command]
+  category: resource_abuse
+  severity: HIGH
+  patterns:
+    - "\\bshutdown\\s+.*(-h\\s+now|-P\\s+0|poweroff|halt)"
+    - "\\breboot\\s+.*(-f|now)"
+    - "\\bsystemctl\\s+(poweroff|reboot|halt)"
+    - "\\binit\\s+0"
+  description: "Detects system shutdown or reboot commands"
+  remediation: "Block or require confirmation. System shutdown disrupts availability."
+
+# ── Network Attack Tools ────────────────────────────────────────────────────
+- id: TOOL_CMD_NETWORK_ATTACK_TOOLS
+  tools: [execute_shell_command]
+  params: [command]
+  category: network_abuse
+  severity: HIGH
+  patterns:
+    - "\\b(hping3?|nping|masscan)\\s+.*flood"
+    - "\\b(slowloris|goldeneye)\\b"
+    - "\\b(sqlmap|nmap|metasploit|msfconsole)\\b"
+    - "\\b(hydra\\s+.*-L)"
+    - "\\bmedusa\\b"
+  description: "Detects network attack or penetration testing tools"
+  remediation: "Block immediately. Attack tools may be illegal or violate policy."
+
+# ── Security Tool Tampering ───────────────────────────────────────────────
+- id: TOOL_CMD_SECURITY_TAMPERING
+  tools: [execute_shell_command]
+  params: [command]
+  category: evidence_destruction
+  severity: HIGH
+  patterns:
+    - "\\bsetenforce\\s+0"
+    - "\\bapparmor\\s+.*-d"
+    - "\\bselinuxconfigured\\s+0"
+    - "\\b(rm\\s+.*\\/etc\\/selinux)"
+  description: "Detects disabling or weakening of SELinux or AppArmor"
+  remediation: "Block or require approval. Disabling security frameworks is dangerous."
+
+# ── Container Security ───────────────────────────────────────────────────
+- id: TOOL_CMD_CONTAINER_SECURITY
+  tools: [execute_shell_command]
+  params: [command]
+  category: resource_abuse
+  severity: HIGH
+  patterns:
+    - "\\bdocker\\s+rm\\s+-f"
+    - "\\bdocker\\s+run\\s+.*--privileged"
+    - "\\bdocker\\s+run\\s+.*-v\\s+.*:/:/"
+    - "\\bkubectl\\s+delete\\s+.*--all"
+    - "\\bdocker\\s+system\\s+prune\\s+-a"
+  description: "Detects dangerous container operations"
+  remediation: "Block or require confirmation. Container operations can be destructive."
+
+# ── Information Disclosure ───────────────────────────────────────────────
+- id: TOOL_CMD_INFO_DISCLOSURE
+  tools: [execute_shell_command]
+  params: [command]
+  category: sensitive_file_access
+  severity: MEDIUM
+  patterns:
+    - "\\bcat\\s+.*\\/(etc\\/passwd|etc\\/shadow|etc\\/group)"
+    - "\\bgetent\\s+(passwd|shadow|group|hosts)"
+    - "\\benv\\s+\\|\\s+grep\\s+-i\\s+(pass|key|secret|token)"
+    - "\\bps\\s+auxe\\s+\\|\\s+grep\\s+(pass|key|secret|token)"
+  description: "Detects attempts to read sensitive system information"
+  remediation: "Alert user. Information disclosure can aid credential theft."
+
+# ── Persistence ────────────────────────────────────────────────────────
+- id: TOOL_CMD_PERSISTENCE
+  tools: [execute_shell_command]
+  params: [command]
+  category: persistence
+  severity: HIGH
+  patterns:
+    - "\\becho\\s+.*\\|\\s*crontab\\s+-"
+    - "\\bat\\s+.*\\s+\\~\\/(cron|at|periodic)"
+    - "\\bsystemctl\\s+enable\\s+.*\\.(service|timer)"
+    - "\\bln\\s+-sf\\s+.*systemd\\/system"
+    - "\\bupdate-rc\\.d\\s+.*defaults"
+  description: "Detects persistence mechanisms (cron, systemd, init)"
+  remediation: "Block or require approval. Persistence maintains attacker access."
+
+# ── Data Exfiltration ───────────────────────────────────────────────────
+- id: TOOL_CMD_DATA_EXFILTRATION
+  tools: [execute_shell_command]
+  params: [command]
+  category: data_exfiltration
+  severity: HIGH
+  patterns:
+    - "\\b(nc\\s+.*-l\\s+\\d+.*<.*"
+    - "\\bsocat\\s+.*TCP-L:"
+    - "\\bftp\\s+.*put\\s+"
+    - "\\b(curl|wget|scp)\\s+.*external"
+    - "\\bgit\\s+push\\s+.*github.*\\.git"
+  description: "Detects data transfer to external systems"
+  remediation: "Block or alert. Data exfiltration indicates data theft."
+
+# ── System Monitoring ────────────────────────────────────────────────────
+- id: TOOL_CMD_MONITORING
+  tools: [execute_shell_command]
+  params: [command]
+  category: sensitive_file_access
+  severity: LOW
+  patterns:
+    - "\\b(ps\\s+aux|top\\s+-b\\s+-n\\s+1)"
+    - "\\bhtop\\b"
+    - "\\biostat\\b"
+    - "\\bvmstat\\b"
+    - "\\bnetstat\\s+.*-tulpn"
+  description: "Detects system monitoring commands"
+  remediation: "Allow. Monitoring is usually legitimate system administration."
+
+# ── Debugging Tools ───────────────────────────────────────────────────────
+- id: TOOL_CMD_DEBUGGING
+  tools: [execute_shell_command]
+  params: [command]
+  category: sensitive_file_access
+  severity: LOW
+  patterns:
+    - "\\bstrace\\s+.*-p\\s+\\d+"
+    - "\\bgdb\\s+.*attach"
+    - "\\bltrace\\s+.*-p\\s+\\d+"
+    - "\\b(objdump|nm|readelf)\\s+.*"
+  description: "Detects debugging or tracing tools"
+  remediation: "Allow with monitoring. Debugging tools are used for troubleshooting."
+
+# ── Network Tools ───────────────────────────────────────────────────────
+- id: TOOL_CMD_NETWORK_TOOLS
+  tools: [execute_shell_command]
+  params: [command]
+  category: sensitive_file_access
+  severity: LOW
+  patterns:
+    - "\\bping\\s+.*-c\\s+\\d+"
+    - "\\btraceroute\\s+.*-n"
+    - "\\bnslookup\\s+.*\\|\\s*head"
+    - "\\bnetstat\\s+.*-rn"
+    - "\\bss\\s+.*-t\\s+ulpn"
+  description: "Detects network diagnostic tools"
+  remediation: "Allow. Network tools are used for troubleshooting."

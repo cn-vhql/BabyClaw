@@ -49,12 +49,6 @@
   border-radius: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   overflow: hidden;
-  transition: all 0.2s ease-in-out;
-
-  &:hover {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-    border-color: #d9d9d9;
-  }
 }
 
 /* ---- Toolbar ---- */
@@ -66,11 +60,6 @@
   padding: 16px 24px;
   background: #fafafa;
   border-bottom: 1px solid #f0f0f0;
-  transition: background 0.2s ease-in-out;
-
-  &:hover {
-    background: #f5f5f5;
-  }
 }
 
 .toolbarLeft {
@@ -106,35 +95,16 @@
   gap: 16px;
   padding: 12px 24px;
   border-bottom: 1px solid #f5f5f5;
-  transition: all 0.2s ease-in-out;
   flex-wrap: wrap;
 
   &:last-child {
     border-bottom: none;
-  }
-
-  &:hover {
-    background: #fafbfc;
-    transform: translateX(2px);
   }
 }
 
 .envRowSelected {
   background: #e6f4ff;
   border-left: 3px solid #1677ff;
-
-  &:hover {
-    background: #d6eaff;
-    transform: translateX(2px);
-  }
-}
-
-.envRowSelected {
-  background: #e6f4ff;
-
-  &:hover {
-    background: #d6eaff;
-  }
 }
 
 .rowCheckbox {
@@ -160,12 +130,10 @@
   border-radius: 8px;
   background: #fff;
   overflow: hidden;
-  transition: all 0.2s ease-in-out;
 
   &:focus-within {
     border-color: #615ced;
     box-shadow: 0 0 0 2px rgba(97, 92, 237, 0.2);
-    transform: translateY(-1px);
   }
 }
 
@@ -207,7 +175,6 @@
   background: #fafafa;
   min-width: 60px;
   text-align: center;
-  transition: all 0.2s ease-in-out;
 
   .inputGroup:focus-within & {
     color: #615ced;
@@ -226,7 +193,6 @@
   font-size: 14px;
   background: transparent;
   padding-left: 12px;
-  transition: all 0.2s ease-in-out;
 
   &::placeholder {
     color: #bfbfbf;
@@ -241,7 +207,6 @@
     font-family: "SF Mono", "Menlo", "Consolas", monospace;
     font-size: 14px;
     padding-left: 12px;
-    transition: all 0.2s ease-in-out;
 
     &::placeholder {
       color: #bfbfbf;
@@ -260,7 +225,6 @@
   background: transparent;
   cursor: pointer;
   color: #999;
-  transition: all 0.2s ease-in-out;
   border-radius: 4px;
 
   &:hover {
@@ -290,13 +254,10 @@
   cursor: pointer;
   font-size: 16px;
   color: #c0c0c0;
-  transition: all 0.2s ease-in-out;
 
   &:hover {
     color: #615ced;
     background: #f0f0ff;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(97, 92, 237, 0.15);
   }
 }
 
@@ -304,8 +265,6 @@
   &:hover {
     color: #ff4d4f;
     background: #fff1f0;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(255, 77, 79, 0.15);
   }
 }
 
@@ -327,11 +286,6 @@
   padding: 16px 24px;
   border-top: 1px solid #f0f0f0;
   background: #fafafa;
-  transition: background 0.2s ease-in-out;
-
-  &:hover {
-    background: #f5f5f5;
-  }
 }
 
 .addBtn {
@@ -345,14 +299,11 @@
   cursor: pointer;
   font-size: 14px;
   color: #999;
-  transition: all 0.2s ease-in-out;
 
   &:hover {
     color: #615ced;
     border-color: #615ced;
     background: #f0f0ff;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(97, 92, 237, 0.15);
   }
 
   svg {
@@ -392,21 +343,12 @@
     background: #1f1f1f;
     border-color: rgba(255, 255, 255, 0.1);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-
-    &:hover {
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-      border-color: rgba(255, 255, 255, 0.15);
-    }
   }
 
   /* Toolbar */
   .toolbar {
     background: rgba(255, 255, 255, 0.03);
     border-bottom-color: rgba(255, 255, 255, 0.08);
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.05);
-    }
   }
 
   .toolbarCount {
@@ -416,19 +358,11 @@
   /* Env row */
   .envRow {
     border-bottom-color: rgba(255, 255, 255, 0.06);
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.04);
-    }
   }
 
   .envRowSelected {
     background: rgba(22, 119, 255, 0.12);
     border-left-color: #4096ff;
-
-    &:hover {
-      background: rgba(22, 119, 255, 0.18);
-    }
   }
 
   /* Input group (Key / Value 外框) */
@@ -504,10 +438,6 @@
   .addBar {
     background: rgba(255, 255, 255, 0.02);
     border-top-color: rgba(255, 255, 255, 0.08);
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.04);
-    }
   }
 
   .addBtn {

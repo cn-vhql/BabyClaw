@@ -366,7 +366,7 @@
     "welcomeGreeting": "Welcome Greeting",
     "welcomeText": "Welcome Message",
     "welcomeTextTooltip": "Message automatically sent when a user enters a single chat session with the bot for the first time that day",
-    "welcomeTextPlaceholder": "e.g. Hello! I'm CoPaw. How can I help you?",
+    "welcomeTextPlaceholder": "e.g. Hello! I'm BabyClaw. How can I help you?",
     "loginWeCom": "Authorize WeCom Bot via QR Code",
     "wecomAuthHint": "Click the button to open the WeCom QR code window. After scanning and confirming, Bot ID and Secret will be filled in automatically.",
     "wecomAuthSuccess": "WeCom bot authorized successfully",
@@ -703,7 +703,7 @@
     }
   },
   "chat": {
-    "disclaimer": "Works for you, grows with you",
+    "disclaimer": "Grow with BabyClaw",
     "greeting": "Hello, how can I help you today?",
     "description": "I am a helpful assistant that can help you with your questions.",
     "prompt1": "Let's start a new journey!",
@@ -834,7 +834,7 @@
     }
   },
   "login": {
-    "title": "Login to CoPaw",
+    "title": "Login to BabyClaw",
     "registerTitle": "Create Account",
     "firstUserHint": "Create your admin account to get started",
     "usernamePlaceholder": "Username",
