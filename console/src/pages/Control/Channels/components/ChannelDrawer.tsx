@@ -57,13 +57,12 @@ const CHANNELS_WITH_ACCESS_CONTROL: ChannelKey[] = [
 
 // Doc EN URLs per channel (anchors on https://copaw.agentscope.io/docs/channels)
 const CHANNEL_DOC_EN_URLS: Partial<Record<ChannelKey, string>> = {
-  dingtalk:
-    "https://copaw.agentscope.io/docs/channels/?lang=en#DingTalk-recommended",
-  feishu: "https://copaw.agentscope.io/docs/channels/?lang=en#Feishu-Lark",
+  dingtalk: "https://www.dingtalk.com/",
+  feishu: "https://accounts.feishu.cn/",
   imessage:
     "https://copaw.agentscope.io/docs/channels/?lang=en#iMessage-macOS-only",
   discord: "https://copaw.agentscope.io/docs/channels/?lang=en#Discord",
-  qq: "https://copaw.agentscope.io/docs/channels/?lang=en#QQ",
+  qq: "https://q.qq.com/qqbot/openclaw/login.html",
   telegram: "https://copaw.agentscope.io/docs/channels/?lang=en#Telegram",
   mqtt: "https://copaw.agentscope.io/docs/channels/?lang=en#MQTT",
   mattermost: "https://copaw.agentscope.io/docs/channels/?lang=en#Mattermost",
