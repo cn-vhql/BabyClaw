@@ -58,7 +58,7 @@ class JsonEvolutionRepository:
         return None
 
     async def save_record(self, record: EvolutionRecord) -> None:
-        """Save evolution record."""
+        """Save evolution record (update if exists, insert if new)."""
         # Read existing data
         if self.index_file.exists():
             try:
@@ -69,8 +69,25 @@ class JsonEvolutionRepository:
         else:
             data = {"version": 1, "records": []}
 
-        # Insert record at the beginning
-        data["records"].insert(0, record.model_dump(mode="json"))
+        # Check if record already exists
+        record_id = record.id
+        existing_index = None
+        for i, existing_record in enumerate(data.get("records", [])):
+            if existing_record.get("id") == record_id:
+                existing_index = i
+                break
+
+        # Convert record to dict
+        record_dict = record.model_dump(mode="json")
+
+        if existing_index is not None:
+            # Update existing record
+            data["records"][existing_index] = record_dict
+            logger.debug(f"Updated existing record: {record_id}")
+        else:
+            # Insert new record at the beginning
+            data["records"].insert(0, record_dict)
+            logger.debug(f"Inserted new record: {record_id}")
 
         # Update generation count if successful
         if record.status == "success":

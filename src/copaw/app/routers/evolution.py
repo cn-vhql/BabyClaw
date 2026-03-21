@@ -103,13 +103,31 @@ async def run_evolution(
 
     # Get current generation for the new record
     generation = await repo.get_current_generation()
+    next_generation = generation + 1
+
+    # Check max_generations limit
+    max_gen = workspace.config.evolution.max_generations
+    if max_gen is not None and max_gen > 0 and next_generation > max_gen:
+        # Return a failed record immediately
+        from datetime import datetime
+
+        record = EvolutionRecord(
+            generation=next_generation,
+            agent_id=workspace.agent_id,
+            agent_name=workspace.config.name,
+            timestamp=datetime.now(),
+            trigger_type=req.trigger_type,
+            status="failed",
+            error_message=f"已达到最大代数限制 ({max_gen})",
+        )
+        await repo.save_record(record)
+        return record.model_dump(mode="json")
 
     # Create a running record immediately
-    from .models import EvolutionRecord
     from datetime import datetime
 
     record = EvolutionRecord(
-        generation=generation + 1,
+        generation=next_generation,
         agent_id=workspace.agent_id,
         agent_name=workspace.config.name,
         timestamp=datetime.now(),
@@ -127,10 +145,14 @@ async def run_evolution(
                 workspace=workspace,
                 repo=repo,
             )
-            await executor.execute(req)
+            # Pass the existing record so executor updates it instead of creating a new one
+            await executor.execute_with_record(req, record)
         except Exception as e:
             import logging
-            logging.getLogger(__name__).error(f"Background evolution failed: {e}", exc_info=True)
+
+            logging.getLogger(__name__).error(
+                f"Background evolution failed: {e}", exc_info=True
+            )
 
     background_tasks.add_task(run_evolution_background)
 
@@ -162,7 +184,7 @@ async def delete_evolution_record(
     record_id: str,
     request: Request,
 ) -> dict:
-    """Delete a failed evolution record."""
+    """Delete a failed or running evolution record."""
     from ..agent_context import get_agent_for_request
 
     workspace = await get_agent_for_request(request)
@@ -173,11 +195,11 @@ async def delete_evolution_record(
     if not record:
         raise HTTPException(status_code=404, detail="Record not found")
 
-    # Only allow deleting failed records
-    if record.status != "failed":
+    # Allow deleting failed and running records
+    if record.status not in ["failed", "running"]:
         raise HTTPException(
             status_code=400,
-            detail=f"Can only delete failed records, current status: {record.status}"
+            detail=f"Can only delete failed or running records, current status: {record.status}"
         )
 
     # Delete the record

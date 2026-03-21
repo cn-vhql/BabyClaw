@@ -277,7 +277,10 @@ const chatSpecToSession = (chat: ChatSpec): ExtendedSession =>
     userId: chat.user_id,
     channel: chat.channel,
     messages: [],
-    meta: chat.meta || {},
+    meta: {
+      ...(chat.meta || {}),
+      is_evolution: chat.is_evolution || false,
+    },
     status: chat.status ?? "idle",
   }) as ExtendedSession;
 
@@ -719,6 +722,12 @@ class SessionApi implements IAgentScopeRuntimeWebUISessionAPI {
     const existing = this.sessionList.find((s) => s.id === sessionId) as
       | ExtendedSession
       | undefined;
+
+    // Check if this is an evolution session - prevent deletion
+    if (existing?.meta?.is_evolution) {
+      console.warn("Cannot delete evolution session");
+      return [...this.sessionList];
+    }
 
     // Use realId (UUID) when available; skip backend call for pure local sessions
     const deleteId =

@@ -47,6 +47,11 @@ class ChatSpec(BaseModel):
         exclude=True,
     )
 
+    @property
+    def is_evolution(self) -> bool:
+        """Check if this is an evolution chat."""
+        return self.meta.get("is_evolution", False)
+
 
 class ChatHistory(BaseModel):
     """Complete chat view with spec and state."""

@@ -9,6 +9,7 @@ export interface ChatSpec {
   updated_at: string | null; // Chat last update timestamp (ISO 8601)
   meta?: Record<string, unknown>; // Additional metadata
   status?: ChatStatus; // Conversation status: idle or running
+  is_evolution?: boolean; // Whether this is an evolution chat
 }
 
 export interface Message {

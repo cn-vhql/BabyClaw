@@ -41,6 +41,80 @@ class EvolutionExecutor:
         self._tool_execution_log: list[dict] = []
         self._full_output: str = ""
 
+    async def execute_with_record(
+        self,
+        request: EvolutionRunRequest,
+        record: EvolutionRecord,
+    ) -> EvolutionRecord:
+        """Execute evolution using an existing record (created by API).
+
+        Args:
+            request: Evolution run request
+            record: Pre-created record (usually with status="running")
+
+        Returns:
+            Updated record with final status
+        """
+        self._current_record = record
+        self._tool_execution_log = []
+        self._full_output = ""
+
+        # Snapshot files before evolution
+        await self._snapshot_before()
+
+        # Create or update evolution chat
+        await self._ensure_evolution_chat()
+
+        # Build evolution prompt (using SOUL.md content)
+        evolution_prompt = await self._build_evolution_prompt(
+            request,
+            record.generation - 1,  # Current generation is record.generation - 1
+        )
+
+        # Use unified session_id for all evolutions
+        evolution_session_id = f"evolution:{self.workspace.agent_id}"
+
+        try:
+            start_time = datetime.now()
+
+            # Execute agent reasoning
+            agent_request = {
+                "input": [
+                    {
+                        "role": "user",
+                        "content": [{"type": "text", "text": evolution_prompt}],
+                    },
+                ],
+                "session_id": evolution_session_id,
+                "user_id": "evolution_system",
+            }
+
+            async for event in self.workspace.runner.stream_query(agent_request):
+                await self._process_event(event)
+
+            # Finalize evolution
+            await self._finalize_evolution(start_time)
+
+        except asyncio.TimeoutError:
+            self._current_record.status = "failed"
+            self._current_record.error_message = "Execution timeout"
+            logger.error(
+                f"Evolution timeout: {self.workspace.agent_id} gen {record.generation}"
+            )
+
+        except Exception as e:
+            self._current_record.status = "failed"
+            self._current_record.error_message = str(e)
+            logger.error(f"Evolution failed: {e}", exc_info=True)
+
+        finally:
+            # Update record (not save new one)
+            await self.repo.save_record(self._current_record)
+            if self.workspace.config.evolution.archive_enabled:
+                await self._create_archive()
+
+        return self._current_record
+
     async def execute(self, request: EvolutionRunRequest) -> EvolutionRecord:
         """Execute one evolution cycle."""
         agent_id = self.workspace.agent_id
@@ -82,8 +156,14 @@ class EvolutionExecutor:
         # Snapshot files before evolution
         await self._snapshot_before()
 
+        # Create or update evolution chat
+        await self._ensure_evolution_chat()
+
         # Build evolution prompt (using SOUL.md content)
         evolution_prompt = await self._build_evolution_prompt(request, generation)
+
+        # Use unified session_id for all evolutions
+        evolution_session_id = f"evolution:{self.workspace.agent_id}"
 
         try:
             start_time = datetime.now()
@@ -96,7 +176,7 @@ class EvolutionExecutor:
                         "content": [{"type": "text", "text": evolution_prompt}],
                     },
                 ],
-                "session_id": f"evolution:{self._current_record.id}",
+                "session_id": evolution_session_id,
                 "user_id": "evolution_system",
             }
 
@@ -229,55 +309,170 @@ class EvolutionExecutor:
         return None
 
     async def _process_event(self, event) -> None:
-        """Process agent output event."""
-        # event is an AgentResponse object with output: List[Message]
-        if not hasattr(event, "output") or not event.output:
+        """Process agent output event.
+
+        Args:
+            event: Can be AgentResponse, Message, TextContent, ToolCallContent, etc.
+        """
+        event_class = type(event).__name__
+        logger.debug(f"Processing event: {event_class}")
+
+        # TextContent - direct text content (delta streaming)
+        if event_class == "TextContent":
+            text = getattr(event, "text", "")
+            if text:
+                self._full_output += text
+                if len(self._current_record.output_summary) < 500:
+                    self._current_record.output_summary += text[:200]
+                logger.debug(f"TextContent: {len(text)} chars")
             return
 
-        for msg in event.output:
-            # Msg.content is a list of blocks (ToolUseBlock, ToolResultBlock, TextBlock, etc.)
-            content = getattr(msg, "content", None)
-            if not content or not isinstance(content, list):
-                continue
+        # Message - contains content blocks
+        if event_class == "Message":
+            content = getattr(event, "content", None)
+            if not content:
+                return
 
-            for block in content:
-                # Each block should have a 'type' field
-                block_type = block.get("type") if isinstance(block, dict) else getattr(block, "type", None)
+            # content can be a list of blocks
+            if isinstance(content, list):
+                for block in content:
+                    # Block can be dict or object (with model_dump method)
+                    if isinstance(block, dict):
+                        self._process_block_dict(block)
+                    elif hasattr(block, "model_dump"):
+                        # Convert Pydantic model to dict
+                        block_dict = block.model_dump()
+                        if isinstance(block_dict, dict):
+                            self._process_block_dict(block_dict)
+                        else:
+                            logger.debug(f"model_dump returned non-dict: {type(block_dict)}")
+                    else:
+                        logger.debug(f"Non-dict content block: {type(block)}")
+            return
 
-                # Tool use block (tool call)
-                if block_type == "tool_use":
-                    self._current_record.tool_calls_count += 1
-                    tool_name = block.get("name") if isinstance(block, dict) else getattr(block, "name", None)
-                    tool_input = block.get("input") if isinstance(block, dict) else getattr(block, "input", {})
+        # AgentResponse - contains output with messages
+        if event_class == "AgentResponse":
+            if not hasattr(event, "output") or not event.output:
+                return
 
-                    if tool_name and tool_name not in self._current_record.tools_used:
-                        self._current_record.tools_used.append(tool_name)
+            for msg in event.output:
+                content = getattr(msg, "content", None)
+                if content and isinstance(content, list):
+                    for block in content:
+                        # Block can be dict or object (with model_dump method)
+                        if isinstance(block, dict):
+                            self._process_block_dict(block)
+                        elif hasattr(block, "model_dump"):
+                            # Convert Pydantic model to dict
+                            block_dict = block.model_dump()
+                            if isinstance(block_dict, dict):
+                                self._process_block_dict(block_dict)
+                            else:
+                                logger.debug(f"model_dump returned non-dict: {type(block_dict)}")
+                        else:
+                            logger.debug(f"Non-dict content block in AgentResponse: {type(block)}")
+            return
 
-                    # Record to tool log
-                    self._tool_execution_log.append({
-                        "tool": tool_name,
-                        "args": tool_input,
-                        "timestamp": datetime.now().isoformat(),
-                    })
+        logger.debug(f"Unhandled event type: {event_class}")
 
-                # Tool result block
-                elif block_type == "tool_result":
-                    tool_name = block.get("name") if isinstance(block, dict) else getattr(block, "name", None)
-                    output = block.get("output") if isinstance(block, dict) else getattr(block, "output", None)
+    def _process_block_dict(self, block: dict) -> None:
+        """Process a content block dict (from Message.content)."""
+        block_type = block.get("type")
 
-                    # Find the most recent tool call log for this tool and add the result
-                    if tool_name and self._tool_execution_log:
-                        for log in reversed(self._tool_execution_log):
-                            if log["tool"] == tool_name and "result" not in log:
-                                log["result"] = output
-                                break
+        # Tool use block (tool call)
+        if block_type == "tool_use":
+            self._current_record.tool_calls_count += 1
+            tool_name = block.get("name", "")
+            tool_input = block.get("input", {})
 
-                # Text block
-                elif block_type == "text":
-                    text = block.get("text") if isinstance(block, dict) else getattr(block, "text", "")
-                    self._full_output += text + "\n"
-                    if len(self._current_record.output_summary) < 500:
-                        self._current_record.output_summary += text[:200]
+            logger.info(f"✓ Tool use: {tool_name}")
+
+            if tool_name and tool_name not in self._current_record.tools_used:
+                self._current_record.tools_used.append(tool_name)
+
+            # Record to tool log
+            self._tool_execution_log.append({
+                "tool": tool_name,
+                "args": tool_input,
+                "timestamp": datetime.now().isoformat(),
+            })
+
+        # Tool result block
+        elif block_type == "tool_result":
+            tool_name = block.get("name", "")
+            output = block.get("output", None)
+
+            logger.debug(f"✓ Tool result: {tool_name}")
+
+            # Find the most recent tool call log for this tool and add the result
+            if tool_name and self._tool_execution_log:
+                for log in reversed(self._tool_execution_log):
+                    if log["tool"] == tool_name and "result" not in log:
+                        log["result"] = output
+                        break
+
+        # Thinking block
+        elif block_type == "thinking":
+            thinking = block.get("thinking", "")
+            self._full_output += f"[思考]{thinking}\n"
+            logger.debug(f"Thinking: {len(thinking)} chars")
+
+        # Text block
+        elif block_type == "text":
+            text = block.get("text", "")
+            self._full_output += text + "\n"
+            if len(self._current_record.output_summary) < 500:
+                self._current_record.output_summary += text[:200]
+
+            logger.debug(f"✓ Text: {len(text)} chars")
+
+        else:
+            logger.debug(f"Unknown block type: {block_type}")
+
+    async def _ensure_evolution_chat(self) -> None:
+        """Ensure evolution chat exists in the chat list."""
+        from ..runner.models import ChatSpec
+        from ..runner.manager import ChatManager
+
+        # Use a fixed session ID for all evolutions
+        evolution_session_id = f"evolution:{self.workspace.agent_id}"
+        evolution_user_id = "evolution_system"
+
+        # Check if evolution chat already exists
+        mgr = self.workspace.chat_manager
+        existing_chats = await mgr.list_chats(
+            user_id=evolution_user_id,
+            channel="console",
+        )
+
+        evolution_chat = None
+        for chat in existing_chats:
+            if chat.meta.get("is_evolution"):
+                evolution_chat = chat
+                break
+
+        if evolution_chat:
+            # Update existing evolution chat
+            evolution_chat.updated_at = datetime.now()
+            # Update name to reflect latest generation
+            evolution_chat.name = f"进化记录 (第{self._current_record.generation}代)"
+            await mgr.update_chat(evolution_chat)
+        else:
+            # Create new evolution chat
+            from uuid import uuid4
+
+            new_chat = ChatSpec(
+                id=str(uuid4()),
+                name=f"进化记录 (第{self._current_record.generation}代)",
+                session_id=evolution_session_id,
+                user_id=evolution_user_id,
+                channel="console",
+                meta={
+                    "is_evolution": True,
+                    "agent_id": self.workspace.agent_id,
+                },
+            )
+            await mgr.create_chat(new_chat)
 
     async def _create_archive(self) -> None:
         """Create complete archive."""

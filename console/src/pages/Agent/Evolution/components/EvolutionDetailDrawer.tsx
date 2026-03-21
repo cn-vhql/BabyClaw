@@ -170,11 +170,13 @@ export function EvolutionDetailDrawer({ open, record, onClose }: Props) {
           <Spinner size="large" />
         </div>
       ) : (
-        <Tabs
-          activeKey={activeTab}
-          onChange={setActiveTab}
-          items={tabItems}
-        />
+        <div className={styles.tabsWrapper}>
+          <Tabs
+            activeKey={activeTab}
+            onChange={setActiveTab}
+            items={tabItems}
+          />
+        </div>
       )}
     </Drawer>
   );

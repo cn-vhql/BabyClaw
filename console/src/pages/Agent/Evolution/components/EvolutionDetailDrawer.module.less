@@ -46,3 +46,27 @@
   font-size: 13px;
   line-height: 1.6;
 }
+
+.tabsWrapper {
+  :global {
+    .ant-tabs-nav {
+      margin-bottom: 16px;
+    }
+
+    .ant-tabs-nav-list {
+      justify-content: center;
+      width: 100%;
+      display: flex;
+    }
+
+    .ant-tabs-tab {
+      margin: 0 8px;
+      flex: 0 0 auto;
+    }
+
+    .ant-tabs-tabpane {
+      display: flex;
+      justify-content: center;
+    }
+  }
+}

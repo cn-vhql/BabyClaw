@@ -80,7 +80,11 @@ async def list_chats(
     result = []
     for spec in chats:
         status = await tracker.get_status(spec.id)
-        result.append(spec.model_copy(update={"status": status}))
+        # Include is_evolution in serialized output
+        result.append(spec.model_copy(update={
+            "status": status,
+            "meta": {**spec.meta, "is_evolution": spec.is_evolution}
+        }))
     return result
 
 
@@ -119,15 +123,36 @@ async def batch_delete_chats(
 ):
     """Delete chats by chat IDs.
 
+    Evolution chats (meta.is_evolution=True) cannot be deleted.
+
     Args:
         chat_ids: List of chat IDs
         mgr: Chat manager dependency
     Returns:
-        True if deleted, False if failed
+        Dict with deleted count and skipped evolution chats
 
     """
-    deleted = await mgr.delete_chats(chat_ids=chat_ids)
-    return {"deleted": deleted}
+    # Filter out evolution chats
+    non_evolution_ids = []
+    evolution_ids = []
+
+    for chat_id in chat_ids:
+        chat = await mgr.get_chat(chat_id)
+        if chat and chat.is_evolution:
+            evolution_ids.append(chat_id)
+        else:
+            non_evolution_ids.append(chat_id)
+
+    # Only delete non-evolution chats
+    deleted = False
+    if non_evolution_ids:
+        deleted = await mgr.delete_chats(chat_ids=non_evolution_ids)
+
+    return {
+        "deleted": deleted,
+        "evolution_skipped": len(evolution_ids),
+        "evolution_ids": evolution_ids,
+    }
 
 
 @router.get("/{chat_id}", response_model=ChatHistory)

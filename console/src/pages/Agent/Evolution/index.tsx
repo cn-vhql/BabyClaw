@@ -114,9 +114,29 @@ function EvolutionPage() {
     return <Tag color={color}>{text}</Tag>;
   };
 
+  const formatTimestamp = (timestamp: string) => {
+    try {
+      const date = new Date(timestamp);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    } catch {
+      return timestamp;
+    }
+  };
+
   const columns = [
     { title: "代数", dataIndex: "generation", width: 80 },
-    { title: "时间", dataIndex: "timestamp", width: 180 },
+    {
+      title: "时间",
+      dataIndex: "timestamp",
+      width: 180,
+      render: (timestamp: string) => formatTimestamp(timestamp),
+    },
     {
       title: "触发方式",
       dataIndex: "trigger_type",
@@ -165,6 +185,19 @@ function EvolutionPage() {
             >
               <Button type="link" size="small" danger>
                 删除
+              </Button>
+            </Popconfirm>
+          )}
+          {record.status === "running" && (
+            <Popconfirm
+              title="确认终止"
+              description="确定要终止并删除这条运行中的进化记录吗？"
+              onConfirm={() => handleDeleteRecord(record)}
+              okText="确定"
+              cancelText="取消"
+            >
+              <Button type="link" size="small" danger>
+                终止
               </Button>
             </Popconfirm>
           )}
