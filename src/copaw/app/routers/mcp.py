@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Literal
+from typing import Any, Dict, List, Optional, Literal
 
 from fastapi import APIRouter, Body, HTTPException, Path, Request
 from pydantic import BaseModel, Field
@@ -452,3 +452,95 @@ async def delete_mcp_client(
     asyncio.create_task(reload_in_background())
 
     return {"message": f"MCP client '{client_key}' deleted successfully"}
+
+
+@router.post(
+    "/{client_key}/test",
+    summary="Test MCP client connection and list tools",
+)
+async def test_mcp_client(
+    request: Request,
+    client_key: str = Path(...),
+) -> Dict[str, Any]:
+    """Test MCP client connection and return available tools.
+
+    Returns connection status and list of tools from the MCP server.
+    """
+    from ..agent_context import get_agent_for_request
+
+    agent = await get_agent_for_request(request)
+
+    if agent.config.mcp is None or client_key not in agent.config.mcp.clients:
+        raise HTTPException(404, detail=f"MCP client '{client_key}' not found")
+
+    client_config = agent.config.mcp.clients[client_key]
+
+    # Try to connect and get tools
+    result = {
+        "client_key": client_key,
+        "client_name": client_config.name,
+        "connected": False,
+        "error": None,
+        "tools": [],
+    }
+
+    try:
+        # Build a temporary client to test connection
+        from ..mcp.manager import MCPClientManager
+
+        manager = MCPClientManager()
+        test_client = manager._build_client(client_config)
+
+        # Try to connect with timeout
+        import asyncio
+
+        try:
+            await asyncio.wait_for(test_client.connect(), timeout=30.0)
+            result["connected"] = True
+        except asyncio.TimeoutError:
+            result["error"] = "Connection timeout after 30 seconds"
+            return result
+        except Exception as e:
+            result["error"] = f"Connection failed: {str(e)}"
+            return result
+
+        # Get tools list
+        try:
+            # AgentScope MCP clients have list_tools() method
+            tools_response = await test_client.list_tools()
+
+            # Extract tool information
+            tools_list = []
+            if hasattr(tools_response, "tools"):
+                for tool in tools_response.tools:
+                    tool_info = {
+                        "name": tool.name if hasattr(tool, "name") else str(tool),
+                        "description": (
+                            tool.description if hasattr(tool, "description") else ""
+                        ),
+                    }
+                    # Add input schema if available
+                    if hasattr(tool, "inputSchema"):
+                        tool_info["input_schema"] = tool.inputSchema
+                    tools_list.append(tool_info)
+
+            result["tools"] = tools_list
+            result["tool_count"] = len(tools_list)
+
+        except Exception as e:
+            result["error"] = f"Failed to list tools: {str(e)}"
+            # Still return connected=True even if listing tools failed
+
+        # Cleanup test client
+        try:
+            await test_client.close()
+        except Exception:
+            pass
+
+    except Exception as e:
+        import logging
+
+        logging.getLogger(__name__).error(f"Test MCP client failed: {e}", exc_info=True)
+        result["error"] = f"Test failed: {str(e)}"
+
+    return result

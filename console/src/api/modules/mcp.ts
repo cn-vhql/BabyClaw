@@ -50,4 +50,23 @@ export const mcpApi = {
     request<{ message: string }>(`/mcp/${encodeURIComponent(clientKey)}`, {
       method: "DELETE",
     }),
+
+  /**
+   * Test MCP client connection and list tools
+   */
+  testMCPClient: (clientKey: string) =>
+    request<{
+      client_key: string;
+      client_name: string;
+      connected: boolean;
+      error: string | null;
+      tools: Array<{
+        name: string;
+        description: string;
+        input_schema?: any;
+      }>;
+      tool_count: number;
+    }>(`/mcp/${encodeURIComponent(clientKey)}/test`, {
+      method: "POST",
+    }),
 };

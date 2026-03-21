@@ -1,9 +1,26 @@
 import { useState } from "react";
-import { Button, Table, Card, Tag, Switch, Modal, Input, Empty } from "@agentscope-ai/design";
+import {
+  Button,
+  Table,
+  Card,
+  Tag,
+  Switch,
+  Modal,
+  Input,
+  Empty,
+  message,
+  Spinner,
+  Descriptions,
+} from "@agentscope-ai/design";
+import { List, Typography } from "antd";
+import { ApiOutlined, CheckCircleOutlined, CloseCircleOutlined } from "@ant-design/icons";
 import type { MCPClientInfo } from "../../../api/types";
 import { useMCP } from "./useMCP";
 import { useTranslation } from "react-i18next";
+import { mcpApi } from "../../../api/modules/mcp";
 import styles from "./index.module.less";
+
+const { Text, Paragraph } = Typography;
 
 type MCPTransport = "stdio" | "streamable_http" | "sse";
 
@@ -76,6 +93,12 @@ function MCPPage() {
     }
   }
 }`);
+
+  // Test connection states
+  const [testModalOpen, setTestModalOpen] = useState(false);
+  const [testingClient, setTestingClient] = useState<MCPClientInfo | null>(null);
+  const [testResult, setTestResult] = useState<any>(null);
+  const [testing, setTesting] = useState(false);
 
   const handleToggleEnabled = async (client: MCPClientInfo) => {
     await toggleEnabled(client);
@@ -190,6 +213,35 @@ function MCPPage() {
     }
   };
 
+  const handleTestClick = async (client: MCPClientInfo) => {
+    setTestingClient(client);
+    setTestResult(null);
+    setTestModalOpen(true);
+    setTesting(true);
+
+    try {
+      const result = await mcpApi.testMCPClient(client.key);
+      setTestResult(result);
+
+      if (result.connected) {
+        message.success(`连接成功！发现 ${result.tool_count || 0} 个工具`);
+      } else {
+        message.error(`连接失败: ${result.error || "未知错误"}`);
+      }
+    } catch (error: any) {
+      const errorMsg = error?.message || "测试失败";
+      setTestResult({
+        connected: false,
+        error: errorMsg,
+        tools: [],
+        tool_count: 0,
+      });
+      message.error(`测试失败: ${errorMsg}`);
+    } finally {
+      setTesting(false);
+    }
+  };
+
   const columns = [
     {
       title: t("mcp.name"),
@@ -237,6 +289,14 @@ function MCPPage() {
       width: 200,
       render: (_: unknown, record: MCPClientInfo) => (
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <Button
+            type="link"
+            size="small"
+            icon={<ApiOutlined />}
+            onClick={() => handleTestClick(record)}
+          >
+            测试
+          </Button>
           <Button
             type="link"
             size="small"
@@ -422,6 +482,191 @@ function MCPPage() {
             {editedJson}
           </pre>
         )}
+      </Modal>
+
+      {/* Test Connection Modal */}
+      <Modal
+        title={testingClient ? `测试连接 - ${testingClient.name}` : "测试连接"}
+        open={testModalOpen}
+        onCancel={() => {
+          setTestModalOpen(false);
+          setTestingClient(null);
+          setTestResult(null);
+        }}
+        footer={
+          <div style={{ textAlign: "right" }}>
+            <Button
+              onClick={() => {
+                setTestModalOpen(false);
+                setTestingClient(null);
+                setTestResult(null);
+              }}
+            >
+              关闭
+            </Button>
+          </div>
+        }
+        width={800}
+      >
+        <div style={{ minHeight: 400 }}>
+          {testing ? (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                minHeight: 400,
+              }}
+            >
+              <Spinner size="large" />
+              <div style={{ marginTop: 16, color: "#666" }}>
+                正在测试连接...
+              </div>
+            </div>
+          ) : testResult ? (
+            <div>
+              {/* Connection Status */}
+              <div
+                style={{
+                  marginBottom: 24,
+                  padding: 16,
+                  borderRadius: 8,
+                  backgroundColor: testResult.connected ? "#f6ffed" : "#fff2f0",
+                  border: `1px solid ${testResult.connected ? "#b7eb8f" : "#ffccc7"}`,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  {testResult.connected ? (
+                    <CheckCircleOutlined style={{ fontSize: 24, color: "#52c41a" }} />
+                  ) : (
+                    <CloseCircleOutlined style={{ fontSize: 24, color: "#ff4d4f" }} />
+                  )}
+                  <div>
+                    <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>
+                      {testResult.connected ? "连接成功" : "连接失败"}
+                    </div>
+                    {testResult.error && (
+                      <div style={{ fontSize: 13, color: "#ff4d4f" }}>
+                        错误信息: {testResult.error}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Tools List */}
+              {testResult.connected && testResult.tools && testResult.tools.length > 0 ? (
+                <div>
+                  <div style={{ marginBottom: 16 }}>
+                    <Text strong style={{ fontSize: 14 }}>
+                      可用工具 ({testResult.tool_count || testResult.tools.length} 个)
+                    </Text>
+                  </div>
+                  <List
+                    bordered
+                    dataSource={testResult.tools}
+                    renderItem={(tool: any, index: number) => (
+                      <List.Item>
+                        <div style={{ width: "100%" }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "flex-start",
+                              gap: 12,
+                              marginBottom: 8,
+                            }}
+                          >
+                            <Tag color="blue" style={{ marginTop: 2 }}>
+                              {index + 1}
+                            </Tag>
+                            <Text strong style={{ fontSize: 14 }}>
+                              {tool.name}
+                            </Text>
+                          </div>
+                          {tool.description && (
+                            <Paragraph
+                              style={{
+                                marginLeft: 42,
+                                marginBottom: 8,
+                                color: "#666",
+                                fontSize: 13,
+                              }}
+                            >
+                              {tool.description}
+                            </Paragraph>
+                          )}
+                          {tool.input_schema && (
+                            <div
+                              style={{
+                                marginLeft: 42,
+                                padding: 12,
+                                backgroundColor: "#f5f5f5",
+                                borderRadius: 6,
+                              }}
+                            >
+                              <Text
+                                style={{
+                                  fontSize: 12,
+                                  color: "#999",
+                                  display: "block",
+                                  marginBottom: 8,
+                                }}
+                              >
+                                参数定义:
+                              </Text>
+                              <pre
+                                style={{
+                                  margin: 0,
+                                  fontSize: 12,
+                                  overflow: "auto",
+                                  maxHeight: 200,
+                                }}
+                              >
+                                {JSON.stringify(tool.input_schema, null, 2)}
+                              </pre>
+                            </div>
+                          )}
+                        </div>
+                      </List.Item>
+                    )}
+                    pagination={{
+                      pageSize: 10,
+                      size: "small",
+                    }}
+                  />
+                </div>
+              ) : testResult.connected ? (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    minHeight: 300,
+                  }}
+                >
+                  <Empty
+                    description="该MCP服务没有提供工具"
+                    style={{ margin: 0 }}
+                  />
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                minHeight: 400,
+              }}
+            >
+              <Empty description="点击测试按钮开始测试" style={{ margin: 0 }} />
+            </div>
+          )}
+        </div>
       </Modal>
     </div>
   );
