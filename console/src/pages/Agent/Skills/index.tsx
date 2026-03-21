@@ -1,16 +1,22 @@
 import { useState, useRef } from "react";
-import { Button, Form, Modal, message, Table, Card, Tag, Switch, Dropdown } from "@agentscope-ai/design";
-import { Space } from "antd";
+import {
+  Button,
+  Form,
+  Modal,
+  message,
+  Table,
+  Card,
+  Switch,
+} from "@agentscope-ai/design";
 import {
   DownloadOutlined,
   PlusOutlined,
   UploadOutlined,
-  MoreOutlined,
 } from "@ant-design/icons";
+import { useTranslation } from "react-i18next";
 import type { SkillSpec } from "../../../api/types";
 import { SkillDrawer } from "./components";
 import { useSkills } from "./useSkills";
-import { useTranslation } from "react-i18next";
 import styles from "./index.module.less";
 
 function SkillsPage() {
@@ -22,6 +28,7 @@ function SkillsPage() {
     importing,
     cancelImport,
     createSkill,
+    updateSkill,
     uploadSkill,
     importFromHub,
     toggleEnabled,
@@ -87,6 +94,25 @@ function SkillsPage() {
     setDrawerOpen(true);
   };
 
+  const handleEdit = (skill: SkillSpec) => {
+    // Find the latest version of this skill from the skills list
+    const latestSkill = skills.find(s => s.name === skill.name);
+    if (!latestSkill) {
+      message.error("Skill not found");
+      return;
+    }
+
+    setEditingSkill(latestSkill);
+    form.resetFields();
+    form.setFieldsValue({
+      name: latestSkill.name,
+      content: latestSkill.content,
+      source: latestSkill.source,
+      path: latestSkill.path,
+    });
+    setDrawerOpen(true);
+  };
+
   const closeImportModal = () => {
     if (importing) {
       return;
@@ -124,12 +150,6 @@ function SkillsPage() {
     }
   };
 
-  const handleEdit = (skill: SkillSpec) => {
-    setEditingSkill(skill);
-    form.setFieldsValue(skill);
-    setDrawerOpen(true);
-  };
-
   const handleToggleEnabled = async (skill: SkillSpec) => {
     await toggleEnabled(skill);
   };
@@ -143,14 +163,24 @@ function SkillsPage() {
     setEditingSkill(null);
   };
 
-  const handleSubmit = async (values: { name: string; content: string }) => {
-    try {
-      const success = await createSkill(values.name, values.content);
+  const handleSubmit = async (values: { name: string; description: string; content: string }) => {
+    if (editingSkill) {
+      // Update mode - content already has frontmatter built by SkillDrawer
+      const success = await updateSkill(editingSkill, values.content);
       if (success) {
         setDrawerOpen(false);
+        form.resetFields();
       }
-    } catch (error) {
-      console.error("Submit failed", error);
+    } else {
+      // Create mode - content already has frontmatter built by SkillDrawer
+      try {
+        const success = await createSkill(values.name, values.content);
+        if (success) {
+          setDrawerOpen(false);
+        }
+      } catch (error) {
+        console.error("Submit failed", error);
+      }
     }
   };
 
@@ -160,17 +190,13 @@ function SkillsPage() {
       dataIndex: "name",
       key: "name",
       ellipsis: true,
+      width: 200,
     },
     {
-      title: t("skills.type"),
-      dataIndex: "isBuiltin",
-      key: "type",
-      width: 100,
-      render: (_: unknown, record: SkillSpec) => (
-        <Tag color={record.isBuiltin ? "geekblue" : "green"}>
-          {record.isBuiltin ? t("skills.builtin") : t("skills.custom")}
-        </Tag>
-      ),
+      title: t("skills.skillDescription"),
+      dataIndex: "description",
+      key: "description",
+      ellipsis: true,
     },
     {
       title: t("skills.status"),
@@ -326,7 +352,7 @@ function SkillsPage() {
           pagination={{
             pageSize: 10,
             showSizeChanger: false,
-            showTotal: (total) => t("skills.totalItems", { count: total }),
+            showTotal: (total: number) => t("skills.totalItems", { count: total }),
           }}
           size="small"
         />

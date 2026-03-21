@@ -53,7 +53,7 @@ interface SidebarProps {
 
 export default function Sidebar({ selectedKey }: SidebarProps) {
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { isDark } = useTheme();
   const [collapsed, setCollapsed] = useState(false);
   const [openKeys, setOpenKeys] = useState<string[]>(DEFAULT_OPEN_KEYS);
@@ -183,6 +183,7 @@ export default function Sidebar({ selectedKey }: SidebarProps) {
       <div className={styles.siderTop}>
         {!collapsed && (
           <div className={styles.logoWrapper}>
+            <img src="/babyclaw.png" alt="BabyClaw" style={{ height: 32, width: 'auto', marginRight: 8 }} />
             <h1 className={styles.logoText}>
               <span className={styles.logoTextBaby}>Baby</span>
               <span className={styles.logoTextClaw}>Claw</span>

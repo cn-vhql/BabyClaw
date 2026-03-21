@@ -5,10 +5,8 @@ import {
   Table,
   message,
   Tag,
-  Modal,
   Popconfirm,
 } from "@agentscope-ai/design";
-import { useTranslation } from "react-i18next";
 import { useAgentStore } from "../../../stores/agentStore";
 import { evolutionApi } from "../../../api/modules/evolution";
 import type { EvolutionRecord } from "../../../api/types/evolution";
@@ -17,7 +15,6 @@ import { EvolutionSettingsModal } from "./components/EvolutionSettingsModal";
 import styles from "./index.module.less";
 
 function EvolutionPage() {
-  const { t } = useTranslation();
   const { selectedAgent } = useAgentStore();
   const [records, setRecords] = useState<EvolutionRecord[]>([]);
   const [loading, setLoading] = useState(false);

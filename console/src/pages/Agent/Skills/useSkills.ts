@@ -234,6 +234,18 @@ export function useSkills() {
     }
   };
 
+  const updateSkill = async (skill: SkillSpec, content: string) => {
+    try {
+      await api.updateSkill(skill.name, content);
+      message.success("Updated successfully");
+      await fetchSkills();
+      return true;
+    } catch (error) {
+      handleError(error, "Failed to update");
+      return false;
+    }
+  };
+
   const uploadSkill = async (file: File) => {
     try {
       setUploading(true);
@@ -366,11 +378,11 @@ export function useSkills() {
   const deleteSkill = async (skill: SkillSpec) => {
     const confirmed = await new Promise<boolean>((resolve) => {
       Modal.confirm({
-        title: "Confirm Delete",
-        content: `Are you sure you want to delete skill "${skill.name}"? This action cannot be undone.`,
-        okText: "Delete",
+        title: t("skills.deleteConfirm"),
+        content: t("skills.deleteDesc", { name: skill.name }) || `确定要删除技能 "${skill.name}" 吗？此操作无法撤销。`,
+        okText: t("common.delete"),
         okType: "danger",
-        cancelText: "Cancel",
+        cancelText: t("common.cancel"),
         onOk: () => resolve(true),
         onCancel: () => resolve(false),
       });
@@ -381,16 +393,16 @@ export function useSkills() {
     try {
       const result = await api.deleteSkill(skill.name);
       if (result.deleted) {
-        message.success("Deleted successfully");
+        message.success(t("skills.deleteSuccess"));
         await fetchSkills();
         return true;
       } else {
-        message.error("Failed to delete skill");
+        message.error(t("skills.deleteFailed"));
         return false;
       }
     } catch (error) {
       console.error("Failed to delete skill", error);
-      message.error("Failed to delete skill");
+      message.error(t("skills.deleteFailed"));
       return false;
     }
   };
@@ -402,6 +414,7 @@ export function useSkills() {
     importing,
     cancelImport,
     createSkill,
+    updateSkill,
     uploadSkill,
     importFromHub,
     toggleEnabled,

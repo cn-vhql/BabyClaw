@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { Table, Card, Button, Switch, Empty, Tag } from "@agentscope-ai/design";
+import { useMemo } from "react";
+import { Table, Card, Button, Switch, Empty } from "@agentscope-ai/design";
 import { useTools } from "./useTools";
 import { useTranslation } from "react-i18next";
 import type { ToolInfo } from "../../../api/modules/tools";
@@ -29,17 +29,6 @@ export default function ToolsPage() {
       dataIndex: "name",
       key: "name",
       ellipsis: true,
-    },
-    {
-      title: t("tools.type"),
-      dataIndex: "isBuiltin",
-      key: "type",
-      width: 100,
-      render: (_: unknown, record: ToolInfo) => (
-        <Tag color={record.isBuiltin ? "geekblue" : "green"}>
-          {record.isBuiltin ? t("tools.builtin") : t("tools.custom")}
-        </Tag>
-      ),
     },
     {
       title: t("tools.status"),

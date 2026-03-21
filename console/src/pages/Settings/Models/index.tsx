@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Button, Table, Card, Tag, Modal, message } from "@agentscope-ai/design";
 import { PlusOutlined } from "@ant-design/icons";
 import { useProviders } from "./useProviders";
@@ -30,15 +30,6 @@ function ModelsPage() {
 
   const refreshProvidersSilently = () => fetchAll(false);
 
-  const { regularProviders, embeddedProviders } = useMemo(() => {
-    const regular: ProviderInfo[] = [];
-    const embedded: ProviderInfo[] = [];
-    for (const p of providers) {
-      if (p.is_local) embedded.push(p);
-      else regular.push(p);
-    }
-    return { regularProviders: regular, embeddedProviders: embedded };
-  }, [providers]);
 
   const handleManageModels = (provider: ProviderInfo) => {
     setSelectedProvider(provider);

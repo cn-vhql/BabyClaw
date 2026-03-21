@@ -756,9 +756,7 @@ export default function ChatPage() {
       },
       welcome: {
         ...i18nConfig.welcome,
-        avatar: isDark
-          ? `${import.meta.env.BASE_URL}copaw-dark.png`
-          : `${import.meta.env.BASE_URL}copaw-symbol.svg`,
+        avatar: `${import.meta.env.BASE_URL}babyclaw.png`,
       },
       sender: {
         ...(i18nConfig as any)?.sender,

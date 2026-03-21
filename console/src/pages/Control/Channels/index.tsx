@@ -1,10 +1,16 @@
 import { useMemo, useState } from "react";
-import { Form, message, Table, Card, Tag, Switch, Button, Dropdown } from "@agentscope-ai/design";
-import { MoreOutlined } from "@ant-design/icons";
-import type { MenuProps } from "antd";
 import { useTranslation } from "react-i18next";
 
 import api from "../../../api";
+import {
+  Form,
+  message,
+  Table,
+  Card,
+  Tag,
+  Switch,
+  Button,
+} from "@agentscope-ai/design";
 import {
   ChannelDrawer,
   useChannels,
@@ -221,7 +227,7 @@ function ChannelsPage() {
           pagination={{
             pageSize: 10,
             showSizeChanger: false,
-            showTotal: (total) => t("channels.totalItems", { count: total }),
+            showTotal: (total: number) => t("channels.totalItems", { count: total }),
           }}
           size="small"
         />

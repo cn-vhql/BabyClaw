@@ -7,7 +7,7 @@ const defaultConfig = {
     prefix: "copaw",
     leftHeader: {
       logo: "",
-      title: "与 BabyClaw 一起成长",
+      title: "与 BabyClaw 共同成长",
     },
   },
   sender: {

@@ -420,6 +420,12 @@ def _read_skills_from_dir(
 
         try:
             content = skill_md.read_text(encoding="utf-8")
+            logger.debug(
+                "Read skill '%s' from %s: %d bytes",
+                skill_dir.name,
+                skill_md,
+                len(content),
+            )
             description = ""
             try:
                 post = frontmatter.loads(content)
@@ -675,12 +681,16 @@ class SkillService:
         skills.extend(
             _read_skills_from_dir(get_builtin_skills_dir(), "builtin"),
         )
-        skills.extend(
-            _read_skills_from_dir(
-                get_customized_skills_dir(self.workspace_dir),
-                "customized",
-            ),
+        customized_skills = _read_skills_from_dir(
+            get_customized_skills_dir(self.workspace_dir),
+            "customized",
         )
+        logger.debug(
+            "Read %d customized skills from %s",
+            len(customized_skills),
+            get_customized_skills_dir(self.workspace_dir),
+        )
+        skills.extend(customized_skills)
 
         return _dedupe_skills_by_name(skills)
 
@@ -853,6 +863,140 @@ class SkillService:
                 raise
             logger.error(
                 "Failed to create skill '%s': %s",
+                name,
+                e,
+            )
+            return False
+
+    def update_skill(
+        self,
+        name: str,
+        content: str,
+        references: dict[str, Any] | None = None,
+        scripts: dict[str, Any] | None = None,
+    ) -> bool:
+        """
+        Update an existing skill's content.
+
+        Args:
+            name: Skill name to update.
+            content: New content of SKILL.md file.
+            references: Optional tree structure for references/ subdirectory.
+            scripts: Optional tree structure for scripts/ subdirectory.
+
+        Returns:
+            True if skill was updated successfully, False otherwise.
+        """
+        # Validate SKILL.md content has required YAML Front Matter
+        try:
+            post = frontmatter.loads(content)
+            skill_name = post.get("name", None)
+            skill_description = post.get("description", None)
+
+            if not skill_name or not skill_description:
+                logger.error(
+                    "SKILL.md content must have YAML Front Matter "
+                    "with 'name' and 'description' fields.",
+                )
+                return False
+
+            logger.debug(
+                "Validated SKILL.md: name='%s', description='%s'",
+                skill_name,
+                skill_description,
+            )
+        except Exception as e:
+            logger.error(
+                "Failed to parse SKILL.md YAML Front Matter: %s",
+                e,
+            )
+            return False
+
+        customized_dir = get_customized_skills_dir(self.workspace_dir)
+        skill_dir = customized_dir / name
+        skill_md = skill_dir / "SKILL.md"
+
+        # Check if skill exists
+        if not skill_dir.exists():
+            logger.debug(
+                "Skill '%s' does not exist. Cannot update.",
+                name,
+            )
+            return False
+
+        # Update skill
+        try:
+            # Update SKILL.md in customized_skills
+            skill_md.write_text(content, encoding="utf-8")
+            logger.info(
+                "Wrote SKILL.md for skill '%s' to %s (%d bytes)",
+                name,
+                skill_md,
+                len(content),
+            )
+
+            # Verify the write was successful by reading back
+            written_content = skill_md.read_text(encoding="utf-8")
+            if written_content != content:
+                logger.error(
+                    "Content mismatch for skill '%s' after write. Expected %d bytes, got %d bytes",
+                    name,
+                    len(content),
+                    len(written_content),
+                )
+                return False
+
+            # Sync to active_skills if the skill is currently enabled
+            active_dir = get_active_skills_dir(self.workspace_dir)
+            active_skill_dir = active_dir / name
+            if active_skill_dir.exists():
+                # Copy the updated skill to active_skills
+                _replace_skill_dir(skill_dir, active_skill_dir)
+                logger.info(
+                    "Synced updated skill '%s' to active_skills.",
+                    name,
+                )
+
+            logger.info(
+                "Successfully updated SKILL.md for skill '%s' (%d bytes).",
+                name,
+                len(content),
+            )
+
+            # Update references if provided
+            if references is not None:
+                references_dir = skill_dir / "references"
+                # Clean up existing references
+                if references_dir.exists():
+                    shutil.rmtree(references_dir)
+                # Create new references
+                references_dir.mkdir(parents=True, exist_ok=True)
+                _create_files_from_tree(references_dir, references)
+                logger.debug(
+                    "Updated references structure for skill '%s'.",
+                    name,
+                )
+
+            # Update scripts if provided
+            if scripts is not None:
+                scripts_dir = skill_dir / "scripts"
+                # Clean up existing scripts
+                if scripts_dir.exists():
+                    shutil.rmtree(scripts_dir)
+                # Create new scripts
+                scripts_dir.mkdir(parents=True, exist_ok=True)
+                _create_files_from_tree(scripts_dir, scripts)
+                logger.debug(
+                    "Updated scripts structure for skill '%s'.",
+                    name,
+                )
+
+            logger.info("Updated skill '%s' successfully.", name)
+            return True
+
+        except Exception as e:
+            logger.error(
+                "Failed to update skill '%s': %s",
                 name,
                 e,
             )

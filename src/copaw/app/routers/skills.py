@@ -71,6 +71,22 @@ class CreateSkillRequest(BaseModel):
     )
 
 
+class UpdateSkillRequest(BaseModel):
+    content: str = Field(..., description="Skill content (SKILL.md)")
+    references: dict[str, Any] | None = Field(
+        None,
+        description="Optional tree structure for references/. "
+        "Can be flat {filename: content} or nested "
+        "{dirname: {filename: content}}",
+    )
+    scripts: dict[str, Any] | None = Field(
+        None,
+        description="Optional tree structure for scripts/. "
+        "Can be flat {filename: content} or nested "
+        "{dirname: {filename: content}}",
+    )
+
+
 class HubSkillSpec(BaseModel):
     slug: str
     name: str
@@ -586,6 +602,31 @@ async def create_skill(
     except SkillScanError as e:
         return _scan_error_response(e)
     return {"created": result}
+
+
+@router.put("/{skill_name}")
+async def update_skill(
+    skill_name: str,
+    request_body: UpdateSkillRequest,
+    request: Request,
+):
+    """Update an existing skill's content."""
+    from ..agent_context import get_agent_for_request
+
+    workspace = await get_agent_for_request(request)
+    workspace_dir = Path(workspace.workspace_dir)
+    skill_service = SkillService(workspace_dir)
+
+    try:
+        result = skill_service.update_skill(
+            name=skill_name,
+            content=request_body.content,
+            references=request_body.references,
+            scripts=request_body.scripts,
+        )
+    except SkillScanError as e:
+        return _scan_error_response(e)
+    return {"updated": result}
 
 
 @router.post("/{skill_name}/disable")

@@ -167,7 +167,7 @@ export function EvolutionDetailDrawer({ open, record, onClose }: Props) {
     >
       {loading ? (
         <div style={{ textAlign: "center", padding: 40 }}>
-          <Spinner size="large" />
+          <Spinner />
         </div>
       ) : (
         <div className={styles.tabsWrapper}>

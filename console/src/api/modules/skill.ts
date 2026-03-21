@@ -47,6 +47,14 @@ export const skillApi = {
       }),
     }),
 
+  updateSkill: (skillName: string, content: string) =>
+    request<Record<string, unknown>>(`/skills/${encodeURIComponent(skillName)}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        content: content,
+      }),
+    }),
+
   enableSkill: (skillName: string) =>
     request<void>(`/skills/${encodeURIComponent(skillName)}/enable`, {
       method: "POST",

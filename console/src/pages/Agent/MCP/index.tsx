@@ -10,7 +10,6 @@ import {
   Empty,
   message,
   Spinner,
-  Descriptions,
 } from "@agentscope-ai/design";
 import { List, Typography } from "antd";
 import { ApiOutlined, CheckCircleOutlined, CloseCircleOutlined } from "@ant-design/icons";
@@ -519,7 +518,7 @@ function MCPPage() {
                 minHeight: 400,
               }}
             >
-              <Spinner size="large" />
+              <Spinner />
               <div style={{ marginTop: 16, color: "#666" }}>
                 正在测试连接...
               </div>

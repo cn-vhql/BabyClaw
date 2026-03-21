@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import {
   Button,
   Table,
-  Card,
   Modal,
   Input,
   Select,
@@ -16,10 +15,8 @@ import {
   PlusOutlined,
   DeleteOutlined,
   UploadOutlined,
-  SearchOutlined,
   FileTextOutlined,
   SaveOutlined,
-  EditOutlined,
 } from "@ant-design/icons";
 import type { UploadFile } from "antd";
 import { knowledgeApi, type KnowledgeBase, type KnowledgeBaseDetail, type Document, type Chunk } from "../../../api/modules/knowledge";
@@ -31,7 +28,6 @@ export default function KnowledgePage() {
   const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([]);
   const [selectedKbId, setSelectedKbId] = useState<string | null>(null);
   const [selectedKb, setSelectedKb] = useState<KnowledgeBaseDetail | null>(null);
-  const [loading, setLoading] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [newKbName, setNewKbName] = useState("");
   const [newKbDesc, setNewKbDesc] = useState("");
@@ -43,11 +39,11 @@ export default function KnowledgePage() {
   const [uploadOverlap, setUploadOverlap] = useState(50);
   const [uploadFiles, setUploadFiles] = useState<UploadFile[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [_previewChunks, setPreviewChunks] = useState<Chunk[]>([]);
   const [activeTab, setActiveTab] = useState("documents");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
-  const [previewChunks, setPreviewChunks] = useState<Chunk[]>([]);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [editingChunks, setEditingChunks] = useState<Chunk[]>([]);
   const [newChunkContent, setNewChunkContent] = useState("");
@@ -61,7 +57,7 @@ export default function KnowledgePage() {
   const [searchPageSize, setSearchPageSize] = useState(10);
 
   const loadKnowledgeBases = async () => {
-    setLoading(true);
+    setUploading(true);
     try {
       const res = await knowledgeApi.list();
       setKnowledgeBases(res.knowledge_bases);
@@ -72,7 +68,7 @@ export default function KnowledgePage() {
       message.error(t("knowledge.loadFailed"));
       isSwitchingAgent.current = false;
     } finally {
-      setLoading(false);
+      setUploading(false);
     }
   };
 
@@ -162,7 +158,7 @@ export default function KnowledgePage() {
     }
 
     setSelectedKbId(kbId);
-    setLoading(true);
+    setUploading(true);
 
     // Clear search state when switching knowledge base
     setSearchResults([]);
@@ -183,7 +179,7 @@ export default function KnowledgePage() {
         message.error(t("knowledge.loadDetailFailed"));
       }
     } finally {
-      setLoading(false);
+      setUploading(false);
     }
   };
 

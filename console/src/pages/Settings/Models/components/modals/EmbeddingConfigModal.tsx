@@ -46,7 +46,7 @@ export function EmbeddingConfigModal({
 
     setLoading(true);
     try {
-      const config = await api.agent.getEmbeddingConfig();
+      const config = await api.getEmbeddingConfig();
       form.setFieldsValue(config);
     } catch (error) {
       message.error(t("models.embedding.loadFailed"));
@@ -65,7 +65,7 @@ export function EmbeddingConfigModal({
       const values = await form.validateFields();
       setSaving(true);
 
-      await api.agent.updateEmbeddingConfig(values);
+      await api.updateEmbeddingConfig(values);
       message.success(t("models.embedding.saveSuccess"));
       onSaved?.();
       onClose();

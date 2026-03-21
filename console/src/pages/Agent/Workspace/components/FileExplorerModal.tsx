@@ -4,14 +4,11 @@ import { Tree, Spin, Typography } from "antd";
 import {
   FileOutlined,
   FolderOutlined,
-  FolderOpenOutlined,
   DeleteOutlined,
   DownloadOutlined,
   UploadOutlined,
   ReloadOutlined,
-  FileTextOutlined,
   CaretRightFilled,
-  CaretDownFilled,
 } from "@ant-design/icons";
 import { workspaceApi } from "../../../../api/modules/workspace";
 import type { FileTreeNode, FileContentResult } from "../../../../api/types/workspace";
@@ -266,7 +263,7 @@ export const FileExplorerModal: React.FC<FileExplorerModalProps> = ({
             ) : (
               <Empty
                 description={t("workspace.noFiles") || "No files"}
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                image={undefined}
               />
             )}
           </div>
@@ -328,14 +325,13 @@ export const FileExplorerModal: React.FC<FileExplorerModalProps> = ({
               ) : (
                 <Empty
                   description={t("workspace.binaryFile") || "Binary file - preview not available"}
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  image={undefined}
                 />
               )
             ) : (
               <Empty
                 description={t("workspace.selectFile") || "Select a file to preview"}
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                icon={<FileTextOutlined />}
+                image={undefined}
               />
             )}
           </div>

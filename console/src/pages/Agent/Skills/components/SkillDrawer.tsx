@@ -33,12 +33,39 @@ function parseFrontmatter(content: string): Record<string, string> | null {
   return result;
 }
 
+/**
+ * Remove frontmatter from content, return only the markdown content.
+ */
+function removeFrontmatter(content: string): string {
+  const trimmed = content.trim();
+  if (!trimmed.startsWith("---")) return content;
+
+  const endIndex = trimmed.indexOf("---", 3);
+  if (endIndex === -1) return content;
+
+  return trimmed.slice(endIndex + 3).trim();
+}
+
+/**
+ * Build skill file content from name, description and content.
+ */
+function buildSkillContent(name: string, description: string, content: string): string {
+  const cleanContent = content.trim();
+  const escapedDescription = description.replace(/"/g, '\\"');
+  return `---
+name: ${name}
+description: "${escapedDescription}"
+---
+
+${cleanContent}`;
+}
+
 interface SkillDrawerProps {
   open: boolean;
   editingSkill: SkillSpec | null;
   form: FormInstance<SkillSpec>;
   onClose: () => void;
-  onSubmit: (values: SkillSpec) => void;
+  onSubmit: (values: { name: string; description: string; content: string }) => void;
   onContentChange?: (content: string) => void;
 }
 
@@ -56,23 +83,11 @@ export function SkillDrawer({
   const [optimizing, setOptimizing] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const validateFrontmatter = useCallback(
+  const validateContent = useCallback(
     (_: unknown, value: string) => {
-      const content = contentValue || value;
-      if (!content || !content.trim()) {
+      const contentToCheck = value || contentValue;
+      if (!contentToCheck || !contentToCheck.trim()) {
         return Promise.reject(new Error(t("skills.pleaseInputContent")));
-      }
-      const fm = parseFrontmatter(content);
-      if (!fm) {
-        return Promise.reject(new Error(t("skills.frontmatterRequired")));
-      }
-      if (!fm.name) {
-        return Promise.reject(new Error(t("skills.frontmatterNameRequired")));
-      }
-      if (!fm.description) {
-        return Promise.reject(
-          new Error(t("skills.frontmatterDescriptionRequired")),
-        );
       }
       return Promise.resolve();
     },
@@ -81,27 +96,39 @@ export function SkillDrawer({
 
   useEffect(() => {
     if (editingSkill) {
-      setContentValue(editingSkill.content);
+      // Parse frontmatter to extract name and description
+      const fm = parseFrontmatter(editingSkill.content);
+      const contentWithoutFrontmatter = removeFrontmatter(editingSkill.content);
+
       form.setFieldsValue({
         name: editingSkill.name,
-        content: editingSkill.content,
+        description: fm?.description || "",
+        content: contentWithoutFrontmatter,
       });
+      setContentValue(contentWithoutFrontmatter);
     } else {
-      setContentValue("");
       form.resetFields();
+      setContentValue("");
     }
   }, [editingSkill, form]);
 
-  const handleSubmit = (values: { name: string; content: string }) => {
+  const handleSubmit = (values: { name: string; description: string; content: string }) => {
+    const { name, description, content } = values;
+    const finalContent = buildSkillContent(name, description, contentValue || content);
+
     if (editingSkill) {
-      message.warning(t("skills.editNotSupported"));
-      onClose();
-    } else {
+      // Edit mode: submit with the editing skill's name
       onSubmit({
-        ...values,
-        content: contentValue || values.content,
-        source: "",
-        path: "",
+        name: editingSkill.name,
+        description,
+        content: finalContent,
+      });
+    } else {
+      // Create mode
+      onSubmit({
+        name,
+        description,
+        content: finalContent,
       });
     }
   };
@@ -158,7 +185,7 @@ export function SkillDrawer({
     }
   };
 
-  const drawerFooter = !editingSkill ? (
+  const drawerFooter = (
     <div
       style={{
         display: "flex",
@@ -167,36 +194,36 @@ export function SkillDrawer({
       }}
     >
       <div>
-        {!optimizing ? (
-          <Button
-            type="default"
-            icon={<ThunderboltOutlined />}
-            onClick={handleOptimize}
-            disabled={!contentValue.trim()}
-          >
-            {t("skills.optimizeWithAI")}
-          </Button>
-        ) : (
-          <Button
-            type="default"
-            danger
-            icon={<StopOutlined />}
-            onClick={handleStopOptimize}
-          >
-            {t("skills.stopOptimize")}
-          </Button>
+        {!editingSkill && (
+          <>
+            {!optimizing ? (
+              <Button
+                type="default"
+                icon={<ThunderboltOutlined />}
+                onClick={handleOptimize}
+                disabled={!contentValue.trim()}
+              >
+                {t("skills.optimizeWithAI")}
+              </Button>
+            ) : (
+              <Button
+                type="default"
+                danger
+                icon={<StopOutlined />}
+                onClick={handleStopOptimize}
+              >
+                {t("skills.stopOptimize")}
+              </Button>
+            )}
+          </>
         )}
       </div>
       <div style={{ display: "flex", gap: 8 }}>
         <Button onClick={onClose}>{t("common.cancel")}</Button>
         <Button type="primary" onClick={() => form.submit()}>
-          {t("skills.create")}
+          {editingSkill ? t("skills.update") : t("skills.create")}
         </Button>
       </div>
-    </div>
-  ) : (
-    <div style={{ display: "flex", justifyContent: "flex-end" }}>
-      <Button onClick={onClose}>{t("common.cancel")}</Button>
     </div>
   );
 
@@ -204,7 +231,7 @@ export function SkillDrawer({
     <Drawer
       width={520}
       placement="right"
-      title={editingSkill ? t("skills.viewSkill") : t("skills.createSkill")}
+      title={editingSkill ? t("skills.editSkill") : t("skills.createSkill")}
       open={open}
       onClose={onClose}
       destroyOnClose
@@ -222,9 +249,20 @@ export function SkillDrawer({
             </Form.Item>
 
             <Form.Item
+              name="description"
+              label="Description"
+              rules={[{ required: true, message: t("skills.pleaseInputDescription") }]}
+            >
+              <Input.TextArea
+                placeholder={t("skills.skillDescriptionPlaceholder")}
+                rows={3}
+              />
+            </Form.Item>
+
+            <Form.Item
               name="content"
               label="Content"
-              rules={[{ required: true, validator: validateFrontmatter }]}
+              rules={[{ required: true, validator: validateContent }]}
             >
               <MarkdownCopy
                 content={contentValue}
@@ -243,43 +281,42 @@ export function SkillDrawer({
 
         {editingSkill && (
           <>
-            <Form.Item name="name" label="name">
-              <Input disabled />
+            <Form.Item name="name" label="Name">
+              <Input disabled value={editingSkill.name} />
             </Form.Item>
 
-            <Form.Item name="content" label="Content">
+            <Form.Item
+              name="description"
+              label="Description"
+              rules={[{ required: true, message: t("skills.pleaseInputDescription") }]}
+            >
+              <Input.TextArea
+                placeholder={t("skills.skillDescriptionPlaceholder")}
+                rows={3}
+              />
+            </Form.Item>
+
+            <Form.Item name="content" label="Content" rules={[{ required: true, validator: validateContent }]}>
               <MarkdownCopy
-                content={editingSkill.content}
+                content={contentValue}
                 showMarkdown={showMarkdown}
                 onShowMarkdownChange={setShowMarkdown}
+                editable={true}
+                onContentChange={handleContentChange}
                 textareaProps={{
-                  disabled: true,
+                  placeholder: t("skills.contentPlaceholder"),
                   rows: 12,
                 }}
               />
             </Form.Item>
 
             <Form.Item name="source" label="Source">
-              <Input disabled />
+              <Input disabled value={editingSkill.source} />
             </Form.Item>
 
             <Form.Item name="path" label="Path">
-              <Input disabled />
+              <Input disabled value={editingSkill.path} />
             </Form.Item>
-
-            <div
-              style={{
-                padding: 12,
-                backgroundColor: "#fffbe6",
-                border: "1px solid #ffe58f",
-                borderRadius: 4,
-                marginTop: 16,
-              }}
-            >
-              <p style={{ margin: 0, fontSize: 12, color: "#8c8c8c" }}>
-                {t("skills.editNote")}
-              </p>
-            </div>
           </>
         )}
       </Form>
