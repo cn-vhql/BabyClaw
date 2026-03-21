@@ -25,6 +25,7 @@ import {
   Shield,
   Plug,
   Wrench,
+  Database,
   PanelLeftClose,
   PanelLeftOpen,
   BarChart3,
@@ -122,6 +123,11 @@ export default function Sidebar({ selectedKey }: SidebarProps) {
         { key: "skills", label: t("nav.skills"), icon: <Sparkles size={16} /> },
         { key: "tools", label: t("nav.tools"), icon: <Wrench size={16} /> },
         { key: "mcp", label: t("nav.mcp"), icon: <Plug size={16} /> },
+        {
+          key: "knowledge",
+          label: t("nav.knowledge"),
+          icon: <Database size={16} />,
+        },
         {
           key: "agent-config",
           label: t("nav.agentConfig"),

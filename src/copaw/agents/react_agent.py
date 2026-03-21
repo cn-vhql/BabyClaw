@@ -44,6 +44,8 @@ from .tools import (
     view_image,
     write_file,
     create_memory_search_tool,
+    knowledge_search,
+    list_knowledge_bases,
 )
 from .utils import process_file_and_media_blocks_in_message
 from ..constant import (
@@ -211,6 +213,8 @@ class CoPawAgent(ToolGuardMixin, ReActAgent):
             "get_current_time": get_current_time,
             "set_user_timezone": set_user_timezone,
             "get_token_usage": get_token_usage,
+            "knowledge_search": knowledge_search,
+            "list_knowledge_bases": list_knowledge_bases,
         }
 
         # Register only enabled tools

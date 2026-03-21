@@ -1,0 +1,372 @@
+.knowledgePage {
+  padding: 24px;
+  height: calc(100vh - 96px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.header {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.headerInfo {
+  h1 {
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0 0 4px 0;
+  }
+
+  p {
+    margin: 0;
+    color: #999;
+    font-size: 14px;
+  }
+}
+
+.title {
+  margin-bottom: 4px;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.description {
+  margin: 0;
+  color: #999;
+  font-size: 14px;
+}
+
+.layout {
+  display: flex;
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-bottom: 12px;
+}
+
+.sidebar {
+  width: 400px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  /* Custom scrollbar */
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #d9d9d9;
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+.emptyState {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  font-size: 14px;
+}
+
+.kbHeader {
+  flex-shrink: 0;
+  margin-bottom: 16px;
+
+  h2 {
+    margin: 0 0 4px 0;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  p {
+    margin: 0;
+    color: #999;
+    font-size: 14px;
+  }
+}
+
+.toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.chunkConfig {
+  padding: 12px;
+  background: #f5f5f5;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.searchBar {
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.chunksList {
+  max-height: 600px;
+  overflow-y: auto;
+  margin-bottom: 16px;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #d9d9d9;
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+.searchResults {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: visible;
+  padding-bottom: 24px;
+}
+
+.documentsList {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: visible;
+  padding-bottom: 24px;
+}
+
+.chunkItem {
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+  background: #fff;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: #d9d9d9;
+    background-color: #fafafa;
+  }
+}
+
+.chunkHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.chunkId {
+  font-size: 12px;
+  color: #999;
+  font-family: monospace;
+}
+
+.chunkContent {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #333;
+  background: #fff;
+  padding: 12px;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+
+  &:placeholder-shown {
+    color: #999;
+  }
+}
+
+/* Table styles */
+:global {
+  .copaw-table {
+    font-size: 13px;
+
+    .copaw-table-thead > tr > th {
+      font-size: 13px;
+      font-weight: 600;
+      background: #fafafa;
+      padding: 12px;
+    }
+
+    .copaw-table-tbody > tr > td {
+      font-size: 13px;
+      padding: 12px;
+    }
+
+    .copaw-table-tbody > tr:hover > td {
+      background: #f5f5f5;
+    }
+  }
+}
+
+/* Tag styles */
+:global {
+  .copaw-tag {
+    font-size: 12px;
+  }
+}
+
+/* Dark mode */
+:global(.dark-mode) {
+  .header {
+    .title {
+      color: rgba(255, 255, 255, 0.85);
+    }
+  }
+
+  .description {
+    color: rgba(255, 255, 255, 0.35);
+  }
+
+  .emptyState {
+    color: rgba(255, 255, 255, 0.3);
+  }
+
+  .kbHeader {
+    h2 {
+      color: rgba(255, 255, 255, 0.85);
+    }
+
+    p {
+      color: rgba(255, 255, 255, 0.35);
+    }
+  }
+
+  .chunkConfig {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  /* Reindexing status notification dark mode */
+  .chunksList + div > div[style*="background: #f0f5ff"],
+  .chunksList + div > div[style*="background"] {
+    background: rgba(24, 144, 255, 0.1) !important;
+    border-color: rgba(24, 144, 255, 0.3) !important;
+    color: rgba(24, 144, 255, 0.85) !important;
+  }
+
+  .chunkItem {
+    background-color: #2a2a2a;
+    border-color: rgba(255, 255, 255, 0.1);
+
+    &:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+      background-color: #333;
+    }
+  }
+
+  .chunkId {
+    color: rgba(255, 255, 255, 0.35);
+  }
+
+  .chunkContent {
+    color: rgba(255, 255, 255, 0.85);
+    background: #1f1f1f;
+    border-color: rgba(255, 255, 255, 0.1);
+
+    &:placeholder-shown {
+      color: rgba(255, 255, 255, 0.3);
+    }
+  }
+
+  .chunksList {
+    &::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+    }
+  }
+
+  /* Table dark mode */
+  .copaw-table {
+    .copaw-table-thead > tr > th {
+      background: rgba(255, 255, 255, 0.03);
+      color: rgba(255, 255, 255, 0.85);
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+
+    .copaw-table-tbody > tr > td {
+      color: rgba(255, 255, 255, 0.85);
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+
+    .copaw-table-tbody > tr:hover > td {
+      background: rgba(255, 255, 255, 0.04);
+    }
+  }
+
+  /* Pagination dark mode */
+  .chunksList {
+    button {
+      color: rgba(255, 255, 255, 0.85);
+      border-color: rgba(255, 255, 255, 0.15);
+
+      &:hover:not(:disabled) {
+        color: rgba(255, 255, 255, 0.85);
+        border-color: rgba(255, 255, 255, 0.3);
+      }
+
+      &:disabled {
+        color: rgba(255, 255, 255, 0.25);
+        border-color: rgba(255, 255, 255, 0.08);
+      }
+    }
+
+    span {
+      color: rgba(255, 255, 255, 0.65);
+
+      strong {
+        color: rgba(255, 255, 255, 0.85);
+      }
+    }
+
+    input {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.15);
+      color: rgba(255, 255, 255, 0.85);
+
+      &::placeholder {
+        color: rgba(255, 255, 255, 0.25);
+      }
+
+      &:hover {
+        border-color: rgba(255, 255, 255, 0.3);
+      }
+
+      &:focus {
+        border-color: #1890ff;
+      }
+    }
+  }
+}

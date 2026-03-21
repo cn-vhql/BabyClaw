@@ -32,6 +32,11 @@ export default function AgentSelector() {
   const handleChange = (value: string) => {
     setSelectedAgent(value);
     message.success(t("agent.switchSuccess"));
+
+    // Dispatch custom event in next tick to ensure zustand persist has updated localStorage
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent("agent-switched", { detail: { agentId: value } }));
+    }, 0);
   };
 
   const agentCount = agents.length;
