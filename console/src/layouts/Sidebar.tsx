@@ -77,7 +77,7 @@ export default function Sidebar({ selectedKey }: SidebarProps) {
   const menuItems: MenuProps["items"] = [
     {
       key: "chat-group",
-      label: t("nav.chat"),
+      label: t("nav.chatGroup"),
       icon: <MessageSquare size={16} />,
       children: [
         {

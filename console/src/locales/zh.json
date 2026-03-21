@@ -28,6 +28,7 @@
   },
   "nav": {
     "chat": "聊天",
+    "chatGroup": "BabyClaw",
     "control": "控制",
     "channels": "频道",
     "sessions": "会话",
