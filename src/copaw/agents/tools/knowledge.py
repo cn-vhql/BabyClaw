@@ -10,8 +10,6 @@ from agentscope.message import TextBlock
 from agentscope.tool import ToolResponse
 from openai import OpenAI
 
-from ...config.config import load_agent_config
-
 logger = logging.getLogger(__name__)
 
 
@@ -31,8 +29,14 @@ def knowledge_search(
         ToolResponse with search results including document name, content, and score
     """
     try:
-        config = load_agent_config()
-        workspace_dir = Path(config.workspace_path)
+        # Lazy import to avoid circular dependency
+        from ...app.agent_context import get_current_agent_id
+        from ...config.config import load_agent_config
+
+        # Get current agent ID automatically
+        agent_id = get_current_agent_id()
+        config = load_agent_config(agent_id)
+        workspace_dir = Path(config.workspace_dir)  # Fixed: workspace_dir not workspace_path
         embedding_config = config.running.embedding_config
 
         if kb_id:
@@ -159,8 +163,14 @@ def list_knowledge_bases() -> ToolResponse:
         ToolResponse with list of knowledge bases including name, description, and document count
     """
     try:
-        config = load_agent_config()
-        workspace_dir = Path(config.workspace_path)
+        # Lazy import to avoid circular dependency
+        from ...app.agent_context import get_current_agent_id
+        from ...config.config import load_agent_config
+
+        # Get current agent ID automatically
+        agent_id = get_current_agent_id()
+        config = load_agent_config(agent_id)
+        workspace_dir = Path(config.workspace_dir)  # Fixed: workspace_dir not workspace_path
 
         kb_dir = workspace_dir / "knowledge"
         if not kb_dir.exists():
