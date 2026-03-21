@@ -15,6 +15,7 @@ import ToolsPage from "../../pages/Agent/Tools";
 import WorkspacePage from "../../pages/Agent/Workspace";
 import MCPPage from "../../pages/Agent/MCP";
 import KnowledgePage from "../../pages/Agent/Knowledge";
+import EvolutionPage from "../../pages/Agent/Evolution";
 import ModelsPage from "../../pages/Settings/Models";
 import EnvironmentsPage from "../../pages/Settings/Environments";
 import SecurityPage from "../../pages/Settings/Security";
@@ -35,6 +36,7 @@ const pathToKey: Record<string, string> = {
   "/mcp": "mcp",
   "/workspace": "workspace",
   "/knowledge": "knowledge",
+  "/evolution": "evolution",
   "/agents": "agents",
   "/models": "models",
   "/environments": "environments",
@@ -69,6 +71,7 @@ export default function MainLayout() {
               <Route path="/mcp" element={<MCPPage />} />
               <Route path="/workspace" element={<WorkspacePage />} />
               <Route path="/knowledge" element={<KnowledgePage />} />
+              <Route path="/evolution" element={<EvolutionPage />} />
               <Route path="/agents" element={<AgentsPage />} />
               <Route path="/models" element={<ModelsPage />} />
               <Route path="/environments" element={<EnvironmentsPage />} />

@@ -20,6 +20,7 @@ from .console import router as console_router
 from .token_usage import router as token_usage_router
 from .auth import router as auth_router
 from .knowledge import router as knowledge_router
+from .evolution import router as evolution_router
 
 router = APIRouter()
 
@@ -39,6 +40,7 @@ router.include_router(skills_stream_router)
 router.include_router(tools_router)
 router.include_router(workspace_router)
 router.include_router(envs_router)
+router.include_router(evolution_router)
 router.include_router(token_usage_router)
 router.include_router(auth_router)
 

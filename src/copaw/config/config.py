@@ -14,6 +14,7 @@ from ..constant import (
     WORKING_DIR,
 )
 from ..providers.models import ModelSlotConfig
+from .evolution import EvolutionConfig
 
 
 def generate_short_agent_id() -> str:
@@ -449,6 +450,10 @@ class AgentProfileConfig(BaseModel):
     security: Optional["SecurityConfig"] = Field(
         default=None,
         description="Security configuration for this agent",
+    )
+    evolution: EvolutionConfig = Field(
+        default_factory=EvolutionConfig,
+        description="Evolution configuration for this agent",
     )
 
 

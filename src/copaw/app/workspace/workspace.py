@@ -30,6 +30,19 @@ from ..crons.repo.json_repo import JsonJobRepository
 from ...agents.memory import MemoryManager
 from ...config.config import load_agent_config
 
+
+def create_evolution_repo(workspace, _):
+    """Create evolution repository service."""
+    from ..evolution.repo.json_repo import JsonEvolutionRepository
+    from ..evolution.init import initialize_evolution_files
+
+    # Initialize evolution files
+    initialize_evolution_files(workspace.workspace_dir)
+
+    # Create repository
+    repo = JsonEvolutionRepository(workspace.workspace_dir)
+    return repo
+
 if TYPE_CHECKING:
     from ..channels.base import BaseChannel
 
@@ -106,6 +119,11 @@ class Workspace:
     def cron_manager(self):
         """Get cron manager instance from ServiceManager."""
         return self._service_manager.services.get("cron_manager")
+
+    @property
+    def evolution_repo(self):
+        """Get evolution repository instance from ServiceManager."""
+        return self._service_manager.services.get("evolution_repo")
 
     # Non-service state
     @property
@@ -246,6 +264,17 @@ class Workspace:
                 start_method="start",
                 stop_method="stop",
                 priority=40,
+                concurrent_init=False,
+            ),
+        )
+
+        # Priority 45: Evolution repository
+        sm.register(
+            ServiceDescriptor(
+                name="evolution_repo",
+                service_class=None,
+                post_init=create_evolution_repo,
+                priority=45,
                 concurrent_init=False,
             ),
         )

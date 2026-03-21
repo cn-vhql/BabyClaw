@@ -85,6 +85,11 @@ export default function Sidebar({ selectedKey }: SidebarProps) {
           label: t("nav.chat"),
           icon: <MessageCircle size={16} />,
         },
+        {
+          key: "evolution",
+          label: t("nav.evolution"),
+          icon: <Sparkles size={16} />,
+        },
       ],
     },
     {

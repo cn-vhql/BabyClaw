@@ -1,0 +1,299 @@
+# -*- coding: utf-8 -*-
+"""Evolution executor for running digital life evolution."""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+from datetime import datetime
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+from .models import EvolutionArchive, EvolutionRecord, EvolutionRunRequest
+
+if TYPE_CHECKING:
+    from .repo.json_repo import JsonEvolutionRepository
+
+logger = logging.getLogger(__name__)
+
+
+class EvolutionExecutor:
+    """Evolution executor for running evolution process."""
+
+    # Protected files that cannot be modified
+    PROTECTED_FILES = {
+        "agent.json",
+        "sessions",
+        "memory",
+        "chats.json",
+        "token_usage.json",
+    }
+
+    def __init__(
+        self,
+        workspace,  # Workspace instance
+        repo: "JsonEvolutionRepository",
+    ) -> None:
+        """Initialize executor with workspace and repository."""
+        self.workspace = workspace
+        self.repo = repo
+        self._current_record: EvolutionRecord | None = None
+        self._tool_execution_log: list[dict] = []
+        self._full_output: str = ""
+
+    async def execute(self, request: EvolutionRunRequest) -> EvolutionRecord:
+        """Execute one evolution cycle."""
+        agent_id = self.workspace.agent_id
+        generation = await self.repo.get_current_generation()
+        next_generation = generation + 1
+
+        # Check max_generations limit
+        max_gen = self.workspace.config.evolution.max_generations
+        if max_gen is not None and max_gen > 0 and next_generation > max_gen:
+            logger.warning(
+                f"Evolution blocked: reached max generation {max_gen}, "
+                f"current={generation}"
+            )
+            # Create a failed record
+            record = EvolutionRecord(
+                generation=next_generation,
+                agent_id=agent_id,
+                agent_name=self.workspace.config.name,
+                timestamp=datetime.now(),
+                trigger_type=request.trigger_type,
+                status="failed",
+                error_message=f"已达到最大代数限制 ({max_gen})",
+            )
+            await self.repo.save_record(record)
+            return record
+
+        # Create record
+        self._current_record = EvolutionRecord(
+            generation=next_generation,
+            agent_id=agent_id,
+            agent_name=self.workspace.config.name,
+            timestamp=datetime.now(),
+            trigger_type=request.trigger_type,
+            status="running",
+        )
+        self._tool_execution_log = []
+        self._full_output = ""
+
+        # Snapshot files before evolution
+        await self._snapshot_before()
+
+        # Build evolution prompt (using SOUL.md content)
+        evolution_prompt = await self._build_evolution_prompt(request, generation)
+
+        try:
+            start_time = datetime.now()
+
+            # Get evolution model or use default
+            evolution_model = self.workspace.config.evolution.model_name
+
+            # Execute agent reasoning
+            agent_request = {
+                "input": [
+                    {
+                        "role": "user",
+                        "content": [{"type": "text", "text": evolution_prompt}],
+                    },
+                ],
+                "session_id": f"evolution:{self._current_record.id}",
+                "user_id": "evolution_system",
+            }
+
+            # Add model if specified in evolution config
+            if evolution_model:
+                agent_request["model"] = evolution_model
+
+            async for event in self.workspace.runner.stream_query(agent_request):
+                await self._process_event(event)
+
+            # Finalize evolution
+            await self._finalize_evolution(start_time)
+
+        except asyncio.TimeoutError:
+            self._current_record.status = "failed"
+            self._current_record.error_message = "Execution timeout"
+            logger.error(f"Evolution timeout: {agent_id} gen {generation}")
+
+        except Exception as e:
+            self._current_record.status = "failed"
+            self._current_record.error_message = str(e)
+            logger.error(f"Evolution failed: {e}", exc_info=True)
+
+        finally:
+            # Save record and archive
+            await self.repo.save_record(self._current_record)
+            if self.workspace.config.evolution.archive_enabled:
+                await self._create_archive()
+
+        return self._current_record
+
+    async def _build_evolution_prompt(
+        self,
+        request: EvolutionRunRequest,
+        current_generation: int,
+    ) -> str:
+        """Build evolution prompt - using SOUL.md content."""
+        # If custom prompt provided, use it
+        if request.custom_prompt:
+            base_prompt = request.custom_prompt
+        else:
+            # Read SOUL.md as base prompt
+            soul_path = self.workspace.workspace_dir / "SOUL.md"
+            if soul_path.exists():
+                try:
+                    base_prompt = soul_path.read_text(encoding="utf-8")
+                except Exception as e:
+                    logger.warning(f"Failed to read SOUL.md: {e}")
+                    base_prompt = "你是进化的智能体。请自主探索、学习并更新自己的配置文件。"
+            else:
+                base_prompt = "你是进化的智能体。请自主探索、学习并更新自己的配置文件。"
+
+        # Add evolution context
+        evolution_context = f"""
+
+---
+
+# 进化任务
+
+你是第 {current_generation + 1} 代智能体。现在开始你的进化过程。
+
+## 你的能力
+1. 你可以使用 `read_file` 工具查看任何文件
+2. 你可以使用 `write_file` 工具修改文件（但不能修改受保护的系统文件）
+3. 你可以使用 `glob_search` 和 `grep_search` 探索代码
+
+## 你可以更新的文件
+- **SOUL.md**: 你的核心信念、价值观、行为准则
+- **PROFILE.md**: 你的能力描述、专长、限制
+- **PLAN.md**: 你的学习计划、目标、待办事项
+- **EVOLUTION.md**: 你的进化历史、发现、成长记录
+
+## 进化流程
+1. **自我认知**: 读取 SOUL.md、PROFILE.md，了解自己
+2. **环境探索**: 探索项目结构，了解自己的工具和知识库
+3. **反思改进**: 思考如何优化自己的配置
+4. **执行更新**: 使用 write_file 更新文件
+5. **记录成长**: 在 EVOLUTION.md 中记录本次进化的发现和改变
+
+## 更新原则
+- 保持核心信念的一致性
+- 基于实际发现进行改进
+- 记录改变的原因和预期效果
+- 不要删除有价值的历史信息
+
+## 开始
+请开始你的进化，记录你学到的东西和做出的改变。
+"""
+
+        return base_prompt + evolution_context
+
+    async def _snapshot_before(self) -> None:
+        """Snapshot files before evolution."""
+        workspace_dir = self.workspace.workspace_dir
+
+        self._current_record.soul_before = self._read_file(
+            workspace_dir / "SOUL.md"
+        )
+        self._current_record.profile_before = self._read_file(
+            workspace_dir / "PROFILE.md"
+        )
+        self._current_record.plan_before = self._read_file(
+            workspace_dir / "PLAN.md"
+        )
+
+    async def _finalize_evolution(self, start_time: datetime) -> None:
+        """Finalize evolution after completion."""
+        workspace_dir = self.workspace.workspace_dir
+
+        # Snapshot files after evolution
+        self._current_record.soul_after = self._read_file(
+            workspace_dir / "SOUL.md"
+        )
+        self._current_record.profile_after = self._read_file(
+            workspace_dir / "PROFILE.md"
+        )
+        self._current_record.plan_after = self._read_file(
+            workspace_dir / "PLAN.md"
+        )
+
+        # Update status
+        self._current_record.status = "success"
+        self._current_record.duration_seconds = (
+            datetime.now() - start_time
+        ).total_seconds()
+
+    def _read_file(self, path: Path) -> str | None:
+        """Safely read file content."""
+        try:
+            if path.exists():
+                return path.read_text(encoding="utf-8")
+        except Exception as e:
+            logger.warning(f"Failed to read {path}: {e}")
+        return None
+
+    async def _process_event(self, event) -> None:
+        """Process agent output event."""
+        # event is an AgentResponse object with output: List[Message]
+        if not hasattr(event, "output") or not event.output:
+            return
+
+        for msg in event.output:
+            msg_type = getattr(msg, "type", None)
+
+            # Tool call event
+            if msg_type == "function_call":
+                self._current_record.tool_calls_count += 1
+                tool_name = getattr(msg, "name", None)
+                if tool_name and tool_name not in self._current_record.tools_used:
+                    self._current_record.tools_used.append(tool_name)
+
+                # Record to tool log
+                self._tool_execution_log.append({
+                    "tool": tool_name,
+                    "args": getattr(msg, "arguments", None),
+                    "timestamp": datetime.now().isoformat(),
+                })
+
+            # Tool result event
+            elif msg_type == "function_call_output":
+                if self._tool_execution_log:
+                    self._tool_execution_log[-1]["result"] = getattr(msg, "content", None)
+
+            # Text output event
+            elif msg_type == "message":
+                content = getattr(msg, "content", [])
+                if isinstance(content, list):
+                    for item in content:
+                        item_type = getattr(item, "type", "")
+                        if item_type == "text":
+                            text = getattr(item, "text", "")
+                            self._full_output += text + "\n"
+                            if len(self._current_record.output_summary) < 500:
+                                self._current_record.output_summary += text[:200]
+
+    async def _create_archive(self) -> None:
+        """Create complete archive."""
+        archive = EvolutionArchive(
+            evolution_id=self._current_record.id,
+            generation=self._current_record.generation,
+            timestamp=datetime.now(),
+            tool_execution_log=self._tool_execution_log,
+            full_output=self._full_output,
+        )
+
+        # Save file snapshots
+        workspace_dir = self.workspace.workspace_dir
+        for filename in ["SOUL.md", "PROFILE.md", "PLAN.md", "EVOLUTION.md"]:
+            file_path = workspace_dir / filename
+            if file_path.exists():
+                try:
+                    archive.files[filename] = file_path.read_text(encoding="utf-8")
+                except Exception as e:
+                    logger.warning(f"Failed to archive {filename}: {e}")
+
+        # Save to repository
+        await self.repo.save_archive(archive)
