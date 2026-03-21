@@ -8,6 +8,7 @@ import {
   CustomProviderModal,
   ProviderConfigModal,
   ModelManageModal,
+  EmbeddingConfigModal,
 } from "./components";
 import { useTranslation } from "react-i18next";
 import type { ProviderInfo } from "../../../api/types/provider";
@@ -24,6 +25,7 @@ function ModelsPage() {
   const [addProviderOpen, setAddProviderOpen] = useState(false);
   const [configModalOpen, setConfigModalOpen] = useState(false);
   const [modelManageOpen, setModelManageOpen] = useState(false);
+  const [embeddingConfigOpen, setEmbeddingConfigOpen] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<ProviderInfo | null>(null);
 
   const refreshProvidersSilently = () => fetchAll(false);
@@ -242,14 +244,22 @@ function ModelsPage() {
                 title={t("models.providersTitle")}
                 description={t("models.providersDescription")}
               />
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => setAddProviderOpen(true)}
-                className={styles.addProviderBtn}
-              >
-                {t("models.addProvider")}
-              </Button>
+              <div style={{ display: "flex", gap: 8 }}>
+                <Button
+                  onClick={() => setEmbeddingConfigOpen(true)}
+                  className={styles.addProviderBtn}
+                >
+                  {t("models.embedding.configButton")}
+                </Button>
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => setAddProviderOpen(true)}
+                  className={styles.addProviderBtn}
+                >
+                  {t("models.addProvider")}
+                </Button>
+              </div>
             </div>
 
             {providers.length > 0 && (
@@ -299,6 +309,12 @@ function ModelsPage() {
               onSaved={refreshProvidersSilently}
             />
           )}
+
+          <EmbeddingConfigModal
+            open={embeddingConfigOpen}
+            onClose={() => setEmbeddingConfigOpen(false)}
+            onSaved={refreshProvidersSilently}
+          />
         </>
       )}
     </div>

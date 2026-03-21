@@ -82,4 +82,35 @@ export const agentApi = {
       ffmpeg_installed: boolean;
       whisper_installed: boolean;
     }>("/agent/local-whisper-status"),
+
+  getEmbeddingConfig: () =>
+    request<{
+      backend: string;
+      api_key: string;
+      base_url: string;
+      model_name: string;
+      dimensions: number;
+      enable_cache: boolean;
+      use_dimensions: boolean;
+      max_cache_size: number;
+      max_input_length: number;
+      max_batch_size: number;
+    }>("/agent/embedding-config"),
+
+  updateEmbeddingConfig: (config: {
+    backend: string;
+    api_key: string;
+    base_url: string;
+    model_name: string;
+    dimensions: number;
+    enable_cache: boolean;
+    use_dimensions: boolean;
+    max_cache_size: number;
+    max_input_length: number;
+    max_batch_size: number;
+  }) =>
+    request<{ success: boolean; message: string }>("/agent/embedding-config", {
+      method: "PUT",
+      body: JSON.stringify(config),
+    }),
 };

@@ -829,3 +829,83 @@ async def download_file(request: Request, path: str):
         raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+class EmbeddingConfigRequest(BaseModel):
+    """Embedding configuration request."""
+
+    backend: str = Field(default="openai", description="Embedding backend")
+    api_key: str = Field(default="", description="API key for embedding provider")
+    base_url: str = Field(default="", description="Base URL for embedding API")
+    model_name: str = Field(default="", description="Embedding model name")
+    dimensions: int = Field(default=1024, description="Embedding dimensions")
+    enable_cache: bool = Field(default=True, description="Enable embedding cache")
+    use_dimensions: bool = Field(default=False, description="Use custom dimensions")
+    max_cache_size: int = Field(default=2000, description="Maximum cache size")
+    max_input_length: int = Field(default=8192, description="Maximum input length")
+    max_batch_size: int = Field(default=10, description="Maximum batch size")
+
+
+@router.get(
+    "/embedding-config",
+    summary="Get embedding configuration",
+    description="Get the current embedding model configuration",
+)
+async def get_embedding_config(request: Request) -> dict:
+    """Get embedding configuration."""
+    try:
+        workspace = await get_agent_for_request(request)
+        config = load_agent_config(workspace.agent_id)
+
+        return {
+            "backend": config.running.embedding_config.backend,
+            "api_key": config.running.embedding_config.api_key,
+            "base_url": config.running.embedding_config.base_url,
+            "model_name": config.running.embedding_config.model_name,
+            "dimensions": config.running.embedding_config.dimensions,
+            "enable_cache": config.running.embedding_config.enable_cache,
+            "use_dimensions": config.running.embedding_config.use_dimensions,
+            "max_cache_size": config.running.embedding_config.max_cache_size,
+            "max_input_length": config.running.embedding_config.max_input_length,
+            "max_batch_size": config.running.embedding_config.max_batch_size,
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.put(
+    "/embedding-config",
+    summary="Update embedding configuration",
+    description="Update the embedding model configuration",
+)
+async def update_embedding_config(
+    request: Request,
+    config_data: EmbeddingConfigRequest,
+) -> dict:
+    """Update embedding configuration."""
+    try:
+        workspace = await get_agent_for_request(request)
+        config = load_agent_config(workspace.agent_id)
+
+        # Update embedding config
+        config.running.embedding_config.backend = config_data.backend
+        config.running.embedding_config.api_key = config_data.api_key
+        config.running.embedding_config.base_url = config_data.base_url
+        config.running.embedding_config.model_name = config_data.model_name
+        config.running.embedding_config.dimensions = config_data.dimensions
+        config.running.embedding_config.enable_cache = config_data.enable_cache
+        config.running.embedding_config.use_dimensions = config_data.use_dimensions
+        config.running.embedding_config.max_cache_size = config_data.max_cache_size
+        config.running.embedding_config.max_input_length = config_data.max_input_length
+        config.running.embedding_config.max_batch_size = config_data.max_batch_size
+
+        # Save config
+        save_agent_config(workspace.agent_id, config)
+
+        # Restart embedding model if workspace is running
+        if hasattr(workspace, "memory_manager") and workspace.memory_manager:
+            await workspace.memory_manager.restart_embedding_model()
+
+        return {"success": True, "message": "Embedding configuration updated"}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
