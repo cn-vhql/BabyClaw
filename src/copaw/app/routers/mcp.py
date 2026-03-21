@@ -507,12 +507,19 @@ async def test_mcp_client(
         # Get tools list
         try:
             # AgentScope MCP clients have list_tools() method
+            # Returns List[mcp.types.Tool] directly
             tools_response = await test_client.list_tools()
 
-            # Extract tool information
-            tools_list = []
-            if hasattr(tools_response, "tools"):
-                for tool in tools_response.tools:
+            # Debug: log the response structure
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"MCP tools response type: {type(tools_response)}")
+
+            # list_tools() returns a list directly, not wrapped
+            if isinstance(tools_response, list):
+                logger.info(f"Tools list contains {len(tools_response)} items")
+                tools_list = []
+                for tool in tools_response:
                     tool_info = {
                         "name": tool.name if hasattr(tool, "name") else str(tool),
                         "description": (
@@ -524,10 +531,18 @@ async def test_mcp_client(
                         tool_info["input_schema"] = tool.inputSchema
                     tools_list.append(tool_info)
 
-            result["tools"] = tools_list
-            result["tool_count"] = len(tools_list)
+                result["tools"] = tools_list
+                result["tool_count"] = len(tools_list)
+            else:
+                logger.warning(f"Unexpected tools response type: {type(tools_response)}")
+                logger.info(f"Response content: {tools_response}")
+                result["tools"] = []
+                result["tool_count"] = 0
 
         except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to list tools: {e}", exc_info=True)
             result["error"] = f"Failed to list tools: {str(e)}"
             # Still return connected=True even if listing tools failed
 
