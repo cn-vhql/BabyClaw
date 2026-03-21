@@ -201,7 +201,14 @@
     "uploadFailed": "Skill upload failed",
     "uploadNoChange": "No new skills were imported. They may already exist.",
     "zipOnly": "Only .zip files are supported for upload",
-    "fileSizeExceeded": "File size exceeds 100MB limit. Current file: {{size}}MB"
+    "fileSizeExceeded": "File size exceeds 100MB limit. Current file: {{size}}MB",
+    "name": "Name",
+    "type": "Type",
+    "status": "Status",
+    "actions": "Actions",
+    "builtin": "Built-in",
+    "custom": "Custom",
+    "totalItems": "Total {{count}} items"
   },
   "mcp": {
     "title": "MCP Clients",
@@ -338,6 +345,9 @@
     "configFailed": "Failed to save configuration",
     "channelType": "Channel Type",
     "status": "Status",
+    "name": "Name",
+    "actions": "Actions",
+    "configure": "Configure",
     "totalItems": "Total {{count}} items",
     "botPrefix": "Bot Prefix",
     "filterToolMessages": "Show Tool Messages",
@@ -467,6 +477,7 @@
     "noData": "No token usage data in the selected period"
   },
   "models": {
+    "providerType": "Provider Type",
     "llmConfiguration": "LLM Configuration",
     "providersTitle": "Providers",
     "providersDescription": "Configure API keys and endpoints for each provider.",

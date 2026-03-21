@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Card, Switch, Empty, Button } from "@agentscope-ai/design";
+import { Table, Card, Button, Switch, Empty, Tag } from "@agentscope-ai/design";
 import { useTools } from "./useTools";
 import { useTranslation } from "react-i18next";
 import type { ToolInfo } from "../../../api/modules/tools";
@@ -9,7 +9,6 @@ export default function ToolsPage() {
   const { t } = useTranslation();
   const { tools, loading, batchLoading, toggleEnabled, enableAll, disableAll } =
     useTools();
-  const [hoverKey, setHoverKey] = useState<string | null>(null);
 
   const handleToggle = (tool: ToolInfo) => {
     toggleEnabled(tool);
@@ -23,6 +22,55 @@ export default function ToolsPage() {
     () => tools.some((tool) => tool.enabled),
     [tools],
   );
+
+  const columns = [
+    {
+      title: t("tools.name"),
+      dataIndex: "name",
+      key: "name",
+      ellipsis: true,
+    },
+    {
+      title: t("tools.type"),
+      dataIndex: "isBuiltin",
+      key: "type",
+      width: 100,
+      render: (_: unknown, record: ToolInfo) => (
+        <Tag color={record.isBuiltin ? "geekblue" : "green"}>
+          {record.isBuiltin ? t("tools.builtin") : t("tools.custom")}
+        </Tag>
+      ),
+    },
+    {
+      title: t("tools.status"),
+      dataIndex: "enabled",
+      key: "status",
+      width: 100,
+      render: (enabled: boolean, record: ToolInfo) => (
+        <Switch
+          size="small"
+          checked={enabled}
+          onChange={() => handleToggle(record)}
+        />
+      ),
+    },
+    {
+      title: t("tools.actions"),
+      key: "actions",
+      width: 120,
+      render: (_: unknown, record: ToolInfo) => (
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <Button
+            type="link"
+            size="small"
+            onClick={() => handleToggle(record)}
+          >
+            {record.enabled ? t("common.disable") : t("common.enable")}
+          </Button>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className={styles.toolsPage}>
@@ -64,39 +112,19 @@ export default function ToolsPage() {
       ) : tools.length === 0 ? (
         <Empty description={t("tools.emptyState")} />
       ) : (
-        <div className={styles.toolsGrid}>
-          {tools.map((tool) => (
-            <Card
-              key={tool.name}
-              className={`${styles.toolCard} ${
-                tool.enabled ? styles.enabledCard : ""
-              } ${
-                hoverKey === tool.name ? styles.hoverCard : styles.normalCard
-              }`}
-              onMouseEnter={() => setHoverKey(tool.name)}
-              onMouseLeave={() => setHoverKey(null)}
-            >
-              <div className={styles.cardHeader}>
-                <h3 className={styles.toolName}>{tool.name}</h3>
-                <div className={styles.statusContainer}>
-                  <span className={styles.statusDot} />
-                  <span className={styles.statusText}>
-                    {tool.enabled ? t("common.enabled") : t("common.disabled")}
-                  </span>
-                </div>
-              </div>
-
-              <p className={styles.toolDescription}>{tool.description}</p>
-
-              <div className={styles.cardFooter}>
-                <Switch
-                  checked={tool.enabled}
-                  onChange={() => handleToggle(tool)}
-                />
-              </div>
-            </Card>
-          ))}
-        </div>
+        <Card className={styles.tableCard} bodyStyle={{ padding: 0 }}>
+          <Table
+            columns={columns}
+            dataSource={tools}
+            rowKey="name"
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: false,
+              showTotal: (total) => t("tools.totalItems", { count: total }),
+            }}
+            size="small"
+          />
+        </Card>
       )}
     </div>
   );

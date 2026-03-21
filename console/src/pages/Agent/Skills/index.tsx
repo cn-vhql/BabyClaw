@@ -1,12 +1,14 @@
 import { useState, useRef } from "react";
-import { Button, Form, Modal, message } from "@agentscope-ai/design";
+import { Button, Form, Modal, message, Table, Card, Tag, Switch, Dropdown } from "@agentscope-ai/design";
+import { Space } from "antd";
 import {
   DownloadOutlined,
   PlusOutlined,
   UploadOutlined,
+  MoreOutlined,
 } from "@ant-design/icons";
 import type { SkillSpec } from "../../../api/types";
-import { SkillCard, SkillDrawer } from "./components";
+import { SkillDrawer } from "./components";
 import { useSkills } from "./useSkills";
 import { useTranslation } from "react-i18next";
 import styles from "./index.module.less";
@@ -30,7 +32,6 @@ function SkillsPage() {
   const [importUrl, setImportUrl] = useState("");
   const [importUrlError, setImportUrlError] = useState("");
   const [editingSkill, setEditingSkill] = useState<SkillSpec | null>(null);
-  const [hoverKey, setHoverKey] = useState<string | null>(null);
   const [form] = Form.useForm<SkillSpec>();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -129,13 +130,11 @@ function SkillsPage() {
     setDrawerOpen(true);
   };
 
-  const handleToggleEnabled = async (skill: SkillSpec, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleToggleEnabled = async (skill: SkillSpec) => {
     await toggleEnabled(skill);
   };
 
-  const handleDelete = async (skill: SkillSpec, e?: React.MouseEvent) => {
-    e?.stopPropagation();
+  const handleDelete = async (skill: SkillSpec) => {
     await deleteSkill(skill);
   };
 
@@ -154,6 +153,63 @@ function SkillsPage() {
       console.error("Submit failed", error);
     }
   };
+
+  const columns = [
+    {
+      title: t("skills.name"),
+      dataIndex: "name",
+      key: "name",
+      ellipsis: true,
+    },
+    {
+      title: t("skills.type"),
+      dataIndex: "isBuiltin",
+      key: "type",
+      width: 100,
+      render: (_: unknown, record: SkillSpec) => (
+        <Tag color={record.isBuiltin ? "geekblue" : "green"}>
+          {record.isBuiltin ? t("skills.builtin") : t("skills.custom")}
+        </Tag>
+      ),
+    },
+    {
+      title: t("skills.status"),
+      dataIndex: "enabled",
+      key: "status",
+      width: 100,
+      render: (enabled: boolean, record: SkillSpec) => (
+        <Switch
+          size="small"
+          checked={enabled}
+          onChange={() => handleToggleEnabled(record)}
+        />
+      ),
+    },
+    {
+      title: t("skills.actions"),
+      key: "actions",
+      width: 180,
+      render: (_: unknown, record: SkillSpec) => (
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <Button
+            type="link"
+            size="small"
+            onClick={() => handleEdit(record)}
+          >
+            {t("common.edit")}
+          </Button>
+          <Button
+            type="link"
+            size="small"
+            danger
+            onClick={() => handleDelete(record)}
+          >
+            {t("common.delete")}
+          </Button>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className={styles.skillsPage}>
@@ -261,33 +317,20 @@ function SkillsPage() {
         ) : null}
       </Modal>
 
-      {loading ? (
-        <div className={styles.loading}>
-          <span className={styles.loadingText}>{t("common.loading")}</span>
-        </div>
-      ) : (
-        <div className={styles.skillsGrid}>
-          {skills
-            .slice()
-            .sort((a, b) => {
-              if (a.enabled && !b.enabled) return -1;
-              if (!a.enabled && b.enabled) return 1;
-              return a.name.localeCompare(b.name);
-            })
-            .map((skill) => (
-              <SkillCard
-                key={skill.name}
-                skill={skill}
-                isHover={hoverKey === skill.name}
-                onClick={() => handleEdit(skill)}
-                onMouseEnter={() => setHoverKey(skill.name)}
-                onMouseLeave={() => setHoverKey(null)}
-                onToggleEnabled={(e) => handleToggleEnabled(skill, e)}
-                onDelete={(e) => handleDelete(skill, e)}
-              />
-            ))}
-        </div>
-      )}
+      <Card className={styles.tableCard} bodyStyle={{ padding: 0 }}>
+        <Table
+          columns={columns}
+          dataSource={skills}
+          loading={loading}
+          rowKey="name"
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: false,
+            showTotal: (total) => t("skills.totalItems", { count: total }),
+          }}
+          size="small"
+        />
+      </Card>
 
       <SkillDrawer
         open={drawerOpen}

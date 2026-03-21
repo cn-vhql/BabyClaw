@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Button, Empty, Modal, Input } from "@agentscope-ai/design";
+import { Button, Table, Card, Tag, Switch, Modal, Input, Empty } from "@agentscope-ai/design";
 import type { MCPClientInfo } from "../../../api/types";
-import { MCPClientCard } from "./components";
 import { useMCP } from "./useMCP";
 import { useTranslation } from "react-i18next";
+import styles from "./index.module.less";
 
 type MCPTransport = "stdio" | "streamable_http" | "sse";
 
@@ -59,7 +59,11 @@ function MCPPage() {
     createClient,
     updateClient,
   } = useMCP();
-  const [hoverKey, setHoverKey] = useState<string | null>(null);
+  const [jsonModalOpen, setJsonModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<MCPClientInfo | null>(null);
+  const [editedJson, setEditedJson] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [newClientJson, setNewClientJson] = useState(`{
   "mcpServers": {
@@ -73,17 +77,45 @@ function MCPPage() {
   }
 }`);
 
-  const handleToggleEnabled = async (
-    client: MCPClientInfo,
-    e?: React.MouseEvent,
-  ) => {
-    e?.stopPropagation();
+  const handleToggleEnabled = async (client: MCPClientInfo) => {
     await toggleEnabled(client);
   };
 
-  const handleDelete = async (client: MCPClientInfo, e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    await deleteClient(client);
+  const handleDeleteClick = (client: MCPClientInfo) => {
+    setSelectedClient(client);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (selectedClient) {
+      await deleteClient(selectedClient);
+      setDeleteModalOpen(false);
+      setSelectedClient(null);
+    }
+  };
+
+  const handleEditClick = (client: MCPClientInfo) => {
+    const jsonStr = JSON.stringify(client, null, 2);
+    setEditedJson(jsonStr);
+    setIsEditing(false);
+    setSelectedClient(client);
+    setJsonModalOpen(true);
+  };
+
+  const handleSaveJson = async () => {
+    if (!selectedClient) return;
+    try {
+      const parsed = JSON.parse(editedJson);
+      const { key, ...updates } = parsed;
+      const success = await updateClient(selectedClient.key, updates);
+      if (success) {
+        setJsonModalOpen(false);
+        setIsEditing(false);
+        setSelectedClient(null);
+      }
+    } catch (error) {
+      alert("Invalid JSON format");
+    }
   };
 
   const handleCreateClient = async () => {
@@ -158,23 +190,80 @@ function MCPPage() {
     }
   };
 
+  const columns = [
+    {
+      title: t("mcp.name"),
+      dataIndex: "name",
+      key: "name",
+      ellipsis: true,
+    },
+    {
+      title: t("mcp.type"),
+      dataIndex: "transport",
+      key: "type",
+      width: 120,
+      render: (transport: string) => {
+        const isRemote = transport === "streamable_http" || transport === "sse";
+        return (
+          <Tag color={isRemote ? "orange" : "blue"}>
+            {isRemote ? t("mcp.remote") : t("mcp.local")}
+          </Tag>
+        );
+      },
+    },
+    {
+      title: t("mcp.description"),
+      dataIndex: "description",
+      key: "description",
+      ellipsis: true,
+      render: (description: string) => description || "-",
+    },
+    {
+      title: t("mcp.status"),
+      dataIndex: "enabled",
+      key: "status",
+      width: 100,
+      render: (enabled: boolean, record: MCPClientInfo) => (
+        <Switch
+          size="small"
+          checked={enabled}
+          onChange={() => handleToggleEnabled(record)}
+        />
+      ),
+    },
+    {
+      title: t("mcp.actions"),
+      key: "actions",
+      width: 200,
+      render: (_: unknown, record: MCPClientInfo) => (
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <Button
+            type="link"
+            size="small"
+            onClick={() => handleEditClick(record)}
+          >
+            {t("common.edit")}
+          </Button>
+          <Button
+            type="link"
+            size="small"
+            danger
+            onClick={() => handleDeleteClick(record)}
+            disabled={record.enabled}
+          >
+            {t("common.delete")}
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
   return (
-    <div style={{ padding: 24 }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 16,
-        }}
-      >
-        <div>
-          <h1 style={{ fontSize: 24, fontWeight: 600, marginBottom: 4 }}>
-            {t("mcp.title")}
-          </h1>
-          <p style={{ margin: 0, color: "#999", fontSize: 14 }}>
-            {t("mcp.description")}
-          </p>
+    <div className={styles.mcpPage}>
+      <div className={styles.header}>
+        <div className={styles.headerInfo}>
+          <h1 className={styles.title}>{t("mcp.title")}</h1>
+          <p className={styles.description}>{t("mcp.description")}</p>
         </div>
         <Button type="primary" onClick={() => setCreateModalOpen(true)}>
           {t("mcp.create")}
@@ -182,34 +271,28 @@ function MCPPage() {
       </div>
 
       {loading ? (
-        <div style={{ textAlign: "center", padding: 60 }}>
-          <p style={{ color: "#999" }}>{t("common.loading")}</p>
+        <div className={styles.loading}>
+          <p>{t("common.loading")}</p>
         </div>
       ) : clients.length === 0 ? (
         <Empty description={t("mcp.emptyState")} />
       ) : (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))",
-            gap: 20,
-          }}
-        >
-          {clients.map((client) => (
-            <MCPClientCard
-              key={client.key}
-              client={client}
-              onToggle={handleToggleEnabled}
-              onDelete={handleDelete}
-              onUpdate={updateClient}
-              isHovered={hoverKey === client.key}
-              onMouseEnter={() => setHoverKey(client.key)}
-              onMouseLeave={() => setHoverKey(null)}
-            />
-          ))}
-        </div>
+        <Card className={styles.tableCard} bodyStyle={{ padding: 0 }}>
+          <Table
+            columns={columns}
+            dataSource={clients}
+            rowKey="key"
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: false,
+              showTotal: (total) => t("mcp.totalItems", { count: total }),
+            }}
+            size="small"
+          />
+        </Card>
       )}
 
+      {/* Create Modal */}
       <Modal
         title={t("mcp.create")}
         open={createModalOpen}
@@ -263,6 +346,82 @@ function MCPPage() {
             fontSize: 13,
           }}
         />
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        title={t("common.confirm")}
+        open={deleteModalOpen}
+        onOk={confirmDelete}
+        onCancel={() => {
+          setDeleteModalOpen(false);
+          setSelectedClient(null);
+        }}
+        okText={t("common.confirm")}
+        cancelText={t("common.cancel")}
+        okButtonProps={{ danger: true }}
+      >
+        <p>{t("mcp.deleteConfirm")}</p>
+      </Modal>
+
+      {/* Edit JSON Modal */}
+      <Modal
+        title={selectedClient ? `${selectedClient.name} - ${t("common.configuration")}` : t("common.configuration")}
+        open={jsonModalOpen}
+        onCancel={() => {
+          setJsonModalOpen(false);
+          setIsEditing(false);
+          setSelectedClient(null);
+        }}
+        footer={
+          <div style={{ textAlign: "right" }}>
+            <Button
+              onClick={() => {
+                setJsonModalOpen(false);
+                setIsEditing(false);
+                setSelectedClient(null);
+              }}
+              style={{ marginRight: 8 }}
+            >
+              {t("common.cancel")}
+            </Button>
+            {isEditing ? (
+              <Button type="primary" onClick={handleSaveJson}>
+                {t("common.save")}
+              </Button>
+            ) : (
+              <Button type="primary" onClick={() => setIsEditing(true)}>
+                {t("common.edit")}
+              </Button>
+            )}
+          </div>
+        }
+        width={700}
+      >
+        {isEditing ? (
+          <Input.TextArea
+            value={editedJson}
+            onChange={(e) => setEditedJson(e.target.value)}
+            autoSize={{ minRows: 15, maxRows: 25 }}
+            style={{
+              fontFamily: "Monaco, Courier New, monospace",
+              fontSize: 13,
+            }}
+          />
+        ) : (
+          <pre
+            style={{
+              backgroundColor: "#f5f5f5",
+              color: "rgba(0,0,0,0.88)",
+              padding: 16,
+              borderRadius: 8,
+              maxHeight: 500,
+              overflow: "auto",
+            }}
+          >
+            {editedJson}
+          </pre>
+        )}
       </Modal>
     </div>
   );

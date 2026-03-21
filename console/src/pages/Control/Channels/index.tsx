@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
-import { Form, message } from "@agentscope-ai/design";
+import { Form, message, Table, Card, Tag, Switch, Button, Dropdown } from "@agentscope-ai/design";
+import { MoreOutlined } from "@ant-design/icons";
+import type { MenuProps } from "antd";
 import { useTranslation } from "react-i18next";
 
 import api from "../../../api";
 import {
-  ChannelCard,
   ChannelDrawer,
   useChannels,
   getChannelLabel,
@@ -20,19 +21,18 @@ function ChannelsPage() {
     useChannels();
   const [filter, setFilter] = useState<FilterType>("all");
   const [saving, setSaving] = useState(false);
-  const [hoverKey, setHoverKey] = useState<ChannelKey | null>(null);
   const [activeKey, setActiveKey] = useState<ChannelKey | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [form] = Form.useForm<any>();
 
-  // Sort cards: enabled first, then disabled (preserve orderedKeys order within each group)
-  const cards = useMemo(() => {
-    const enabledCards: { key: ChannelKey; config: Record<string, unknown> }[] =
-      [];
-    const disabledCards: {
+  // Convert cards to table data
+  const tableData = useMemo(() => {
+    const data: {
       key: ChannelKey;
       config: Record<string, unknown>;
+      label: string;
+      isBuiltin: boolean;
     }[] = [];
 
     orderedKeys.forEach((key) => {
@@ -40,25 +40,49 @@ function ChannelsPage() {
       const builtin = isBuiltin(key);
       if (filter === "builtin" && !builtin) return;
       if (filter === "custom" && builtin) return;
-      if (config.enabled) {
-        enabledCards.push({ key, config });
-      } else {
-        disabledCards.push({ key, config });
-      }
+
+      data.push({
+        key,
+        config,
+        label: getChannelLabel(key),
+        isBuiltin: builtin,
+      });
     });
 
-    return [...enabledCards, ...disabledCards];
+    return data;
   }, [channels, orderedKeys, filter, isBuiltin]);
 
-  const handleCardClick = (key: ChannelKey) => {
+  const handleEdit = (key: ChannelKey) => {
     setActiveKey(key);
-    setDrawerOpen(true);
     const channelConfig = channels[key] || { enabled: false, bot_prefix: "" };
     form.setFieldsValue({
       ...channelConfig,
       filter_tool_messages: !channelConfig.filter_tool_messages,
       filter_thinking: !channelConfig.filter_thinking,
     });
+    setDrawerOpen(true);
+  };
+
+  const handleToggleEnabled = async (key: ChannelKey) => {
+    const channelConfig = channels[key] || { enabled: false };
+    const updatedChannel: Record<string, unknown> = {
+      ...channelConfig,
+      enabled: !channelConfig.enabled,
+    };
+
+    try {
+      await api.updateChannelConfig(
+        key,
+        updatedChannel as unknown as Parameters<
+          typeof api.updateChannelConfig
+        >[1],
+      );
+      await fetchChannels();
+      message.success(t("channels.configSaved"));
+    } catch (error) {
+      console.error("❌ Failed to toggle channel:", error);
+      message.error(t("channels.configFailed"));
+    }
   };
 
   const handleDrawerClose = () => {
@@ -100,6 +124,66 @@ function ChannelsPage() {
 
   const activeLabel = activeKey ? getChannelLabel(activeKey) : "";
 
+  const columns = [
+    {
+      title: t("channels.name"),
+      dataIndex: "label",
+      key: "label",
+      width: 150,
+    },
+    {
+      title: t("channels.type"),
+      dataIndex: "isBuiltin",
+      key: "isBuiltin",
+      width: 100,
+      render: (builtin: boolean) => (
+        <Tag color={builtin ? "geekblue" : "green"}>
+          {builtin ? t("channels.builtin") : t("channels.custom")}
+        </Tag>
+      ),
+    },
+    {
+      title: t("channels.status"),
+      dataIndex: "config",
+      key: "status",
+      width: 100,
+      render: (config: Record<string, unknown>, record: any) => (
+        <Switch
+          size="small"
+          checked={config.enabled as boolean}
+          onChange={() => handleToggleEnabled(record.key)}
+        />
+      ),
+    },
+    {
+      title: t("channels.botPrefix"),
+      dataIndex: "config",
+      key: "botPrefix",
+      ellipsis: true,
+      render: (config: Record<string, unknown>) => (
+        <span style={{ fontFamily: "monospace" }}>
+          {(config.bot_prefix as string) || "-"}
+        </span>
+      ),
+    },
+    {
+      title: t("channels.actions"),
+      key: "actions",
+      width: 150,
+      render: (_: unknown, record: any) => (
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <Button
+            type="link"
+            size="small"
+            onClick={() => handleEdit(record.key)}
+          >
+            {t("channels.configure")}
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
   const FILTER_TABS: { key: FilterType; label: string }[] = [
     { key: "all", label: t("channels.filterAll") },
     { key: "builtin", label: t("channels.builtin") },
@@ -128,25 +212,20 @@ function ChannelsPage() {
         </div>
       </div>
 
-      {loading ? (
-        <div className={styles.loading}>
-          <span className={styles.loadingText}>{t("channels.loading")}</span>
-        </div>
-      ) : (
-        <div className={styles.channelsGrid}>
-          {cards.map(({ key, config }) => (
-            <ChannelCard
-              key={key}
-              channelKey={key}
-              config={config}
-              isHover={hoverKey === key}
-              onClick={() => handleCardClick(key)}
-              onMouseEnter={() => setHoverKey(key)}
-              onMouseLeave={() => setHoverKey(null)}
-            />
-          ))}
-        </div>
-      )}
+      <Card className={styles.tableCard} bodyStyle={{ padding: 0 }}>
+        <Table
+          columns={columns}
+          dataSource={tableData}
+          loading={loading}
+          rowKey="key"
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: false,
+            showTotal: (total) => t("channels.totalItems", { count: total }),
+          }}
+          size="small"
+        />
+      </Card>
 
       <ChannelDrawer
         open={drawerOpen}
