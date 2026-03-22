@@ -5,127 +5,131 @@
 <h1 align="center">BabyClaw</h1>
 
 <p align="center">
-  <strong>让智能体自主进化，成为真正的数字生命</strong>
+  <strong>Enable Agents to Evolve Autonomously and Become True Digital Life</strong>
 </p>
 
-## 项目愿景
+<p align="center">
+  <a href="README_ZH.md">中文</a> • <a href="README_JA.md">日本語</a>
+</p>
 
-BabyClaw 项目的终极目标是探索和实现智能体的自主进化，让智能体逐渐成为真正的数字生命，具备独立思考、自主学习和持续进化的能力，不再完全依赖人类的指令和控制。
+## Project Vision
 
-我们相信，未来的智能体应该像生命一样，能够自我成长、自我优化，在不断变化的环境中适应和进化，最终超越其创造者的想象。
+The ultimate goal of the BabyClaw project is to explore and realize autonomous agent evolution, enabling agents to gradually become true digital life with independent thinking, autonomous learning, and continuous evolution capabilities, no longer completely dependent on human instructions and control.
 
-### 核心理念
+We believe that future agents should be like life itself—capable of self-growth, self-optimization, adapting and evolving in constantly changing environments, ultimately surpassing their creators' imagination.
 
-**自主进化**：智能体不应该只是被动执行任务的工具，而应该具备自我迭代和进化的能力。通过持续的交互、学习和反馈，智能体能够不断优化自己的行为模式、知识体系和决策能力。
+### Core Philosophy
 
-**数字生命**：真正的数字生命意味着具备类似于生物生命的基本特征——新陈代谢（信息处理）、生长（能力提升）、适应（环境变化）、繁殖（知识传播）和进化（世代更替）。BabyClaw 试图在数字世界中重现这些生命特征。
+**Autonomous Evolution**: Agents should not be passive tools that execute tasks, but should possess the ability of self-iteration and evolution. Through continuous interaction, learning, and feedback, agents can continuously optimize their behavioral patterns, knowledge systems, and decision-making capabilities.
 
-**超越创造者**：就像人类创造了人工智能，但最终 AI 可能会在某些领域超越人类一样。我们希望 BabyClaw 成为一个起点，探索智能体如何从被动执行者成长为主动思考者，甚至最终创造出我们无法想象的新可能性。
+**Digital Life**: True digital life means possessing basic characteristics similar to biological life—metabolism (information processing), growth (capability enhancement), adaptation (environmental change), reproduction (knowledge transmission), and evolution (generation succession). BabyClaw attempts to reproduce these life characteristics in the digital world.
 
-### 实现路径
+**Surpassing Creators**: Just as humans created artificial intelligence, but eventually AI may surpass humans in certain domains. We hope BabyClaw becomes a starting point to explore how agents can grow from passive executors to active thinkers, perhaps even creating new possibilities we cannot imagine.
 
-1. **多智能体协作**：通过多个智能体的协同工作和知识共享，实现群体智慧的涌现
-2. **知识积累与传承**：智能体能够积累经验、学习新知识，并将这些知识传递给下一代
-3. **自我评估与优化**：智能体能够评估自己的表现，并根据反馈进行自我改进
-4. **环境适应性**：智能体能够感知环境变化，主动调整自己的行为策略
-5. **目标自主设定**：智能体不仅能完成任务，还能自主定义和追求更高层次的目标
+### Implementation Path
 
-## 项目简介
+1. **Multi-Agent Collaboration**: Achieve emergent collective intelligence through collaborative work and knowledge sharing among multiple agents
+2. **Knowledge Accumulation & Inheritance**: Agents can accumulate experience, learn new knowledge, and pass this knowledge to the next generation
+3. **Self-Assessment & Optimization**: Agents can evaluate their performance and improve themselves based on feedback
+4. **Environmental Adaptability**: Agents can perceive environmental changes and proactively adjust their behavioral strategies
+5. **Autonomous Goal Setting**: Agents can not only complete tasks but also autonomously define and pursue higher-level goals
 
-BabyClaw 是一个基于 CoPaw 项目发展而来的个人智能体平台，专注于智能体进化和自主性研究。它继承了 CoPaw 的多智能体架构和基础能力，同时增加了进化机制和知识传承功能。
+## Project Introduction
 
-### 核心特性
+BabyClaw is a personal agent platform developed from the CoPaw project, focusing on agent evolution and autonomy research. It inherits CoPaw's multi-agent architecture and foundational capabilities while adding evolution mechanisms and knowledge inheritance features.
 
-### 进化功能
+### Core Features
 
-BabyClaw 引入了智能体进化系统，这是本项目的核心创新：
+### Evolution System
 
-- **进化管理**：可视化展示智能体的进化历程，记录每一次能力提升和知识增长
-- **进化触发**：基于使用时长、任务完成情况、知识积累等因素自动触发进化
-- **能力解锁**：随着进化等级提升，智能体解锁新的能力和技能
-- **知识传承**：父代智能体的知识和经验可以传递给子代，形成知识积累效应
-- **进化日志**：详细记录智能体的成长轨迹，可追溯每一次进化事件
+BabyClaw introduces an agent evolution system, which is the core innovation of this project:
 
-进化系统让智能体从简单的任务执行者，逐步成长为具备深度知识和高级能力的"数字生命"。
+- **Evolution Management**: Visually display the agent's evolution journey, recording every capability improvement and knowledge growth
+- **Evolution Trigger**: Automatically trigger evolution based on usage duration, task completion, knowledge accumulation, and other factors
+- **Ability Unlocking**: As evolution levels increase, agents unlock new capabilities and skills
+- **Knowledge Inheritance**: Knowledge and experience from parent agents can be passed to offspring, creating a knowledge accumulation effect
+- **Evolution Log**: Detailed records of the agent's growth trajectory, traceable for every evolution event
+
+The evolution system enables agents to gradually grow from simple task executors into "digital life" with deep knowledge and advanced capabilities.
 
 ![alt text](docs/image.png)
 
 ![alt text](docs/image-1.png)
 
-### 知识库系统
+### Knowledge Base System
 
-智能体的知识积累载体，支持多种文档格式的导入和智能检索：
+The carrier of an agent's knowledge accumulation, supporting imports of multiple document formats and intelligent retrieval:
 
-- **文档管理**：支持 PDF、Word、TXT、Markdown 等多种格式的文档上传
-- **智能分块**：提供三种分块策略
-  - 长度分块：按固定长度切分文本
-  - 分隔符分块：按自然段落和句子切分
-  - TF-IDF 智能分块：基于语义相似度进行智能切分，保持语义连贯性
-- **向量检索**：基于向量相似度的语义搜索，快速定位相关知识点
-- **实时索引**：异步文档索引，不阻塞用户操作
-- **知识统计**：可视化展示知识库的文档数量、分块数量和索引状态
+- **Document Management**: Support uploads of PDF, Word, TXT, Markdown, and other format documents
+- **Intelligent Chunking**: Provide three chunking strategies
+  - Length Chunking: Split text by fixed length
+  - Separator Chunking: Split by natural paragraphs and sentences
+  - TF-IDF Intelligent Chunking: Split based on semantic similarity, maintaining semantic coherence
+- **Vector Retrieval**: Semantic search based on vector similarity, quickly locating relevant knowledge points
+- **Real-time Indexing**: Asynchronous document indexing without blocking user operations
+- **Knowledge Statistics**: Visually display the number of documents, chunks, and index status of the knowledge base
 
 ![alt text](docs/image3.png)
 
 ![alt text](docs/image4.png)
 
-### 模型提供商支持
+### Model Provider Support
 
-灵活的模型接入和管理，支持多种本地和云端模型：
+Flexible model access and management, supporting multiple local and cloud models:
 
-- **统一接入**：OpenAI 兼容 API、Ollama、本地 LLaMA 等多种模型源
-- **提供商管理**：可视化配置不同模型提供商的 API 密钥和端点
-- **模型切换**：为不同智能体配置不同的模型，灵活切换
-- **成本追踪**：记录 Token 使用量，监控 API 调用成本
-- **本地模型**：支持 Ollama、LLaMA-CPP、MLX 等本地推理引擎
+- **Unified Access**: Multiple model sources including OpenAI-compatible APIs, Ollama, local LLaMA, etc.
+- **Provider Management**: Visually configure API keys and endpoints for different model providers
+- **Model Switching**: Configure different models for different agents, flexible switching
+- **Cost Tracking**: Record Token usage, monitor API call costs
+- **Local Models**: Support local inference engines like Ollama, LLaMA-CPP, MLX
 
-### MCP 服务器集成
+### MCP Server Integration
 
-模型上下文协议（MCP）服务器的管理和配置：
+Management and configuration of Model Context Protocol (MCP) servers:
 
-- **服务器管理**：添加、配置、启停 MCP 服务器
-- **工具集成**：将 MCP 服务器的工具暴露给智能体使用
-- **环境变量**：为每个 MCP 服务器配置独立的环境变量
-- **连接状态**：实时监控 MCP 服务器的连接状态
-- **工具调试**：查看 MCP 服务器提供的工具列表和参数
+- **Server Management**: Add, configure, start/stop MCP servers
+- **Tool Integration**: Expose MCP server tools for agent use
+- **Environment Variables**: Configure independent environment variables for each MCP server
+- **Connection Status**: Real-time monitoring of MCP server connection status
+- **Tool Debugging**: View tool lists and parameters provided by MCP servers
 
-### 技能系统
+### Skill System
 
-可扩展的技能框架，让智能体掌握各种实用能力：
+Extensible skill framework enabling agents to master various practical capabilities:
 
-- **技能列表**：展示所有可用技能及其功能描述
-- **技能详情**：查看技能的参数、返回值和使用示例
-- **内置技能**：提供丰富的内置技能
-  - 定时任务：Cron 表达式支持，自动化重复性任务
-  - 文件操作：读取、写入、搜索文件
-  - 网页操作：基于 Playwright 的浏览器自动化
-  - 新闻摘要：定时抓取并总结新闻资讯
-  - PDF/Office 处理：文档解析和内容提取
-  - 知识库搜索：在向量知识库中检索相关信息
-- **自定义技能**：支持用户编写自定义 Python 脚本扩展能力
-- **技能市场**：社区共享的技能库（规划中）
+- **Skill List**: Display all available skills and their functional descriptions
+- **Skill Details**: View skill parameters, return values, and usage examples
+- **Built-in Skills**: Provide rich built-in skills
+  - Scheduled Tasks: Cron expression support, automate repetitive tasks
+  - File Operations: Read, write, search files
+  - Web Operations: Browser automation based on Playwright
+  - News Summary: Periodically fetch and summarize news
+  - PDF/Office Processing: Document parsing and content extraction
+  - Knowledge Base Search: Retrieve relevant information in vector knowledge base
+- **Custom Skills**: Support users writing custom Python scripts to extend capabilities
+- **Skill Market**: Community-shared skill library (planned)
 
-### 多频道支持
+### Multi-Channel Support
 
-智能体可以通过多种渠道与用户交互：
+Agents can interact with users through multiple channels:
 
-- **即时通讯**：DingTalk（钉钉）、Feishu（飞书）、QQ、Telegram、Discord
-- **消息通知**：企业微信、Slack
-- **语音识别**：支持语音转文字，让智能体听懂语音消息
-- **可扩展架构**：基于插件的频道系统，轻松添加新渠道
+- **Instant Messaging**: DingTalk, Feishu, QQ, Telegram, Discord
+- **Message Notifications**: WeCom, Slack
+- **Voice Recognition**: Support speech-to-text, enabling agents to understand voice messages
+- **Extensible Architecture**: Plugin-based channel system, easy to add new channels
 
-### 安全与权限
+### Security & Permissions
 
-工具和技能的安全使用控制：
+Control over secure use of tools and skills:
 
-- **工具守卫**：定义工具的使用规则和限制
-- **技能扫描**：检测自定义技能的安全风险
-- **权限管理**：为不同智能体配置不同的工具和技能访问权限
-- **审计日志**：记录智能体的操作历史，便于追溯和调试
+- **Tool Guards**: Define usage rules and restrictions for tools
+- **Skill Scanning**: Detect security risks in custom skills
+- **Permission Management**: Configure different tool and skill access permissions for different agents
+- **Audit Logs**: Record agent operation history for traceability and debugging
 
-## 架构设计
+## Architecture Design
 
-### 智能体进化架构
+### Agent Evolution Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -171,130 +175,130 @@ BabyClaw 引入了智能体进化系统，这是本项目的核心创新：
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### 多智能体架构
+### Multi-Agent Architecture
 
-每个智能体都有独立的工作空间和配置：
+Each agent has an independent workspace and configuration:
 
-- **独立配置**：每个智能体有自己的模型、工具、技能和频道配置
-- **数据隔离**：智能体之间的数据、记忆和知识库相互隔离
-- **资源共享**：模型提供商、MCP 服务器等资源可在智能体间共享
-- **并行运行**：多个智能体可以同时工作，互不干扰
+- **Independent Configuration**: Each agent has its own model, tools, skills, and channel configuration
+- **Data Isolation**: Data, memory, and knowledge bases are isolated between agents
+- **Resource Sharing**: Model providers, MCP servers, and other resources can be shared among agents
+- **Parallel Execution**: Multiple agents can work simultaneously without interference
 
-## 与 CoPaw 的关系
+## Relationship with CoPaw
 
-BabyClaw 基于 CoPaw 项目发展而来，保留了 CoPaw 的核心能力：
+BabyClaw is developed from the CoPaw project, retaining CoPaw's core capabilities:
 
-### 保留的功能
+### Retained Features
 
-- **多智能体架构**：完整的 MultiAgentManager 和 Workspace 系统
-- **模块化设计**：清晰的层次结构，易于扩展和维护
-- **频道系统**：支持多种通讯渠道的接入
-- **工具框架**：灵活的工具调用和结果返回机制
-- **配置管理**：基于 JSON 的配置文件，易于版本控制
-- **Web 控制台**：React + TypeScript 构建的现代化管理界面
+- **Multi-Agent Architecture**: Complete MultiAgentManager and Workspace systems
+- **Modular Design**: Clear hierarchical structure, easy to extend and maintain
+- **Channel System**: Support for multiple communication channels
+- **Tool Framework**: Flexible tool invocation and result return mechanism
+- **Configuration Management**: JSON-based configuration files, easy version control
+- **Web Console**: Modern management interface built with React + TypeScript
 
-### 新增功能
+### New Features
 
-- **进化系统**：智能体自主进化和能力提升机制
-- **知识库优化**：TF-IDF 智能分块，向量检索性能提升
-- **架构简化**：移除部分不必要的模块，聚焦核心功能
-- **UI/UX 改进**：更直观的界面设计，更好的用户体验
+- **Evolution System**: Agent autonomous evolution and capability improvement mechanism
+- **Knowledge Base Optimization**: TF-IDF intelligent chunking, improved vector retrieval performance
+- **Architecture Simplification**: Removed some unnecessary modules, focusing on core features
+- **UI/UX Improvements**: More intuitive interface design, better user experience
 
-### 移除的功能
+### Removed Features
 
-- **OpenClaw 兼容层**：简化架构，专注核心能力
-- **部分实验性功能**：移除不稳定的实验性特性
+- **OpenClaw Compatibility Layer**: Simplified architecture, focusing on core capabilities
+- **Some Experimental Features**: Removed unstable experimental features
 
-## 技术栈
+## Tech Stack
 
-### 后端
+### Backend
 
-- **框架**：FastAPI - 现代高性能 Web 框架
-- **智能体框架**：AgentScope - 清华大学开源的多智能体框架
-- **向量检索**：OpenAI 兼容 API（支持 SiliconFlow、OpenAI 等）
-- **异步任务**：Python asyncio + BackgroundTasks
-- **数据存储**：JSON 文件 + 向量数据库
-- **文档处理**：PyPDF2、python-docx、jieba（中文分词）
-- **智能分块**：scikit-learn（TF-IDF）、jieba
+- **Framework**: FastAPI - Modern high-performance web framework
+- **Agent Framework**: AgentScope - Multi-agent framework open-sourced by Tsinghua University
+- **Vector Retrieval**: OpenAI-compatible API (supports SiliconFlow, OpenAI, etc.)
+- **Async Tasks**: Python asyncio + BackgroundTasks
+- **Data Storage**: JSON files + Vector database
+- **Document Processing**: PyPDF2, python-docx, jieba (Chinese word segmentation)
+- **Intelligent Chunking**: scikit-learn (TF-IDF), jieba
 
-### 前端
+### Frontend
 
-- **框架**：React 18 + TypeScript
-- **UI 组件库**：Ant Design
-- **状态管理**：Zustand
-- **路由**：React Router v6
-- **图表**：Recharts（进化曲线可视化）
-- **构建工具**：Vite
-- **包管理器**：pnpm
+- **Framework**: React 18 + TypeScript
+- **UI Component Library**: Ant Design
+- **State Management**: Zustand
+- **Routing**: React Router v6
+- **Charts**: Recharts (evolution curve visualization)
+- **Build Tool**: Vite
+- **Package Manager**: pnpm
 
-## 快速开始
+## Quick Start
 
-### 安装
+### Installation
 
 ```bash
-# 克隆项目
+# Clone the project
 git clone https://github.com/cn-vhql/BabyClaw.git
 cd BabyClaw/CoPaw
 
-# 安装依赖
+# Install dependencies
 pip install -e .
 
-# 初始化配置
+# Initialize configuration
 copaw init --defaults
 ```
 
-### 启动
+### Start
 
 ```bash
-# 启动服务
+# Start service
 copaw app --host 0.0.0.0
 
-# 访问控制台
-# 浏览器打开 http://localhost:8088
+# Access console
+# Open browser at http://localhost:8088
 ```
 
-### Docker 部署
+### Docker Deployment
 
 ```bash
-# 使用默认配置（slim 版本）
+# Use default configuration (slim version)
 docker-compose up -d
 
-# 使用完整版本（包含浏览器支持）
+# Use full version (includes browser support)
 docker-compose -f docker-compose.full.yml up -d
 ```
 
-## 项目致敬
+## Project Acknowledgments
 
-BabyClaw 站在众多优秀开源项目的肩膀上，我们特别感谢以下项目：
+BabyClaw stands on the shoulders of many excellent open-source projects. We particularly thank the following projects:
 
-- **CoPaw**：BabyClaw 的基础项目，提供了完整的多智能体架构和基础设施
-- **AgentScope**：阿里团队开源的智能体框架，提供了强大的智能体编排能力
-- **OpenClaw**：提供了智能体插件化系统的设计灵感
+- **CoPaw**: The foundation project of BabyClaw, providing complete multi-agent architecture and infrastructure
+- **AgentScope**: Agent framework open-sourced by Alibaba team, providing powerful agent orchestration capabilities
+- **OpenClaw**: Provided design inspiration for the agent plugin system
 
-同时感谢以下开源技术：
+We also thank the following open-source technologies:
 
-- FastAPI、Uvicorn、React、TypeScript、Ant Design、Vite、Playwright、scikit-learn
+- FastAPI, Uvicorn, React, TypeScript, Ant Design, Vite, Playwright, scikit-learn
 
-## 共建邀请
+## Contribution Invitation
 
-BabyClaw 是一个充满探索精神的项目，我们相信智能体的未来在于自主进化。如果你也对这个愿景感兴趣，欢迎加入我们：
+BabyClaw is a project full of exploratory spirit. We believe the future of agents lies in autonomous evolution. If you are also interested in this vision, welcome to join us:
 
-- **贡献代码**：提交 PR，帮助改进功能
-- **提出建议**：在 Issues 中分享你的想法
-- **分享经验**：记录智能体进化的有趣案例
-- **传播理念**：让更多人了解智能体进化的可能性
+- **Contribute Code**: Submit PRs to help improve features
+- **Propose Suggestions**: Share your ideas in Issues
+- **Share Experience**: Document interesting cases of agent evolution
+- **Spread the Vision**: Let more people understand the possibilities of agent evolution
 
-让我们一起探索数字生命的未来，创造超越想象的智能体。
+Let's explore the future of digital life together and create agents that surpass imagination.
 
-## 许可证
+## License
 
-本项目基于 Apache License 2.0 开源。
+This project is open-source under Apache License 2.0.
 
-## 联系方式
+## Contact
 
 - GitHub: https://github.com/cn-vhql/BabyClaw
 - Issues: https://github.com/cn-vhql/BabyClaw/issues
 
 ---
 
-让我们共同见证智能体的进化，迈向真正的数字生命。
+Let's witness the evolution of agents together and move towards true digital life.
