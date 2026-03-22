@@ -40,7 +40,67 @@ async def update_evolution_config(
     workspace.config.evolution = evolution_config
     save_agent_config(agent_id, workspace.config)
 
+    # Auto-create/delete default evolution cron job when auto_evolution changes
+    cron_manager = workspace.cron_manager
+    if cron_manager:
+        await _sync_evolution_cron_job(
+            workspace=workspace,
+            enabled=evolution_config.auto_evolution,
+        )
+
     return evolution_config.model_dump(mode="json")
+
+
+async def _sync_evolution_cron_job(*, workspace, enabled: bool) -> None:
+    """Create or delete the default evolution cron job.
+
+    Args:
+        workspace: Workspace instance
+        enabled: Whether to create (True) or delete (False) the job
+    """
+    from ..crons.models import CronJobSpec, ScheduleSpec, EvolutionJobConfig
+
+    cron_repo = workspace.cron_manager._repo if workspace.cron_manager else None
+    if not cron_repo:
+        return
+
+    job_id = "_auto_evolution_daily"
+
+    if enabled:
+        # Create default evolution cron job at 12:00 daily
+        job_spec = CronJobSpec(
+            id=job_id,
+            name="每日自动进化（12:00）",
+            enabled=True,
+            schedule=ScheduleSpec(
+                type="cron",
+                cron="0 12 * * *",  # Daily at 12:00
+                timezone="Asia/Shanghai",
+            ),
+            task_type="evolution",
+            evolution_config=EvolutionJobConfig(
+                trigger_type="cron",
+                max_iterations=10,
+                timeout_seconds=300,
+            ),
+            # Evolution tasks don't use dispatch
+            dispatch={
+                "type": "channel",
+                "channel": "",
+                "target": {
+                    "user_id": "",
+                    "session_id": "",
+                },
+                "mode": "stream",
+            },
+        )
+        await cron_repo.upsert_job(job_spec)
+    else:
+        # Delete the auto evolution job if exists
+        existing_job = await cron_repo.get_job(job_id)
+        if existing_job and existing_job.id.startswith("_auto_"):
+            await cron_repo.delete_job(job_id)
+
 
 
 @router.get("/records")

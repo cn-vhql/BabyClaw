@@ -38,15 +38,18 @@ class CronManager:
         channel_manager: Any,
         timezone: str = "UTC",  # pylint: disable=redefined-outer-name
         agent_id: Optional[str] = None,
+        workspace: Any = None,
     ):
         self._repo = repo
         self._runner = runner
         self._channel_manager = channel_manager
         self._agent_id = agent_id
+        self._workspace = workspace
         self._scheduler = AsyncIOScheduler(timezone=timezone)
         self._executor = CronExecutor(
             runner=runner,
             channel_manager=channel_manager,
+            workspace=workspace,
         )
 
         self._lock = asyncio.Lock()

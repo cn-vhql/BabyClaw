@@ -70,9 +70,26 @@ export function EvolutionSettingsModal({
           label="启用自动进化"
           name="auto_evolution"
           valuePropName="checked"
-          tooltip="开启后可通过定时任务自动执行进化"
+          tooltip="开启后会创建默认定时任务（每日12:00），可在定时任务页面修改"
         >
           <Switch />
+        </Form.Item>
+
+        <Form.Item noStyle shouldUpdate={(prev, cur) => prev.auto_evolution !== cur.auto_evolution}>
+          {({ getFieldValue }) => {
+            const autoEvolution = getFieldValue("auto_evolution");
+            return autoEvolution ? (
+              <div style={{ marginBottom: 24, padding: 12, background: "#f0f5ff", borderRadius: 4 }}>
+                <div style={{ fontSize: 12, color: "#1890ff", marginBottom: 4 }}>
+                  ℹ️ 已创建默认定时任务
+                </div>
+                <div style={{ fontSize: 12, color: "#666" }}>
+                  开启自动进化后，系统会创建一个定时任务（每日12:00执行）。
+                  您可以前往 <strong>定时任务</strong> 页面调整执行时间或频率。
+                </div>
+              </div>
+            ) : null;
+          }}
         </Form.Item>
 
         <Form.Item

@@ -117,7 +117,15 @@ class CronJobRequest(BaseModel):
     user_id: Optional[str] = None
 
 
-TaskType = Literal["text", "agent"]
+TaskType = Literal["text", "agent", "evolution"]
+
+
+class EvolutionJobConfig(BaseModel):
+    """Configuration for evolution task type."""
+
+    trigger_type: Literal["cron", "auto"] = "cron"
+    max_iterations: int = 10
+    timeout_seconds: int = 300
 
 
 class CronJobSpec(BaseModel):
@@ -129,6 +137,7 @@ class CronJobSpec(BaseModel):
     task_type: TaskType = "agent"
     text: Optional[str] = None
     request: Optional[CronJobRequest] = None
+    evolution_config: Optional[EvolutionJobConfig] = None
     dispatch: DispatchSpec
 
     runtime: JobRuntimeSpec = Field(default_factory=JobRuntimeSpec)
@@ -148,8 +157,11 @@ class CronJobSpec(BaseModel):
                 update={
                     "user_id": target.user_id,
                     "session_id": target.session_id,
-                },
+                }
             )
+        elif self.task_type == "evolution":
+            if self.evolution_config is None:
+                raise ValueError("task_type is evolution but evolution_config is missing")
         return self
 
 

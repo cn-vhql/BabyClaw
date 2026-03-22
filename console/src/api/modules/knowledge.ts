@@ -27,6 +27,8 @@ export interface Document {
   uploaded_at: string;
   chunk_count: number;
   chunks: Chunk[];
+  indexing_status?: "pending" | "processing" | "completed" | "failed";
+  indexing_error?: string;
 }
 
 export interface Chunk {
@@ -71,6 +73,7 @@ export const knowledgeApi = {
       chunk_type: string;
       max_length: number;
       overlap: number;
+      separators?: string[];
     },
   ) => {
     const formData = new FormData();
@@ -80,6 +83,10 @@ export const knowledgeApi = {
       formData.append("chunk_type", chunkConfig.chunk_type);
       formData.append("max_length", String(chunkConfig.max_length));
       formData.append("overlap", String(chunkConfig.overlap));
+      if (chunkConfig.separators && chunkConfig.separators.length > 0) {
+        // Convert separators array to JSON string
+        formData.append("separators", JSON.stringify(chunkConfig.separators));
+      }
     }
 
     return request<{ doc_id: string; filename: string; chunk_count: number }>(
@@ -96,6 +103,11 @@ export const knowledgeApi = {
     request<{ deleted: boolean }>(`/knowledge/${kbId}/documents/${docId}`, {
       method: "DELETE",
     }),
+
+  getDocumentStatus: (kbId: string, docId: string) =>
+    request<{ doc_id: string; indexing_status: string; chunk_count: number; indexing_error?: string }>(
+      `/knowledge/${kbId}/documents/${docId}/status`
+    ),
 
   getChunks: (kbId: string, docId: string) =>
     request<{ chunks: Chunk[] }>(`/knowledge/${kbId}/documents/${docId}/chunks`),

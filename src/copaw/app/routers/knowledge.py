@@ -9,7 +9,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Body, HTTPException, Request, UploadFile, File
+from fastapi import APIRouter, BackgroundTasks, Body, HTTPException, Request, UploadFile, File
 from fastapi.responses import FileResponse
 from openai import OpenAI
 from pydantic import BaseModel, Field
@@ -170,6 +170,8 @@ async def get_knowledge_base_detail(request: Request, kb_id: str) -> dict:
                                 "size": doc_meta.get("size", 0),
                                 "uploaded_at": doc_meta.get("uploaded_at"),
                                 "chunk_count": doc_meta.get("chunk_count", 0),
+                                "indexing_status": doc_meta.get("indexing_status"),
+                                "indexing_error": doc_meta.get("indexing_error"),
                             }
                             documents.append(lightweight_doc)
 
@@ -192,12 +194,17 @@ async def get_knowledge_base_detail(request: Request, kb_id: str) -> dict:
 async def upload_document(
     request: Request,
     kb_id: str,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     chunk_type: str | None = Body(None, embed=True),
     max_length: int | None = Body(None, embed=True),
     overlap: int | None = Body(None, embed=True),
+    separators: str | None = Body(None, embed=True),
 ) -> dict:
-    """Upload a document to knowledge base."""
+    """Upload a document to knowledge base.
+
+    The document is saved immediately, and chunking/indexing happens in the background.
+    """
     try:
         logger.info(f"Upload request for kb_id: {kb_id}, filename: {file.filename}")
 
@@ -231,12 +238,21 @@ async def upload_document(
             meta = json.load(f)
         kb_chunk_config = meta.get("chunk_config", {})
 
+        # Parse separators from JSON string if provided
+        separators_list = kb_chunk_config.get("separators", [])
+        if separators:
+            try:
+                separators_list = json.loads(separators)
+            except json.JSONDecodeError:
+                logger.warning(f"Invalid separators JSON: {separators}, using KB default")
+                separators_list = kb_chunk_config.get("separators", [])
+
         # Use request params if provided, otherwise use KB default
         chunk_config = {
             "chunk_type": chunk_type if chunk_type else kb_chunk_config.get("chunk_type", "length"),
             "max_length": max_length if max_length else kb_chunk_config.get("max_length", 500),
             "overlap": overlap if overlap is not None else kb_chunk_config.get("overlap", 50),
-            "separators": kb_chunk_config.get("separators", []),
+            "separators": separators_list,
         }
 
         # Save file
@@ -250,8 +266,78 @@ async def upload_document(
 
         logger.info(f"File saved: {file_path}")
 
-        # Read content for chunking
+        # Initialize document metadata with indexing status
         file_type = Path(file.filename).suffix.lower()
+        doc_meta = {
+            "doc_id": doc_id,
+            "filename": file.filename,
+            "file_type": file_type,
+            "size": len(content),
+            "uploaded_at": str(os.path.getctime(file_path)),
+            "chunk_count": 0,
+            "chunks": [],
+            "indexing_status": "pending",  # pending, processing, completed, failed
+            "indexing_error": None,
+        }
+
+        # Save initial metadata immediately
+        doc_meta_file = doc_dir / "meta.json"
+        with open(doc_meta_file, "w", encoding="utf-8") as f:
+            json.dump(doc_meta, f, ensure_ascii=False, indent=2)
+
+        # Start background indexing task
+        embedding_config = workspace.config.running.embedding_config
+        background_tasks.add_task(
+            _index_documentInBackground,
+            workspace_dir=workspace.workspace_dir,
+            kb_id=kb_id,
+            doc_id=doc_id,
+            file_path=str(file_path),
+            file_type=file_type,
+            chunk_config=chunk_config,
+            embedding_config=embedding_config,
+        )
+
+        logger.info(f"Document uploaded successfully: {doc_id}, indexing in background")
+        return {
+            "doc_id": doc_id,
+            "filename": file.filename,
+            "chunk_count": 0,
+            "indexing_status": "pending"
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error(f"Upload failed: {exc}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+async def _index_documentInBackground(
+    workspace_dir: str,
+    kb_id: str,
+    doc_id: str,
+    file_path: str,
+    file_type: str,
+    chunk_config: dict,
+    embedding_config: Any,
+) -> None:
+    """Background task to index a document."""
+    import asyncio
+    from pathlib import Path
+
+    logger.info(f"[Background] Starting indexing for document {doc_id}")
+
+    doc_dir = Path(workspace_dir) / "knowledge" / kb_id / "documents" / doc_id
+    doc_meta_file = doc_dir / "meta.json"
+
+    try:
+        # Update status to processing
+        with open(doc_meta_file, "r", encoding="utf-8") as f:
+            doc_meta = json.load(f)
+
+        doc_meta["indexing_status"] = "processing"
+        with open(doc_meta_file, "w", encoding="utf-8") as f:
+            json.dump(doc_meta, f, ensure_ascii=False, indent=2)
 
         # For text files, read and chunk
         if file_type in [".txt", ".md", ".json", ".csv"]:
@@ -259,9 +345,11 @@ async def upload_document(
                 with open(file_path, "r", encoding="utf-8") as f:
                     file_content = f.read()
 
-                logger.info(f"File content length: {len(file_content)} characters")
+                logger.info(f"[Background] File content length: {len(file_content)} characters")
 
                 # Chunk content
+                from ...agents.knowledge.chunk_strategies import chunk_text
+
                 chunks = chunk_text(
                     text=file_content,
                     doc_id=doc_id,
@@ -271,55 +359,63 @@ async def upload_document(
                     separators=chunk_config["separators"],
                 )
 
-                logger.info(f"Created {len(chunks)} chunks")
+                logger.info(f"[Background] Created {len(chunks)} chunks")
 
-                # Generate embeddings asynchronously (don't block upload)
-                embedding_config = workspace.config.running.embedding_config
+                # Generate embeddings
                 if embedding_config and embedding_config.api_key and len(chunks) > 0:
-                    logger.info(f"Starting embedding generation for {len(chunks)} chunks")
+                    logger.info(f"[Background] Starting embedding generation for {len(chunks)} chunks")
+
                     try:
-                        # Set a timeout for embedding generation
-                        import asyncio
-                        chunks = await asyncio.wait_for(
-                            _generate_embeddings(chunks, embedding_config),
-                            timeout=30.0  # 30 second timeout
-                        )
-                        logger.info(f"Embeddings generated successfully")
-                    except asyncio.TimeoutError:
-                        logger.warning(f"Embedding generation timed out after 30s, saving chunks without embeddings")
+                        chunks = await _generate_embeddings(chunks, embedding_config)
+                        logger.info(f"[Background] Embeddings generated successfully")
                     except Exception as e:
-                        logger.warning(f"Embedding generation failed: {e}, saving chunks without embeddings")
+                        logger.warning(f"[Background] Embedding generation failed: {e}")
+                        # Save chunks without embeddings
+                else:
+                    logger.info(f"[Background] No embedding config, saving chunks without embeddings")
+
+                # Update metadata with results
+                doc_meta["chunk_count"] = len(chunks)
+                doc_meta["chunks"] = chunks
+                doc_meta["indexing_status"] = "completed"
+                doc_meta["indexing_error"] = None
+
+                with open(doc_meta_file, "w", encoding="utf-8") as f:
+                    json.dump(doc_meta, f, ensure_ascii=False, indent=2)
+
+                logger.info(f"[Background] Document indexing completed: {doc_id}")
+
             except Exception as e:
-                logger.error(f"Error processing file content: {e}", exc_info=True)
-                # Create empty chunks if processing fails
-                chunks = []
+                logger.error(f"[Background] Error processing file content: {e}", exc_info=True)
+
+                # Update status to failed
+                doc_meta["indexing_status"] = "failed"
+                doc_meta["indexing_error"] = str(e)
+
+                with open(doc_meta_file, "w", encoding="utf-8") as f:
+                    json.dump(doc_meta, f, ensure_ascii=False, indent=2)
         else:
-            logger.info(f"File type {file_type} not supported for chunking")
-            file_content = ""
-            chunks = []
+            logger.info(f"[Background] File type {file_type} not supported for chunking")
+            doc_meta["indexing_status"] = "completed"
+            doc_meta["indexing_error"] = f"File type {file_type} not supported for chunking"
 
-        # Save document metadata
-        doc_meta = {
-            "doc_id": doc_id,
-            "filename": file.filename,
-            "file_type": file_type,
-            "size": len(content),
-            "uploaded_at": str(os.path.getctime(file_path)),
-            "chunk_count": len(chunks),
-            "chunks": chunks,
-        }
+            with open(doc_meta_file, "w", encoding="utf-8") as f:
+                json.dump(doc_meta, f, ensure_ascii=False, indent=2)
 
-        doc_meta_file = doc_dir / "meta.json"
-        with open(doc_meta_file, "w", encoding="utf-8") as f:
-            json.dump(doc_meta, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logger.error(f"[Background] Indexing failed for document {doc_id}: {e}", exc_info=True)
 
-        logger.info(f"Document uploaded successfully: {doc_id}, chunks: {len(chunks)}")
-        return {"doc_id": doc_id, "filename": file.filename, "chunk_count": len(chunks)}
-    except HTTPException:
-        raise
-    except Exception as exc:
-        logger.error(f"Upload failed: {exc}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        try:
+            with open(doc_meta_file, "r", encoding="utf-8") as f:
+                doc_meta = json.load(f)
+
+            doc_meta["indexing_status"] = "failed"
+            doc_meta["indexing_error"] = str(e)
+
+            with open(doc_meta_file, "w", encoding="utf-8") as f:
+                json.dump(doc_meta, f, ensure_ascii=False, indent=2)
+        except Exception:
+            pass
 
 
 @router.delete("/{kb_id}/documents/{doc_id}")
@@ -356,6 +452,37 @@ async def get_document_chunks(request: Request, kb_id: str, doc_id: str) -> dict
             doc_meta = json.load(f)
 
         return {"chunks": doc_meta.get("chunks", [])}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.get("/{kb_id}/documents/{doc_id}/status")
+async def get_document_indexing_status(
+    request: Request,
+    kb_id: str,
+    doc_id: str,
+) -> dict:
+    """Get document indexing status."""
+    try:
+        workspace = await get_agent_for_request(request)
+        doc_meta_file = (
+            workspace.workspace_dir / "knowledge" / kb_id / "documents" / doc_id / "meta.json"
+        )
+
+        if not doc_meta_file.exists():
+            raise HTTPException(status_code=404, detail="Document not found")
+
+        with open(doc_meta_file, "r", encoding="utf-8") as f:
+            doc_meta = json.load(f)
+
+        return {
+            "doc_id": doc_id,
+            "indexing_status": doc_meta.get("indexing_status", "unknown"),
+            "chunk_count": doc_meta.get("chunk_count", 0),
+            "indexing_error": doc_meta.get("indexing_error"),
+        }
     except HTTPException:
         raise
     except Exception as exc:

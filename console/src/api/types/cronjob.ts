@@ -30,14 +30,21 @@ export interface CronJobRequest {
   [key: string]: unknown;
 }
 
+export interface EvolutionJobConfig {
+  trigger_type?: "cron" | "auto";
+  max_iterations?: number;
+  timeout_seconds?: number;
+}
+
 export interface CronJobSpecInput {
   id: string;
   name: string;
   enabled?: boolean;
   schedule: CronJobSchedule;
-  task_type?: "text" | "agent";
+  task_type?: "text" | "agent" | "evolution";
   text?: string;
   request?: CronJobRequest;
+  evolution_config?: EvolutionJobConfig;
   dispatch: CronJobDispatch;
   runtime?: CronJobRuntime;
   meta?: Record<string, unknown>;

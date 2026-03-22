@@ -260,6 +260,7 @@ class Workspace:
                     ),
                     "timezone": "UTC",
                     "agent_id": ws.agent_id,
+                    "workspace": ws,
                 },
                 start_method="start",
                 stop_method="stop",

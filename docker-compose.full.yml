@@ -1,12 +1,12 @@
 version: '3.8'
 
-# BabyClaw - Default configuration (uses slim version)
-# For full version with browser support, use docker-compose.full.yml
-# For slim version explicitly, use docker-compose.slim.yml
+# BabyClaw Full Version - With Browser Support
+# This version includes Chromium and GUI components for browser automation.
+# Recommended for: All features including web scraping, browser automation, visible browser
+# Suitable for: Chat, knowledge base, browser automation, web interactions
 #
-# Quick start:
-#   docker-compose up -d              # Start slim version (default)
-#   docker-compose -f docker-compose.full.yml up -d  # Start full version
+# Memory: ~2GB - 4GB
+# Image Size: ~1.4GB - 2.1GB
 
 volumes:
   babyclaw-data:
@@ -16,9 +16,7 @@ volumes:
 
 services:
   babyclaw:
-    # Default to slim version for smaller footprint
-    # Change to :latest-full for browser support
-    image: agentscope/babyclaw:latest-slim
+    image: agentscope/babyclaw:latest-full
     container_name: babyclaw
     restart: always
     ports:
@@ -29,23 +27,28 @@ services:
       # - COPAW_AUTH_USERNAME=admin
       # - COPAW_AUTH_PASSWORD=yourpassword
 
-      # Disable iMessage channel (not available in containers)
+      # Channel filtering
       - COPAW_DISABLED_CHANNELS=imessage
 
       # Resource limits
       - PYTHONUNBUFFERED=1
+
+      # Enable browser support (automatically detected)
+      - PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
     volumes:
       - babyclaw-data:/app/working
       - babyclaw-secrets:/app/working.secret
     deploy:
       resources:
         limits:
-          memory: 2G
+          memory: 4G
         reservations:
-          memory: 512M
+          memory: 2G
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8088/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 60s
+    # Additional shm size for Chromium
+    shm_size: 2gb

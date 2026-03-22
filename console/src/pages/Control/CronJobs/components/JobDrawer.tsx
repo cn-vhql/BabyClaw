@@ -245,67 +245,125 @@ export function JobDrawer({
           <Select>
             <Select.Option value="text">text</Select.Option>
             <Select.Option value="agent">agent</Select.Option>
+            <Select.Option value="evolution">evolution</Select.Option>
           </Select>
         </Form.Item>
 
         <Form.Item
-          name="text"
-          label={t("cronJobs.text")}
-          tooltip={t("cronJobs.textTooltip")}
+          noStyle
+          shouldUpdate={(prev, cur) => prev.task_type !== cur.task_type}
         >
-          <Input.TextArea
-            rows={3}
-            placeholder={t("cronJobs.taskDescriptionPlaceholder")}
-          />
-        </Form.Item>
+          {({ getFieldValue }) => {
+            const taskType = getFieldValue("task_type");
 
-        <Form.Item
-          name={["request", "input"]}
-          label={t("cronJobs.requestInput")}
-          rules={[
-            { required: true, message: t("cronJobs.pleaseInputRequest") },
-            {
-              validator: (_, value) => {
-                if (!value) return Promise.resolve();
-                try {
-                  JSON.parse(value);
-                  return Promise.resolve();
-                } catch {
-                  return Promise.reject(
-                    new Error(t("cronJobs.invalidJsonFormat")),
-                  );
-                }
-              },
-            },
-          ]}
-          tooltip={t("cronJobs.requestInputTooltip")}
-          extra={
-            <span style={{ fontSize: 12, color: "#8c8c8c" }}>
-              {t("cronJobs.requestInputExample")}
-            </span>
-          }
-        >
-          <Input.TextArea
-            rows={6}
-            placeholder='[{"role":"user","content":[{"text":"Hello","type":"text"}]}]'
-            style={{ fontFamily: "monospace", fontSize: 12 }}
-          />
-        </Form.Item>
+            // Evolution type configuration
+            if (taskType === "evolution") {
+              return (
+                <>
+                  <Form.Item
+                    name={["evolution_config", "trigger_type"]}
+                    label="触发类型"
+                    initialValue="cron"
+                  >
+                    <Select>
+                      <Select.Option value="cron">定时触发</Select.Option>
+                      <Select.Option value="auto">自动触发</Select.Option>
+                    </Select>
+                  </Form.Item>
 
-        <Form.Item
-          name={["request", "session_id"]}
-          label={t("cronJobs.requestSessionId")}
-          tooltip={t("cronJobs.requestSessionIdTooltip")}
-        >
-          <Input placeholder="default" />
-        </Form.Item>
+                  <Form.Item
+                    name={["evolution_config", "max_iterations"]}
+                    label="最大迭代次数"
+                    initialValue={10}
+                  >
+                    <InputNumber min={1} max={100} style={{ width: "100%" }} />
+                  </Form.Item>
 
-        <Form.Item
-          name={["request", "user_id"]}
-          label={t("cronJobs.requestUserId")}
-          tooltip={t("cronJobs.requestUserIdTooltip")}
-        >
-          <Input placeholder="system" />
+                  <Form.Item
+                    name={["evolution_config", "timeout_seconds"]}
+                    label="超时时间（秒）"
+                    initialValue={300}
+                  >
+                    <InputNumber min={60} max={3600} style={{ width: "100%" }} />
+                  </Form.Item>
+                </>
+              );
+            }
+
+            // Text type configuration
+            if (taskType === "text") {
+              return (
+                <Form.Item
+                  name="text"
+                  label={t("cronJobs.text")}
+                  tooltip={t("cronJobs.textTooltip")}
+                >
+                  <Input.TextArea
+                    rows={3}
+                    placeholder={t("cronJobs.taskDescriptionPlaceholder")}
+                  />
+                </Form.Item>
+              );
+            }
+
+            // Agent type configuration
+            if (taskType === "agent") {
+              return (
+                <>
+                  <Form.Item
+                    name={["request", "input"]}
+                    label={t("cronJobs.requestInput")}
+                    rules={[
+                      { required: true, message: t("cronJobs.pleaseInputRequest") },
+                      {
+                        validator: (_, value) => {
+                          if (!value) return Promise.resolve();
+                          try {
+                            JSON.parse(value);
+                            return Promise.resolve();
+                          } catch {
+                            return Promise.reject(
+                              new Error(t("cronJobs.invalidJsonFormat")),
+                            );
+                          }
+                        },
+                      },
+                    ]}
+                    tooltip={t("cronJobs.requestInputTooltip")}
+                    extra={
+                      <span style={{ fontSize: 12, color: "#8c8c8c" }}>
+                        {t("cronJobs.requestInputExample")}
+                      </span>
+                    }
+                  >
+                    <Input.TextArea
+                      rows={6}
+                      placeholder='[{"role":"user","content":[{"text":"Hello","type":"text"}]}]'
+                      style={{ fontFamily: "monospace", fontSize: 12 }}
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    name={["request", "session_id"]}
+                    label={t("cronJobs.requestSessionId")}
+                    tooltip={t("cronJobs.requestSessionIdTooltip")}
+                  >
+                    <Input placeholder="default" />
+                  </Form.Item>
+
+                  <Form.Item
+                    name={["request", "user_id"]}
+                    label={t("cronJobs.requestUserId")}
+                    tooltip={t("cronJobs.requestUserIdTooltip")}
+                  >
+                    <Input placeholder="system" />
+                  </Form.Item>
+                </>
+              );
+            }
+
+            return null;
+          }}
         </Form.Item>
 
         <Form.Item name={["dispatch", "type"]} label="DispatchType" hidden>
@@ -313,45 +371,61 @@ export function JobDrawer({
         </Form.Item>
 
         <Form.Item
-          name={["dispatch", "channel"]}
-          label={t("cronJobs.dispatchChannel")}
-          rules={[
-            { required: true, message: t("cronJobs.pleaseInputChannel") },
-          ]}
-          tooltip={t("cronJobs.dispatchChannelTooltip")}
+          noStyle
+          shouldUpdate={(prev, cur) => prev.task_type !== cur.task_type}
         >
-          <Input placeholder="console" />
-        </Form.Item>
+          {({ getFieldValue }) => {
+            const taskType = getFieldValue("task_type");
+            // Evolution tasks don't need dispatch configuration
+            if (taskType === "evolution") {
+              return null;
+            }
+            return (
+              <>
+                <Form.Item
+                  name={["dispatch", "channel"]}
+                  label={t("cronJobs.dispatchChannel")}
+                  rules={[
+                    { required: true, message: t("cronJobs.pleaseInputChannel") },
+                  ]}
+                  tooltip={t("cronJobs.dispatchChannelTooltip")}
+                >
+                  <Input placeholder="console" />
+                </Form.Item>
 
-        <Form.Item
-          name={["dispatch", "target", "user_id"]}
-          label={t("cronJobs.dispatchTargetUserId")}
-          rules={[{ required: true, message: t("cronJobs.pleaseInputUserId") }]}
-          tooltip={t("cronJobs.dispatchTargetUserIdTooltip")}
-        >
-          <Input placeholder="admin" />
-        </Form.Item>
+                <Form.Item
+                  name={["dispatch", "target", "user_id"]}
+                  label={t("cronJobs.dispatchTargetUserId")}
+                  rules={[{ required: true, message: t("cronJobs.pleaseInputUserId") }]}
+                  tooltip={t("cronJobs.dispatchTargetUserIdTooltip")}
+                >
+                  <Input placeholder="admin" />
+                </Form.Item>
 
-        <Form.Item
-          name={["dispatch", "target", "session_id"]}
-          label={t("cronJobs.dispatchTargetSessionId")}
-          rules={[
-            { required: true, message: t("cronJobs.pleaseInputSessionId") },
-          ]}
-          tooltip={t("cronJobs.dispatchTargetSessionIdTooltip")}
-        >
-          <Input placeholder="default" />
-        </Form.Item>
+                <Form.Item
+                  name={["dispatch", "target", "session_id"]}
+                  label={t("cronJobs.dispatchTargetSessionId")}
+                  rules={[
+                    { required: true, message: t("cronJobs.pleaseInputSessionId") },
+                  ]}
+                  tooltip={t("cronJobs.dispatchTargetSessionIdTooltip")}
+                >
+                  <Input placeholder="default" />
+                </Form.Item>
 
-        <Form.Item
-          name={["dispatch", "mode"]}
-          label={t("cronJobs.dispatchMode")}
-          tooltip={t("cronJobs.dispatchModeTooltip")}
-        >
-          <Select>
-            <Select.Option value="stream">stream</Select.Option>
-            <Select.Option value="final">final</Select.Option>
-          </Select>
+                <Form.Item
+                  name={["dispatch", "mode"]}
+                  label={t("cronJobs.dispatchMode")}
+                  tooltip={t("cronJobs.dispatchModeTooltip")}
+                >
+                  <Select>
+                    <Select.Option value="stream">stream</Select.Option>
+                    <Select.Option value="final">final</Select.Option>
+                  </Select>
+                </Form.Item>
+              </>
+            );
+          }}
         </Form.Item>
 
         <Form.Item

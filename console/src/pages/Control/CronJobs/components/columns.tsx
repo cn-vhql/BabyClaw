@@ -59,6 +59,28 @@ export const createColumns = (
       dataIndex: "name",
       key: "name",
       width: 250,
+      render: (name: string, record: CronJob) => {
+        const isAutoEvolution = record.id?.startsWith("_auto_");
+        if (isAutoEvolution) {
+          return (
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 12 }}>{name}</span>
+              <span
+                style={{
+                  fontSize: 11,
+                  padding: "2px 6px",
+                  background: "#e6f7ff",
+                  color: "#1890ff",
+                  borderRadius: 2,
+                }}
+              >
+                自动进化
+              </span>
+            </div>
+          );
+        }
+        return <span style={{ fontSize: 12 }}>{name}</span>;
+      },
     },
     {
       title: handlers.t("cronJobs.enabled"),

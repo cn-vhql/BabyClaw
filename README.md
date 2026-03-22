@@ -113,13 +113,51 @@ irm https://copaw.agentscope.io/install.ps1 | iex
 
 ### Docker 部署
 
+BabyClaw提供两个Docker镜像版本，满足不同使用场景的需求。
+
+#### 版本选择
+
+| 版本 | 镜像大小 | 推荐内存 | 适用场景 |
+| :--- | :--- | :--- | :--- |
+| **Slim版本** | 800MB - 1.5GB | 512MB - 2GB | 对话、知识库、文件操作、定时任务 |
+| **Full版本** | 1.4GB - 2.1GB | 2GB - 4GB | 包含浏览器自动化、网页爬取功能 |
+
+#### Slim版本（推荐）
+
+适合大多数AI助理场景，不包含浏览器功能。
+
 ```bash
-docker pull agentscope/copaw:latest
-docker run -p 127.0.0.1:8088:8088 \
-  -v copaw-data:/app/working \
-  -v copaw-secrets:/app/working.secret \
-  agentscope/copaw:latest
+docker pull agentscope/babyclaw:latest-slim
+docker run -d --name babyclaw \
+  -p 127.0.0.1:8088:8088 \
+  -v babyclaw-data:/app/working \
+  agentscope/babyclaw:latest-slim
 ```
+
+#### Full版本
+
+包含完整的浏览器自动化支持，适合需要网页交互的场景。
+
+```bash
+docker pull agentscope/babyclaw:latest-full
+docker run -d --name babyclaw \
+  -p 127.0.0.1:8088:8088 \
+  -v babyclaw-data:/app/working \
+  --shm-size=2g \
+  agentscope/babyclaw:latest-full
+```
+
+#### Docker Compose
+
+```bash
+# 使用slim版本（默认）
+docker-compose up -d
+
+# 使用full版本
+docker-compose -f docker-compose.full.yml up -d
+```
+
+详细说明请参考：[Docker版本说明](deploy/DOCKER_VERSIONS.md)
 
 ### 桌面应用
 
