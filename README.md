@@ -1,4 +1,12 @@
-# BabyClaw
+<p align="center">
+  <img src="console/public/babyclaw.png" alt="BabyClaw" width="60" />
+</p>
+
+<h1 align="center">BabyClaw</h1>
+
+<p align="center">
+  <strong>让智能体自主进化，成为真正的数字生命</strong>
+</p>
 
 ## 项目愿景
 
@@ -40,6 +48,10 @@ BabyClaw 引入了智能体进化系统，这是本项目的核心创新：
 
 进化系统让智能体从简单的任务执行者，逐步成长为具备深度知识和高级能力的"数字生命"。
 
+![alt text](docs/image.png)
+
+![alt text](docs/image-1.png)
+
 ### 知识库系统
 
 智能体的知识积累载体，支持多种文档格式的导入和智能检索：
@@ -52,6 +64,10 @@ BabyClaw 引入了智能体进化系统，这是本项目的核心创新：
 - **向量检索**：基于向量相似度的语义搜索，快速定位相关知识点
 - **实时索引**：异步文档索引，不阻塞用户操作
 - **知识统计**：可视化展示知识库的文档数量、分块数量和索引状态
+
+![alt text](docs/image3.png)
+
+![alt text](docs/image4.png)
 
 ### 模型提供商支持
 
