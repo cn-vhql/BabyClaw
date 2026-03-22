@@ -22,6 +22,7 @@ dependencies = [
     "shortuuid>=1.0.0",
     "tzdata>=2024.1",
     "pyyaml>=6.0",
+    "google-genai>=1.0.0",
 ]
 
 [tool.setuptools.dynamic]

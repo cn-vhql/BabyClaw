@@ -1,5 +1,3 @@
-version: '3.8'
-
 # BabyClaw Full Version - With Browser Support
 # This version includes Chromium and GUI components for browser automation.
 # Recommended for: All features including web scraping, browser automation, visible browser
@@ -12,8 +10,9 @@ version: '3.8'
 # - Scheduled tasks and cron jobs
 # - File operations (PDF, Office, etc.)
 #
-# Memory: ~2GB - 4GB
-# Image Size: ~1.4GB - 2.1GB
+# Build: docker build --build-arg INCLUDE_BROWSER=true -t babyclaw:full .
+# Memory: ~2GB - 4GB recommended
+# Image Size: ~1.4GB - 2.1GB (actual)
 
 volumes:
   babyclaw-data:
@@ -23,11 +22,11 @@ volumes:
 
 services:
   babyclaw:
-    image: agentscope/babyclaw:latest-full
+    image: babyclaw:full
     container_name: babyclaw
     restart: always
     ports:
-      - "127.0.0.1:8088:8088"
+      - "0.0.0.0:8088:8088"
     environment:
       # Authentication (optional)
       # - COPAW_AUTH_ENABLED=true

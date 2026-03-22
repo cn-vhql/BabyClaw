@@ -1,12 +1,21 @@
-version: '3.8'
-
-# BabyClaw - Default configuration (uses slim version)
+# BabyClaw Default Configuration (Slim Version - No Browser Support)
+# This version uses the slim image for smaller footprint.
 # For full version with browser support, use docker-compose.full.yml
 # For slim version explicitly, use docker-compose.slim.yml
 #
 # Quick start:
 #   docker-compose up -d              # Start slim version (default)
 #   docker-compose -f docker-compose.full.yml up -d  # Start full version
+#
+# Features:
+# - Knowledge base with TF-IDF intelligent chunking (requires scikit-learn)
+# - Multi-channel support (DingTalk, Feishu, QQ, Discord, etc.)
+# - Scheduled tasks and cron jobs
+# - File operations (PDF, Office, etc.)
+#
+# Build: docker build -t babyclaw:slim .
+# Memory: ~512MB - 2GB
+# Image Size: ~800MB - 1.5GB
 
 volumes:
   babyclaw-data:
@@ -16,13 +25,11 @@ volumes:
 
 services:
   babyclaw:
-    # Default to slim version for smaller footprint
-    # Change to :latest-full for browser support
-    image: agentscope/babyclaw:latest-slim
+    image: babyclaw:slim
     container_name: babyclaw
     restart: always
     ports:
-      - "127.0.0.1:8088:8088"
+      - "0.0.0.0:8088:8088"
     environment:
       # Authentication (optional)
       # - COPAW_AUTH_ENABLED=true

@@ -3,8 +3,10 @@
 # -----------------------------------------------------------------------------
 FROM agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/node:slim AS console-builder
 WORKDIR /app
+# Install pnpm
+RUN npm install -g pnpm
 COPY console /app/console
-RUN cd /app/console && npm ci --include=dev && npm run build
+RUN cd /app/console && pnpm install && pnpm run build
 
 # -----------------------------------------------------------------------------
 # Stage 2: runtime image with Python, optional Chromium, and app.
