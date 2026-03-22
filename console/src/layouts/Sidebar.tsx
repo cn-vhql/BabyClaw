@@ -32,6 +32,7 @@ import {
   Mic,
   Bot,
   LogOut,
+  Info,
 } from "lucide-react";
 import { clearAuthToken } from "../api/config";
 import { authApi } from "../api/modules/auth";
@@ -167,6 +168,7 @@ export default function Sidebar({ selectedKey }: SidebarProps) {
           label: t("nav.voiceTranscription"),
           icon: <Mic size={16} />,
         },
+        { key: "about", label: t("nav.about"), icon: <Info size={16} /> },
       ],
     },
   ];

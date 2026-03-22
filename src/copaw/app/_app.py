@@ -366,6 +366,13 @@ if os.path.isdir(_CONSOLE_STATIC_DIR):
             return FileResponse(f, media_type="image/png")
         raise HTTPException(status_code=404, detail="Not Found")
 
+    @app.get("/babyclaw.png")
+    def _babyclaw_logo():
+        f = _console_path / "babyclaw.png"
+        if f.is_file():
+            return FileResponse(f, media_type="image/png")
+        raise HTTPException(status_code=404, detail="Not Found")
+
     @app.get("/copaw-symbol.svg")
     def _console_icon():
         f = _console_path / "copaw-symbol.svg"

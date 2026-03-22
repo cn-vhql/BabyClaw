@@ -5,6 +5,12 @@ version: '3.8'
 # Recommended for: Chat, knowledge base, file operations, scheduled tasks
 # Not suitable for: Browser automation, web scraping, visible browser
 #
+# Features:
+# - Knowledge base with TF-IDF intelligent chunking (requires scikit-learn)
+# - Multi-channel support (DingTalk, Feishu, QQ, Discord, etc.)
+# - Scheduled tasks and cron jobs
+# - File operations (PDF, Office, etc.)
+#
 # Memory: ~512MB - 2GB
 # Image Size: ~800MB - 1.5GB
 

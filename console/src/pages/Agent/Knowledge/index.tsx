@@ -8,7 +8,6 @@ import {
   message,
   Popconfirm,
   Tag,
-  Drawer,
 } from "@agentscope-ai/design";
 import { PlusOutlined, DeleteOutlined, SearchOutlined, EditOutlined } from "@ant-design/icons";
 import { knowledgeApi, type KnowledgeBase } from "../../../api/modules/knowledge";

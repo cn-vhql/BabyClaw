@@ -1,8 +1,9 @@
-import { Layout, Space } from "antd";
+import { Layout, Space, Button } from "antd";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 import ThemeToggleButton from "../components/ThemeToggleButton";
 import AgentSelector from "../components/AgentSelector";
 import { useTranslation } from "react-i18next";
+import { Github } from "lucide-react";
 import styles from "./index.module.less";
 import { KEY_TO_LABEL } from "./constants";
 
@@ -22,6 +23,20 @@ export default function Header({ selectedKey }: HeaderProps) {
       </span>
       <Space size="middle">
         <AgentSelector />
+        <a
+          href="https://github.com/cn-vhql/BabyClaw"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={styles.githubLink}
+        >
+          <Button
+            type="text"
+            icon={<Github size={18} />}
+            className={styles.githubButton}
+          >
+            GitHub
+          </Button>
+        </a>
         <LanguageSwitcher />
         <ThemeToggleButton />
       </Space>

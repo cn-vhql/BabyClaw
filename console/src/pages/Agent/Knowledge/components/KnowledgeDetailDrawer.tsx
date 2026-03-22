@@ -1,9 +1,8 @@
 import { Drawer, Tabs, Button, Upload, Input, Table, Tag, message, Modal, Card, Popconfirm, Select } from "@agentscope-ai/design";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { PlusOutlined, DeleteOutlined, UploadOutlined, FileTextOutlined, SaveOutlined, SearchOutlined } from "@ant-design/icons";
 import type { UploadFile } from "antd";
 import { knowledgeApi, type KnowledgeBaseDetail, type Document, type Chunk } from "../../../../api/modules/knowledge";
-import { useTranslation } from "react-i18next";
 
 interface Props {
   open: boolean;
@@ -14,7 +13,6 @@ interface Props {
 }
 
 export function KnowledgeDetailDrawer({ open, kbId, kb, onClose, onUpdate }: Props) {
-  const { t } = useTranslation();
   const [uploadChunkType, setUploadChunkType] = useState<"length" | "separator" | "tfidf">("length");
   const [uploadMaxLength, setUploadMaxLength] = useState(500);
   const [uploadOverlap, setUploadOverlap] = useState(50);
@@ -34,7 +32,7 @@ export function KnowledgeDetailDrawer({ open, kbId, kb, onClose, onUpdate }: Pro
   const [previewPageSize] = useState(10);
   const [addChunkModalOpen, setAddChunkModalOpen] = useState(false);
   const [searchPage, setSearchPage] = useState(1);
-  const [searchPageSize, setSearchPageSize] = useState(10);
+  const searchPageSize = 10;
   const [indexingDocsMap, setIndexingDocsMap] = useState<Record<string, boolean>>({});
 
   // Poll document indexing status

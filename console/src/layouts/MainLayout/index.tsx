@@ -22,6 +22,7 @@ import SecurityPage from "../../pages/Settings/Security";
 import TokenUsagePage from "../../pages/Settings/TokenUsage";
 import VoiceTranscriptionPage from "../../pages/Settings/VoiceTranscription";
 import AgentsPage from "../../pages/Settings/Agents";
+import AboutPage from "../../pages/About";
 
 const { Content } = Layout;
 
@@ -44,6 +45,7 @@ const pathToKey: Record<string, string> = {
   "/security": "security",
   "/token-usage": "token-usage",
   "/voice-transcription": "voice-transcription",
+  "/about": "about",
 };
 
 export default function MainLayout() {
@@ -82,6 +84,7 @@ export default function MainLayout() {
                 path="/voice-transcription"
                 element={<VoiceTranscriptionPage />}
               />
+              <Route path="/about" element={<AboutPage />} />
             </Routes>
           </div>
         </Content>

@@ -94,7 +94,8 @@ COPY pyproject.toml setup.py README.md ./
 COPY src ./src
 # Inject console dist from build stage (repo does not commit dist).
 COPY --from=console-builder /app/console/dist/ ./src/copaw/console/
-RUN pip install --no-cache-dir .[ollama]
+# Install optional dependencies: ollama and knowledge (for TF-IDF chunking)
+RUN pip install --no-cache-dir .[ollama,knowledge]
 
 # Init working dir with default config.json and HEARTBEAT.md (build time).
 RUN copaw init --defaults --accept-security

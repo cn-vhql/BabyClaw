@@ -5,6 +5,13 @@ version: '3.8'
 # Recommended for: All features including web scraping, browser automation, visible browser
 # Suitable for: Chat, knowledge base, browser automation, web interactions
 #
+# Features:
+# - Knowledge base with TF-IDF intelligent chunking (requires scikit-learn)
+# - Browser automation with Playwright and Chromium
+# - Multi-channel support (DingTalk, Feishu, QQ, Discord, etc.)
+# - Scheduled tasks and cron jobs
+# - File operations (PDF, Office, etc.)
+#
 # Memory: ~2GB - 4GB
 # Image Size: ~1.4GB - 2.1GB
 

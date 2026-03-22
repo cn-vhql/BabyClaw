@@ -46,7 +46,8 @@
     "environments": "Environments",
     "security": "Security",
     "tokenUsage": "Token Usage",
-    "voiceTranscription": "Voice Transcription"
+    "voiceTranscription": "Voice Transcription",
+    "about": "About"
   },
   "voiceTranscription": {
     "title": "Voice Transcription",
@@ -946,5 +947,22 @@
     "document": "Document",
     "content": "Content",
     "score": "Score"
+  },
+  "about": {
+    "title": "About BabyClaw",
+    "mission": {
+      "title": "Project Vision",
+      "content": "The ultimate goal of BabyClaw is to explore and realize the autonomous evolution of AI agents, enabling them to become true digital life forms with independent thinking, autonomous learning, and continuous evolution capabilities, no longer completely dependent on human instructions and control.",
+      "vision": "We believe that future agents should be like life itself, capable of self-growth and self-optimization, adapting and evolving in constantly changing environments, ultimately transcending the imagination of their creators."
+    },
+    "opensource": {
+      "title": "Tribute to Open Source",
+      "content": "BabyClaw stands on the shoulders of many outstanding open source projects. We especially thank the following projects for providing inspiration and technical support:"
+    },
+    "acknowledgments": {
+      "title": "Technology Stack",
+      "content": "This project is built with the following open source technologies. Thanks to all contributors for their hard work:"
+    },
+    "footer": "Built with ❤️, moving towards the future of digital life"
   }
 }

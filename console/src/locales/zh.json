@@ -48,6 +48,7 @@
     "environments": "环境变量",
     "security": "安全",
     "tokenUsage": "Token 消耗",
+    "about": "关于",
     "voiceTranscription": "语音转写"
   },
   "workspace": {
@@ -973,5 +974,22 @@
     "document": "文档",
     "content": "内容",
     "score": "分数"
+  },
+  "about": {
+    "title": "关于 BabyClaw",
+    "mission": {
+      "title": "项目愿景",
+      "content": "BabyClaw 项目的终极目标是探索和实现智能体的自主进化，让智能体逐渐成为真正的数字生命，具备独立思考、自主学习和持续进化的能力，不再完全依赖人类的指令和控制。",
+      "vision": "我们相信，未来的智能体应该像生命一样，能够自我成长、自我优化，在不断变化的环境中适应和进化，最终超越其创造者的想象。"
+    },
+    "opensource": {
+      "title": "致敬开源项目",
+      "content": "BabyClaw 站在众多优秀开源项目的肩膀上。我们特别感谢以下项目为本项目提供灵感和技术支持："
+    },
+    "acknowledgments": {
+      "title": "技术栈",
+      "content": "本项目基于以下开源技术构建，感谢所有贡献者的辛勤付出："
+    },
+    "footer": "用 ❤️ 打造，向着数字生命的未来迈进"
   }
 }

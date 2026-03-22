@@ -23,6 +23,24 @@
   font-weight: 500;
 }
 
+.githubLink {
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+}
+
+.githubButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.githubButton:hover {
+  background: rgba(0, 0, 0, 0.04) !important;
+}
+
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 .sider {
   background: #fff !important;
@@ -220,6 +238,10 @@
 
   .headerTitle {
     color: rgba(255, 255, 255, 0.85);
+  }
+
+  .githubButton:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
   }
 
   .sider {
