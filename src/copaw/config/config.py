@@ -712,6 +712,21 @@ def _default_builtin_tools() -> Dict[str, BuiltinToolConfig]:
             enabled=True,
             description="Get llm token usage",
         ),
+        "knowledge_search": BuiltinToolConfig(
+            name="knowledge_search",
+            enabled=True,
+            description="Search knowledge base for relevant information",
+        ),
+        "list_knowledge_bases": BuiltinToolConfig(
+            name="list_knowledge_bases",
+            enabled=True,
+            description="List all available knowledge bases",
+        ),
+        "knowledge_write": BuiltinToolConfig(
+            name="knowledge_write",
+            enabled=True,
+            description="Write text content to knowledge base for future retrieval",
+        ),
     }
 
 

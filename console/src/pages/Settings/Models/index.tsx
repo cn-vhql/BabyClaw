@@ -9,6 +9,7 @@ import {
   ProviderConfigModal,
   ModelManageModal,
   EmbeddingConfigModal,
+  AgentDefaultModelCard,
 } from "./components";
 import { useTranslation } from "react-i18next";
 import type { ProviderInfo } from "../../../api/types/provider";
@@ -228,6 +229,15 @@ function ModelsPage() {
         <LoadingState message={error} error onRetry={fetchAll} />
       ) : (
         <>
+          {/* ---- Agent Default Model Section ---- */}
+          <div className={styles.agentDefaultModelSection}>
+            <AgentDefaultModelCard
+              providers={providers}
+              activeModels={activeModels}
+              onUpdated={refreshProvidersSilently}
+            />
+          </div>
+
           {/* ---- Providers Section ---- */}
           <div className={styles.providersBlock}>
             <div className={styles.sectionHeaderRow}>

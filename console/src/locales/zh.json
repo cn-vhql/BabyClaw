@@ -632,7 +632,15 @@
       "loadFailed": "加载向量配置失败",
       "saveSuccess": "向量配置已保存",
       "saveFailed": "保存向量配置失败"
-    }
+    },
+    "agentDefaultModel": "当前智能体默认模型",
+    "agentDefaultModelDesc": "设置当前所选智能体使用的默认 LLM 模型。每个智能体可以有独立的模型配置。",
+    "selectDefaultModel": "选择默认模型",
+    "noDefaultModel": "未设置默认模型",
+    "defaultModelUpdated": "默认模型已更新",
+    "updateFailed": "更新失败",
+    "updating": "更新中",
+    "noAvailableModels": "暂无可用模型"
   },
   "agentConfig": {
     "title": "运行配置",

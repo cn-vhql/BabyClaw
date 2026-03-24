@@ -39,6 +39,98 @@
   margin-top: 32px;
 }
 
+/* ---- Agent Default Model Card ---- */
+
+.agentDefaultModelSection {
+  margin-bottom: 24px;
+}
+
+.agentDefaultModelCard {
+  border-radius: 16px;
+  border: 2px solid #615ced;
+  box-shadow: rgba(97, 92, 237, 0.15) 0px 8px 24px;
+  background: linear-gradient(135deg, #f8f9ff 0%, #fff 100%);
+
+  :global(.ant-card-body) {
+    padding: 20px 24px;
+  }
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.agentNameBadge {
+  padding: 4px 12px;
+  background: #615ced;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 20px;
+}
+
+.cardDescription {
+  margin: 0 0 16px;
+  font-size: 14px;
+  color: #666;
+  line-height: 1.6;
+}
+
+.savingWrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+  border-radius: 8px;
+  color: #52c41a;
+  font-size: 14px;
+}
+
+.modelSelect {
+  width: 100%;
+}
+
+/* Dark mode for Agent Default Model Card */
+:global(.dark-mode) {
+  .agentDefaultModelCard {
+    background: linear-gradient(135deg, rgba(97, 92, 237, 0.1) 0%, #2a2a2a 100%);
+    border-color: #615ced;
+    box-shadow: rgba(97, 92, 237, 0.25) 0px 8px 24px;
+  }
+
+  .cardTitle {
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  .cardDescription {
+    color: rgba(255, 255, 255, 0.55);
+  }
+
+  .savingWrapper {
+    background: rgba(82, 196, 26, 0.15);
+    border-color: rgba(82, 196, 26, 0.3);
+    color: #52c41a;
+  }
+}
+
 /* ---- Provider Groups ---- */
 
 .providerGroup {

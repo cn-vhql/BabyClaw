@@ -220,7 +220,7 @@ export const FileExplorerModal: React.FC<FileExplorerModalProps> = ({
     : false;
 
   const canDelete = selectedPath && !isPresetItem;
-  const canDownload = selectedPath && fileContent?.is_text !== false;
+  const canDownload = selectedPath && fileContent !== null;
 
   return (
     <Modal

@@ -26,6 +26,7 @@ from .get_token_usage import get_token_usage
 from .knowledge import (
     knowledge_search,
     list_knowledge_bases,
+    knowledge_write,
 )
 
 __all__ = [
@@ -49,4 +50,5 @@ __all__ = [
     "get_token_usage",
     "knowledge_search",
     "list_knowledge_bases",
+    "knowledge_write",
 ]

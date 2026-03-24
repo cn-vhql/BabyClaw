@@ -8,6 +8,7 @@ import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
+from urllib.parse import quote
 
 from fastapi import APIRouter, Body, HTTPException, Request, UploadFile, File
 from fastapi.responses import StreamingResponse
@@ -806,12 +807,39 @@ async def download_file(request: Request, path: str):
         workspace = await get_agent_for_request(request)
         file_path = workspace.workspace_dir / path
 
+        logging.info(f"Downloading file: {file_path}")
+
         # Security check
         if not str(file_path.resolve()).startswith(str(workspace.workspace_dir.resolve())):
             raise HTTPException(status_code=403, detail="Access denied")
 
         if not file_path.exists() or not file_path.is_file():
+            logging.error(f"File not found: {file_path}")
             raise HTTPException(status_code=404, detail="File not found")
+
+        # Get file extension for media type
+        file_ext = file_path.suffix.lower()
+        media_type_map = {
+            ".pdf": "application/pdf",
+            ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ".xls": "application/vnd.ms-excel",
+            ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            ".doc": "application/msword",
+            ".txt": "text/plain",
+            ".zip": "application/zip",
+            ".rar": "application/x-rar-compressed",
+            ".7z": "application/x-7z-compressed",
+            ".png": "image/png",
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".gif": "image/gif",
+            ".mp4": "video/mp4",
+            ".mp3": "audio/mpeg",
+        }
+        media_type = media_type_map.get(file_ext, "application/octet-stream")
+
+        # Encode filename for proper handling of UTF-8 characters
+        encoded_filename = quote(file_path.name, safe="")
 
         def iter_file():
             with open(file_path, "rb") as f:
@@ -820,14 +848,15 @@ async def download_file(request: Request, path: str):
 
         return StreamingResponse(
             iter_file(),
-            media_type="application/octet-stream",
+            media_type=media_type,
             headers={
-                "Content-Disposition": f'attachment; filename="{file_path.name}"',
+                "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}",
             },
         )
     except HTTPException:
         raise
     except Exception as exc:
+        logging.error(f"Error downloading file: {exc}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 

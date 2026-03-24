@@ -646,7 +646,15 @@
       "loadFailed": "Failed to load vector configuration",
       "saveSuccess": "Vector configuration saved",
       "saveFailed": "Failed to save vector configuration"
-    }
+    },
+    "agentDefaultModel": "Current Agent Default Model",
+    "agentDefaultModelDesc": "Set the default LLM model for the currently selected agent. Each agent can have its own model configuration.",
+    "selectDefaultModel": "Select default model",
+    "noDefaultModel": "No default model set",
+    "defaultModelUpdated": "Default model updated",
+    "updateFailed": "Update failed",
+    "updating": "Updating",
+    "noAvailableModels": "No available models"
   },
   "agentConfig": {
     "title": "Configuration",
