@@ -51,6 +51,8 @@ export function AgentTable({
     {
       title: t("common.actions"),
       key: "actions",
+      className: "copaw-table-actions-cell",
+      onHeaderCell: () => ({ className: "copaw-table-actions-cell" }),
       width: 200,
       render: (_: unknown, record: AgentSummary) => (
         <Space>

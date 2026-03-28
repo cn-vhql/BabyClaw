@@ -215,6 +215,8 @@ export function SkillScannerSection() {
     {
       title: t("security.skillScanner.scanAlerts.actions"),
       key: "actions",
+      className: "copaw-table-actions-cell",
+      onHeaderCell: () => ({ className: "copaw-table-actions-cell" }),
       width: 200,
       render: (_: unknown, record: BlockedSkillRecord, index: number) => (
         <Space size="small">
@@ -295,6 +297,8 @@ export function SkillScannerSection() {
     {
       title: t("security.skillScanner.whitelist.actions"),
       key: "actions",
+      className: "copaw-table-actions-cell",
+      onHeaderCell: () => ({ className: "copaw-table-actions-cell" }),
       width: 100,
       render: (_: unknown, record: SkillScannerWhitelistEntry) => (
         <Tooltip title={t("security.skillScanner.whitelist.remove")}>

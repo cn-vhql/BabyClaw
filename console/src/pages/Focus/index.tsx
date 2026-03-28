@@ -61,6 +61,14 @@ type FocusFormValues = Omit<FocusSettings, "every" | "doNotDisturb"> & {
 
 type RunFilterValue = "all" | FocusRunStatus;
 type RunTabKey = "overview" | "notes" | "prompt" | "output" | "tools" | "notification";
+type NormalizedToolLog = {
+  key: string;
+  tool: string;
+  callId?: string;
+  timestamp?: string;
+  args?: unknown;
+  result?: unknown;
+};
 
 function TimePickerHHmm({
   value,
@@ -137,6 +145,71 @@ function renderJson(value: unknown) {
   } catch {
     return String(value);
   }
+}
+
+function formatDisplayTime(timestamp?: string) {
+  if (!timestamp) return "";
+  const parsed = new Date(timestamp);
+  if (Number.isNaN(parsed.getTime())) return timestamp;
+  return parsed.toLocaleString();
+}
+
+function stringifyValue(value: unknown) {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string") return value;
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
+}
+
+function normalizeToolLogs(archive: FocusRunArchive | null): NormalizedToolLog[] {
+  if (!archive || !Array.isArray(archive.toolExecutionLog)) return [];
+
+  return archive.toolExecutionLog.map((entry, index) => {
+    if (entry && typeof entry === "object") {
+      const callId =
+        typeof entry.call_id === "string"
+          ? entry.call_id
+          : typeof entry.callId === "string"
+            ? entry.callId
+            : undefined;
+      const tool =
+        typeof entry.tool === "string"
+          ? entry.tool
+          : typeof entry.name === "string"
+            ? entry.name
+            : `tool-${index + 1}`;
+
+      return {
+        key: `${callId || tool}-${index}`,
+        tool,
+        callId,
+        timestamp: typeof entry.timestamp === "string" ? entry.timestamp : undefined,
+        args:
+          "args" in entry
+            ? entry.args
+            : "input" in entry
+              ? entry.input
+              : "arguments" in entry
+                ? entry.arguments
+                : undefined,
+        result:
+          "result" in entry
+            ? entry.result
+            : "output" in entry
+              ? entry.output
+              : undefined,
+      };
+    }
+
+    return {
+      key: `tool-${index}`,
+      tool: `tool-${index + 1}`,
+      result: entry,
+    };
+  });
 }
 
 export default function FocusPage() {
@@ -518,6 +591,121 @@ export default function FocusPage() {
     { key: "tools", label: t("focus.runTabTools") },
     { key: "notification", label: t("focus.runTabNotification") },
   ];
+
+  const toolLogs = useMemo(() => normalizeToolLogs(runArchive), [runArchive]);
+  const toolsUsed = useMemo(
+    () => Array.from(new Set(toolLogs.map((log) => log.tool).filter(Boolean))),
+    [toolLogs],
+  );
+
+  const renderMarkdownPanel = (content?: string | null, emptyText?: string) => {
+    if (!content?.trim()) {
+      return <Empty description={emptyText || t("focus.runArchivePending")} />;
+    }
+
+    return (
+      <div className={styles.runMarkdownPanel}>
+        <LazyMarkdown
+          content={content}
+          className={`${styles.noteMarkdown} ${styles.runMarkdownContent}`}
+        />
+      </div>
+    );
+  };
+
+  const renderNotificationResult = () => {
+    const result = runArchive?.notificationResult || {};
+    const status =
+      (typeof result.status === "string" ? result.status : undefined) ||
+      runDetail?.notificationStatus ||
+      "pending";
+    const channel =
+      typeof result.channel === "string" && result.channel
+        ? result.channel
+        : undefined;
+    const error =
+      typeof result.error === "string" && result.error ? result.error : undefined;
+
+    const descriptionMap: Record<string, string> = {
+      pending: t("focus.notificationDescriptionPending"),
+      sent: channel
+        ? t("focus.notificationDescriptionSentWithChannel", { channel })
+        : t("focus.notificationDescriptionSent"),
+      failed: error
+        ? t("focus.notificationDescriptionFailedWithError", { error })
+        : t("focus.notificationDescriptionFailed"),
+      timeout: t("focus.notificationDescriptionTimedOut"),
+      cancelled: t("focus.notificationDescriptionCancelled"),
+      skipped_no_target: t("focus.notificationDescriptionSkippedNoTarget"),
+      skipped_no_notes: t("focus.notificationDescriptionSkippedNoNotes"),
+      not_applicable: t("focus.notificationDescriptionNotApplicable"),
+    };
+
+    const extraEntries = Object.entries(result).filter(
+      ([key, value]) =>
+        key !== "status" &&
+        key !== "channel" &&
+        key !== "error" &&
+        value !== null &&
+        value !== undefined &&
+        value !== "",
+    );
+
+    return (
+      <div className={styles.notificationTab}>
+        <Card
+          title={t("focus.notificationResultSummary")}
+          size="small"
+          className={styles.detailCard}
+        >
+          <div className={styles.notificationSummary}>
+            <div>
+              <div className={styles.overviewLabel}>
+                {t("focus.notificationStatus")}
+              </div>
+              <div className={styles.notificationHeadline}>
+                {formatNotificationStatus(status)}
+              </div>
+            </div>
+            <p className={styles.notificationDescription}>
+              {descriptionMap[status] ||
+                t("focus.notificationDescriptionUnknown", {
+                  status: formatNotificationStatus(status),
+                })}
+            </p>
+            {channel ? (
+              <div className={styles.notificationMetaLine}>
+                <span className={styles.overviewLabel}>
+                  {t("focus.notificationChannelLabel")}
+                </span>
+                <span>{channel}</span>
+              </div>
+            ) : null}
+            {error ? (
+              <div className={styles.notificationMetaLine}>
+                <span className={styles.overviewLabel}>
+                  {t("focus.notificationErrorLabel")}
+                </span>
+                <span>{error}</span>
+              </div>
+            ) : null}
+          </div>
+        </Card>
+
+        {extraEntries.length > 0 ? (
+          <Card
+            title={t("focus.notificationExtraDetails")}
+            size="small"
+            className={styles.detailCard}
+          >
+            <pre className={styles.fileContent}>
+              {renderJson(Object.fromEntries(extraEntries))}
+            </pre>
+          </Card>
+        ) : null}
+      </div>
+    );
+  };
 
   const initialLoading = settingsLoading && notesLoading && runsLoading;
 
@@ -919,31 +1107,87 @@ export default function FocusPage() {
               ) : null}
 
               {activeRunTab === "prompt" ? (
-                <pre className={styles.codeBlock}>
-                  {runArchive?.prompt || t("focus.runArchivePending")}
-                </pre>
+                renderMarkdownPanel(runArchive?.prompt, t("focus.runArchivePending"))
               ) : null}
 
               {activeRunTab === "output" ? (
-                <pre className={styles.codeBlock}>
-                  {runArchive?.fullOutput || t("focus.runArchivePending")}
-                </pre>
+                renderMarkdownPanel(runArchive?.fullOutput, t("focus.runArchivePending"))
               ) : null}
 
               {activeRunTab === "tools" ? (
-                <pre className={styles.codeBlock}>
-                  {runArchive
-                    ? renderJson(runArchive.toolExecutionLog)
-                    : t("focus.runArchivePending")}
-                </pre>
+                runArchive ? (
+                  <div className={styles.toolsTab}>
+                    <Card
+                      title={t("focus.toolUsageStats")}
+                      size="small"
+                      className={styles.detailCard}
+                    >
+                      <p>
+                        {t("focus.toolCallCount")}
+                        <Tag color="blue">{toolLogs.length}</Tag>
+                      </p>
+                      <p>{t("focus.toolsUsedLabel")}</p>
+                      <div className={styles.tagList}>
+                        {toolsUsed.length > 0 ? (
+                          toolsUsed.map((tool) => <Tag key={tool}>{tool}</Tag>)
+                        ) : (
+                          <span className={styles.muted}>{t("focus.noToolLogs")}</span>
+                        )}
+                      </div>
+                    </Card>
+
+                    {toolLogs.length > 0 ? (
+                      <Card
+                        title={t("focus.toolLogDetails", { count: toolLogs.length })}
+                        size="small"
+                        className={styles.detailCard}
+                      >
+                        {toolLogs.map((log) => (
+                          <div key={log.key} className={styles.toolLog}>
+                            <div className={styles.toolLogHeader}>
+                              <strong>{log.tool}</strong>
+                              {log.callId ? <Tag>{log.callId}</Tag> : null}
+                              <span>
+                                {formatDisplayTime(log.timestamp) ||
+                                  t("focus.timeUnknown")}
+                              </span>
+                            </div>
+                            {log.args !== undefined && stringifyValue(log.args) ? (
+                              <div className={styles.toolLogSection}>
+                                <strong>{t("focus.toolArguments")}</strong>
+                                <pre className={styles.fileContent}>
+                                  {stringifyValue(log.args)}
+                                </pre>
+                              </div>
+                            ) : null}
+                            {log.result !== undefined && log.result !== null ? (
+                              <div className={styles.toolLogSection}>
+                                <strong>{t("focus.toolResultLabel")}</strong>
+                                <pre className={styles.fileContent}>
+                                  {stringifyValue(log.result)}
+                                </pre>
+                              </div>
+                            ) : null}
+                          </div>
+                        ))}
+                      </Card>
+                    ) : (
+                      <Card
+                        title={t("focus.runTabTools")}
+                        size="small"
+                        className={styles.detailCard}
+                      >
+                        <Empty description={t("focus.noToolLogs")} />
+                      </Card>
+                    )}
+                  </div>
+                ) : (
+                  <Empty description={t("focus.runArchivePending")} />
+                )
               ) : null}
 
               {activeRunTab === "notification" ? (
-                <pre className={styles.codeBlock}>
-                  {runArchive
-                    ? renderJson(runArchive.notificationResult)
-                    : t("focus.runArchivePending")}
-                </pre>
+                renderNotificationResult()
               ) : null}
             </div>
           </div>

@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
+import json
+import sqlite3
 import tempfile
 import unittest
 from datetime import datetime, timezone
@@ -97,7 +99,7 @@ class FocusServiceTests(unittest.TestCase):
             self.assertEqual(loaded_archive.note_ids, [note.id])
 
             self.assertTrue(service.remove_tag("nvidia"))
-            self.assertEqual(service.list_tags(), ["OpenAI", "Release"])
+            self.assertEqual(service.list_tags(), ["OpenAI"])
 
     def test_create_running_run_enforces_single_flight(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -130,3 +132,134 @@ class FocusServiceTests(unittest.TestCase):
             )
             self.assertIsNotNone(third)
             self.assertIsNone(third_running)
+
+    def test_write_note_normalizes_stringified_tags_without_polluting_focus_tags(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            service = FocusService(Path(tmp_dir))
+            service.replace_tags(["俄乌战争", "台海战争"])
+
+            note = service.write_note(
+                title="俄乌战争：能源制裁升级",
+                content="出现新的制裁动态。",
+                tags='["俄乌战争,能源经济制裁]',
+                source="web",
+            )
+
+            self.assertEqual(note.tags, ["俄乌战争", "能源经济制裁"])
+            self.assertEqual(service.list_tags(), ["俄乌战争", "台海战争"])
+
+    def test_service_repairs_polluted_focus_tags_notes_and_runs_on_init(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            workspace = Path(tmp_dir)
+            service = FocusService(workspace)
+            db_path = workspace / "focus.sqlite3"
+
+            polluted_tags = [
+                "俄乌战争",
+                "台海战争",
+                "[",
+                '"',
+                "俄",
+                "乌",
+                "战",
+                "争",
+                ",",
+                "能",
+                "源",
+                "经",
+                "济",
+                "制",
+                "裁",
+                "]",
+            ]
+            polluted_note_tags = ['[', '"', "俄", "乌", "战", "争", ",", "能", "源", "经", "济", "制", "裁", "]"]
+            polluted_run_tags = [
+                "俄乌战争",
+                "台海战争",
+                "[",
+                '"',
+                "俄",
+                "乌",
+                "战",
+                "争",
+                ",",
+                "能",
+                "源",
+                "经",
+                "济",
+                "制",
+                "裁",
+                "]",
+            ]
+
+            with sqlite3.connect(db_path) as conn:
+                conn.execute("DELETE FROM focus_tags")
+                conn.execute("DELETE FROM focus_notes")
+                conn.execute("DELETE FROM focus_runs")
+                now = datetime.now(timezone.utc).isoformat()
+                for position, tag in enumerate(polluted_tags):
+                    conn.execute(
+                        """
+                        INSERT INTO focus_tags (
+                            name, normalized_name, position, created_at, updated_at
+                        ) VALUES (?, ?, ?, ?, ?)
+                        """,
+                        (tag, tag.lower(), position, now, now),
+                    )
+                conn.execute(
+                    """
+                    INSERT INTO focus_notes (
+                        id, title, content, preview_text, fingerprint, source, tags_json,
+                        created_at, session_id, run_id
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        "note-1",
+                        "俄乌战争：能源制裁升级",
+                        "出现新的制裁动态。",
+                        "出现新的制裁动态。",
+                        "",
+                        "web",
+                        json.dumps(polluted_note_tags, ensure_ascii=False),
+                        now,
+                        None,
+                        "run-1",
+                    ),
+                )
+                conn.execute(
+                    """
+                    INSERT INTO focus_runs (
+                        id, status, reason, trigger_type, started_at, finished_at,
+                        note_count, summary, notification_status, archive_id,
+                        tag_snapshot_json, session_id
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        "run-1",
+                        "completed",
+                        None,
+                        "manual",
+                        now,
+                        now,
+                        1,
+                        "生成 1 条关注要点",
+                        "not_applicable",
+                        "run-1",
+                        json.dumps(polluted_run_tags, ensure_ascii=False),
+                        "focus:run-1",
+                    ),
+                )
+                conn.commit()
+
+            repaired = FocusService(workspace)
+            self.assertEqual(repaired.list_tags(), ["俄乌战争", "台海战争"])
+
+            note = repaired.get_note("note-1")
+            self.assertIsNotNone(note)
+            assert note is not None
+            self.assertEqual(note.tags, ["俄乌战争", "能源经济制裁"])
+
+            run = repaired.get_run("run-1")
+            self.assertIsNotNone(run)
+            assert run is not None
+            self.assertEqual(run.tag_snapshot, ["俄乌战争", "台海战争"])

@@ -351,6 +351,8 @@ export const createColumns = (
     {
       title: handlers.t("cronJobs.action"),
       key: "action",
+      className: "copaw-table-actions-cell",
+      onHeaderCell: () => ({ className: "copaw-table-actions-cell" }),
       width: 240,
       fixed: "right",
       render: (_: unknown, record: CronJob) => {

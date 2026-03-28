@@ -78,6 +78,8 @@ export const createColumns = (
     {
       title: t("sessions.action"),
       key: "action",
+      className: "copaw-table-actions-cell",
+      onHeaderCell: () => ({ className: "copaw-table-actions-cell" }),
       width: 180,
       fixed: "right",
       render: (_: unknown, record: Session) => (

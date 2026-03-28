@@ -177,6 +177,8 @@ function ModelsPage() {
     {
       title: t("models.actions"),
       key: "actions",
+      className: "copaw-table-actions-cell",
+      onHeaderCell: () => ({ className: "copaw-table-actions-cell" }),
       width: 200,
       render: (_: unknown, record: ProviderInfo) => (
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>

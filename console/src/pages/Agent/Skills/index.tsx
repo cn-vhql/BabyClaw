@@ -213,6 +213,8 @@ function SkillsPage() {
     {
       title: t("skills.actions"),
       key: "actions",
+      className: "copaw-table-actions-cell",
+      onHeaderCell: () => ({ className: "copaw-table-actions-cell" }),
       width: 180,
       render: (_: unknown, record: SkillSpec) => (
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>

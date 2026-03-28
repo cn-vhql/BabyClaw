@@ -20,7 +20,7 @@ class FocusService:
     def list_tags(self) -> list[str]:
         return self.repo.list_tags()
 
-    def replace_tags(self, tags: list[str]) -> list[str]:
+    def replace_tags(self, tags: list[str] | str | None) -> list[str]:
         return self.repo.replace_tags(tags)
 
     def add_tag(self, tag: str) -> bool:
@@ -37,7 +37,7 @@ class FocusService:
         *,
         title: str,
         content: str,
-        tags: list[str] | None = None,
+        tags: list[str] | str | None = None,
         source: str = "manual",
         session_id: str | None = None,
         run_id: str | None = None,

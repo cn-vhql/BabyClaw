@@ -326,6 +326,8 @@ function MCPPage() {
     {
       title: t("mcp.actions"),
       key: "actions",
+      className: "copaw-table-actions-cell",
+      onHeaderCell: () => ({ className: "copaw-table-actions-cell" }),
       width: 200,
       render: (_: unknown, record: MCPClientInfo) => (
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>

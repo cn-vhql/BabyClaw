@@ -877,6 +877,20 @@ body[data-app-theme] .ant-checkbox-checked .ant-checkbox-inner {
   background: var(--copaw-table-surface) !important;
 }
 
+.copaw-table-wrapper .copaw-table-container::before,
+.copaw-table-wrapper .copaw-table-container::after,
+.copaw-table-wrapper .ant-table-container::before,
+.copaw-table-wrapper .ant-table-container::after,
+.ant-table-wrapper .copaw-table-container::before,
+.ant-table-wrapper .copaw-table-container::after,
+.ant-table-wrapper .ant-table-container::before,
+.ant-table-wrapper .ant-table-container::after {
+  width: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  pointer-events: none !important;
+}
+
 .copaw-table-wrapper .copaw-table-content,
 .copaw-table-wrapper .ant-table-content,
 .copaw-table-wrapper .copaw-table-body,
@@ -951,11 +965,65 @@ body[data-app-theme] .ant-checkbox-checked .ant-checkbox-inner {
   font-size: 13px;
 }
 
+.copaw-table-wrapper .copaw-table-cell.copaw-table-actions-cell,
+.copaw-table-wrapper .ant-table-cell.copaw-table-actions-cell,
+.ant-table-wrapper .copaw-table-cell.copaw-table-actions-cell,
+.ant-table-wrapper .ant-table-cell.copaw-table-actions-cell {
+  background: var(--copaw-table-action-bg) !important;
+  box-shadow: inset 1px 0 0 var(--copaw-table-action-border);
+}
+
+.copaw-table-wrapper .copaw-table-thead > tr > th.copaw-table-actions-cell,
+.copaw-table-wrapper .ant-table-thead > tr > th.copaw-table-actions-cell,
+.ant-table-wrapper .copaw-table-thead > tr > th.copaw-table-actions-cell,
+.ant-table-wrapper .ant-table-thead > tr > th.copaw-table-actions-cell {
+  background: var(--copaw-table-action-bg) !important;
+  color: var(--copaw-table-action-text) !important;
+  box-shadow: inset 1px 0 0 var(--copaw-table-action-border);
+}
+
 .copaw-table-wrapper .copaw-table-tbody > tr:hover > td,
 .copaw-table-wrapper .ant-table-tbody > tr:hover > td,
 .ant-table-wrapper .copaw-table-tbody > tr:hover > td,
 .ant-table-wrapper .ant-table-tbody > tr:hover > td {
   background: var(--copaw-table-row-hover) !important;
+}
+
+.copaw-table-wrapper .copaw-table-tbody > tr > td.copaw-table-cell-row-hover,
+.copaw-table-wrapper .copaw-table-tbody > tr > td.ant-table-cell-row-hover,
+.copaw-table-wrapper .ant-table-tbody > tr > td.copaw-table-cell-row-hover,
+.copaw-table-wrapper .ant-table-tbody > tr > td.ant-table-cell-row-hover,
+.ant-table-wrapper .copaw-table-tbody > tr > td.copaw-table-cell-row-hover,
+.ant-table-wrapper .copaw-table-tbody > tr > td.ant-table-cell-row-hover,
+.ant-table-wrapper .ant-table-tbody > tr > td.copaw-table-cell-row-hover,
+.ant-table-wrapper .ant-table-tbody > tr > td.ant-table-cell-row-hover {
+  background: var(--copaw-table-row-hover) !important;
+}
+
+.copaw-table-wrapper .copaw-table-tbody > tr:hover > td.copaw-table-actions-cell,
+.copaw-table-wrapper .ant-table-tbody > tr:hover > td.copaw-table-actions-cell,
+.ant-table-wrapper .copaw-table-tbody > tr:hover > td.copaw-table-actions-cell,
+.ant-table-wrapper .ant-table-tbody > tr:hover > td.copaw-table-actions-cell {
+  background: var(--copaw-table-action-bg-hover) !important;
+}
+
+.copaw-table-wrapper .copaw-table-tbody > tr > td.copaw-table-actions-cell.copaw-table-cell-row-hover,
+.copaw-table-wrapper .copaw-table-tbody > tr > td.copaw-table-actions-cell.ant-table-cell-row-hover,
+.copaw-table-wrapper .copaw-table-tbody > tr > td.ant-table-cell.copaw-table-actions-cell.copaw-table-cell-row-hover,
+.copaw-table-wrapper .copaw-table-tbody > tr > td.ant-table-cell.copaw-table-actions-cell.ant-table-cell-row-hover,
+.copaw-table-wrapper .ant-table-tbody > tr > td.copaw-table-actions-cell.copaw-table-cell-row-hover,
+.copaw-table-wrapper .ant-table-tbody > tr > td.copaw-table-actions-cell.ant-table-cell-row-hover,
+.copaw-table-wrapper .ant-table-tbody > tr > td.ant-table-cell.copaw-table-actions-cell.copaw-table-cell-row-hover,
+.copaw-table-wrapper .ant-table-tbody > tr > td.ant-table-cell.copaw-table-actions-cell.ant-table-cell-row-hover,
+.ant-table-wrapper .copaw-table-tbody > tr > td.copaw-table-actions-cell.copaw-table-cell-row-hover,
+.ant-table-wrapper .copaw-table-tbody > tr > td.copaw-table-actions-cell.ant-table-cell-row-hover,
+.ant-table-wrapper .copaw-table-tbody > tr > td.ant-table-cell.copaw-table-actions-cell.copaw-table-cell-row-hover,
+.ant-table-wrapper .copaw-table-tbody > tr > td.ant-table-cell.copaw-table-actions-cell.ant-table-cell-row-hover,
+.ant-table-wrapper .ant-table-tbody > tr > td.copaw-table-actions-cell.copaw-table-cell-row-hover,
+.ant-table-wrapper .ant-table-tbody > tr > td.copaw-table-actions-cell.ant-table-cell-row-hover,
+.ant-table-wrapper .ant-table-tbody > tr > td.ant-table-cell.copaw-table-actions-cell.copaw-table-cell-row-hover,
+.ant-table-wrapper .ant-table-tbody > tr > td.ant-table-cell.copaw-table-actions-cell.ant-table-cell-row-hover {
+  background: var(--copaw-table-action-bg-hover) !important;
 }
 
 .copaw-table-wrapper .copaw-table-tbody > tr.copaw-table-row-selected > td,
@@ -967,6 +1035,21 @@ body[data-app-theme] .ant-checkbox-checked .ant-checkbox-inner {
 .ant-table-wrapper .ant-table-tbody > tr.copaw-table-row-selected > td,
 .ant-table-wrapper .ant-table-tbody > tr.ant-table-row-selected > td {
   background: var(--copaw-table-row-selected) !important;
+}
+
+.copaw-table-wrapper .copaw-table-tbody > tr.copaw-table-row-selected > td.copaw-table-actions-cell,
+.copaw-table-wrapper .copaw-table-tbody > tr.ant-table-row-selected > td.copaw-table-actions-cell,
+.copaw-table-wrapper .ant-table-tbody > tr.copaw-table-row-selected > td.copaw-table-actions-cell,
+.copaw-table-wrapper .ant-table-tbody > tr.ant-table-row-selected > td.copaw-table-actions-cell,
+.ant-table-wrapper .copaw-table-tbody > tr.copaw-table-row-selected > td.copaw-table-actions-cell,
+.ant-table-wrapper .copaw-table-tbody > tr.ant-table-row-selected > td.copaw-table-actions-cell,
+.ant-table-wrapper .ant-table-tbody > tr.copaw-table-row-selected > td.copaw-table-actions-cell,
+.ant-table-wrapper .ant-table-tbody > tr.ant-table-row-selected > td.copaw-table-actions-cell {
+  background: color-mix(
+    in srgb,
+    var(--copaw-table-row-selected) 58%,
+    var(--copaw-table-action-bg)
+  ) !important;
 }
 
 .copaw-table-wrapper .copaw-table-tbody > tr:last-child > td,
@@ -985,6 +1068,194 @@ body[data-app-theme] .ant-checkbox-checked .ant-checkbox-inner {
 .ant-table-wrapper .ant-table-cell-fix-left,
 .ant-table-wrapper .ant-table-cell-fix-right {
   background: var(--copaw-table-surface) !important;
+  background-clip: padding-box;
+}
+
+.copaw-table-wrapper .copaw-table-thead > tr > th.copaw-table-cell-fix-left,
+.copaw-table-wrapper .copaw-table-thead > tr > th.copaw-table-cell-fix-right,
+.copaw-table-wrapper .ant-table-thead > tr > th.copaw-table-cell-fix-left,
+.copaw-table-wrapper .ant-table-thead > tr > th.copaw-table-cell-fix-right,
+.ant-table-wrapper .copaw-table-thead > tr > th.copaw-table-cell-fix-left,
+.ant-table-wrapper .copaw-table-thead > tr > th.copaw-table-cell-fix-right,
+.ant-table-wrapper .ant-table-thead > tr > th.copaw-table-cell-fix-left,
+.ant-table-wrapper .ant-table-thead > tr > th.copaw-table-cell-fix-right {
+  background: var(--copaw-table-header-bg) !important;
+  background-clip: padding-box;
+}
+
+.copaw-table-wrapper .copaw-table-tbody > tr:hover > td.copaw-table-cell-fix-left,
+.copaw-table-wrapper .copaw-table-tbody > tr:hover > td.copaw-table-cell-fix-right,
+.copaw-table-wrapper .ant-table-tbody > tr:hover > td.copaw-table-cell-fix-left,
+.copaw-table-wrapper .ant-table-tbody > tr:hover > td.copaw-table-cell-fix-right,
+.ant-table-wrapper .copaw-table-tbody > tr:hover > td.copaw-table-cell-fix-left,
+.ant-table-wrapper .copaw-table-tbody > tr:hover > td.copaw-table-cell-fix-right,
+.ant-table-wrapper .ant-table-tbody > tr:hover > td.copaw-table-cell-fix-left,
+.ant-table-wrapper .ant-table-tbody > tr:hover > td.copaw-table-cell-fix-right {
+  background: var(--copaw-table-row-hover) !important;
+}
+
+.copaw-table-wrapper .copaw-table-tbody > tr > td.copaw-table-cell-fix-left.copaw-table-cell-row-hover,
+.copaw-table-wrapper .copaw-table-tbody > tr > td.copaw-table-cell-fix-right.copaw-table-cell-row-hover,
+.copaw-table-wrapper .copaw-table-tbody > tr > td.ant-table-cell-fix-left.copaw-table-cell-row-hover,
+.copaw-table-wrapper .copaw-table-tbody > tr > td.ant-table-cell-fix-right.copaw-table-cell-row-hover,
+.copaw-table-wrapper .copaw-table-tbody > tr > td.copaw-table-cell-fix-left.ant-table-cell-row-hover,
+.copaw-table-wrapper .copaw-table-tbody > tr > td.copaw-table-cell-fix-right.ant-table-cell-row-hover,
+.copaw-table-wrapper .copaw-table-tbody > tr > td.ant-table-cell-fix-left.ant-table-cell-row-hover,
+.copaw-table-wrapper .copaw-table-tbody > tr > td.ant-table-cell-fix-right.ant-table-cell-row-hover,
+.copaw-table-wrapper .ant-table-tbody > tr > td.copaw-table-cell-fix-left.copaw-table-cell-row-hover,
+.copaw-table-wrapper .ant-table-tbody > tr > td.copaw-table-cell-fix-right.copaw-table-cell-row-hover,
+.copaw-table-wrapper .ant-table-tbody > tr > td.ant-table-cell-fix-left.copaw-table-cell-row-hover,
+.copaw-table-wrapper .ant-table-tbody > tr > td.ant-table-cell-fix-right.copaw-table-cell-row-hover,
+.copaw-table-wrapper .ant-table-tbody > tr > td.copaw-table-cell-fix-left.ant-table-cell-row-hover,
+.copaw-table-wrapper .ant-table-tbody > tr > td.copaw-table-cell-fix-right.ant-table-cell-row-hover,
+.copaw-table-wrapper .ant-table-tbody > tr > td.ant-table-cell-fix-left.ant-table-cell-row-hover,
+.copaw-table-wrapper .ant-table-tbody > tr > td.ant-table-cell-fix-right.ant-table-cell-row-hover,
+.ant-table-wrapper .copaw-table-tbody > tr > td.copaw-table-cell-fix-left.copaw-table-cell-row-hover,
+.ant-table-wrapper .copaw-table-tbody > tr > td.copaw-table-cell-fix-right.copaw-table-cell-row-hover,
+.ant-table-wrapper .copaw-table-tbody > tr > td.ant-table-cell-fix-left.copaw-table-cell-row-hover,
+.ant-table-wrapper .copaw-table-tbody > tr > td.ant-table-cell-fix-right.copaw-table-cell-row-hover,
+.ant-table-wrapper .copaw-table-tbody > tr > td.copaw-table-cell-fix-left.ant-table-cell-row-hover,
+.ant-table-wrapper .copaw-table-tbody > tr > td.copaw-table-cell-fix-right.ant-table-cell-row-hover,
+.ant-table-wrapper .copaw-table-tbody > tr > td.ant-table-cell-fix-left.ant-table-cell-row-hover,
+.ant-table-wrapper .copaw-table-tbody > tr > td.ant-table-cell-fix-right.ant-table-cell-row-hover,
+.ant-table-wrapper .ant-table-tbody > tr > td.copaw-table-cell-fix-left.copaw-table-cell-row-hover,
+.ant-table-wrapper .ant-table-tbody > tr > td.copaw-table-cell-fix-right.copaw-table-cell-row-hover,
+.ant-table-wrapper .ant-table-tbody > tr > td.ant-table-cell-fix-left.copaw-table-cell-row-hover,
+.ant-table-wrapper .ant-table-tbody > tr > td.ant-table-cell-fix-right.copaw-table-cell-row-hover,
+.ant-table-wrapper .ant-table-tbody > tr > td.copaw-table-cell-fix-left.ant-table-cell-row-hover,
+.ant-table-wrapper .ant-table-tbody > tr > td.copaw-table-cell-fix-right.ant-table-cell-row-hover,
+.ant-table-wrapper .ant-table-tbody > tr > td.ant-table-cell-fix-left.ant-table-cell-row-hover,
+.ant-table-wrapper .ant-table-tbody > tr > td.ant-table-cell-fix-right.ant-table-cell-row-hover {
+  background: var(--copaw-table-row-hover) !important;
+}
+
+.copaw-table-wrapper .copaw-table-tbody > tr:hover > td.copaw-table-cell-fix-right.copaw-table-actions-cell,
+.copaw-table-wrapper .copaw-table-tbody > tr:hover > td.ant-table-cell-fix-right.copaw-table-actions-cell,
+.copaw-table-wrapper .ant-table-tbody > tr:hover > td.copaw-table-cell-fix-right.copaw-table-actions-cell,
+.copaw-table-wrapper .ant-table-tbody > tr:hover > td.ant-table-cell-fix-right.copaw-table-actions-cell,
+.ant-table-wrapper .copaw-table-tbody > tr:hover > td.copaw-table-cell-fix-right.copaw-table-actions-cell,
+.ant-table-wrapper .copaw-table-tbody > tr:hover > td.ant-table-cell-fix-right.copaw-table-actions-cell,
+.ant-table-wrapper .ant-table-tbody > tr:hover > td.copaw-table-cell-fix-right.copaw-table-actions-cell,
+.ant-table-wrapper .ant-table-tbody > tr:hover > td.ant-table-cell-fix-right.copaw-table-actions-cell {
+  background: var(--copaw-table-action-bg-hover) !important;
+}
+
+.copaw-table-wrapper .copaw-table-tbody > tr > td.copaw-table-cell-fix-right.copaw-table-actions-cell.copaw-table-cell-row-hover,
+.copaw-table-wrapper .copaw-table-tbody > tr > td.ant-table-cell-fix-right.copaw-table-actions-cell.copaw-table-cell-row-hover,
+.copaw-table-wrapper .copaw-table-tbody > tr > td.copaw-table-cell-fix-right.copaw-table-actions-cell.ant-table-cell-row-hover,
+.copaw-table-wrapper .copaw-table-tbody > tr > td.ant-table-cell-fix-right.copaw-table-actions-cell.ant-table-cell-row-hover,
+.copaw-table-wrapper .ant-table-tbody > tr > td.copaw-table-cell-fix-right.copaw-table-actions-cell.copaw-table-cell-row-hover,
+.copaw-table-wrapper .ant-table-tbody > tr > td.ant-table-cell-fix-right.copaw-table-actions-cell.copaw-table-cell-row-hover,
+.copaw-table-wrapper .ant-table-tbody > tr > td.copaw-table-cell-fix-right.copaw-table-actions-cell.ant-table-cell-row-hover,
+.copaw-table-wrapper .ant-table-tbody > tr > td.ant-table-cell-fix-right.copaw-table-actions-cell.ant-table-cell-row-hover,
+.ant-table-wrapper .copaw-table-tbody > tr > td.copaw-table-cell-fix-right.copaw-table-actions-cell.copaw-table-cell-row-hover,
+.ant-table-wrapper .copaw-table-tbody > tr > td.ant-table-cell-fix-right.copaw-table-actions-cell.copaw-table-cell-row-hover,
+.ant-table-wrapper .copaw-table-tbody > tr > td.copaw-table-cell-fix-right.copaw-table-actions-cell.ant-table-cell-row-hover,
+.ant-table-wrapper .copaw-table-tbody > tr > td.ant-table-cell-fix-right.copaw-table-actions-cell.ant-table-cell-row-hover,
+.ant-table-wrapper .ant-table-tbody > tr > td.copaw-table-cell-fix-right.copaw-table-actions-cell.copaw-table-cell-row-hover,
+.ant-table-wrapper .ant-table-tbody > tr > td.ant-table-cell-fix-right.copaw-table-actions-cell.copaw-table-cell-row-hover,
+.ant-table-wrapper .ant-table-tbody > tr > td.copaw-table-cell-fix-right.copaw-table-actions-cell.ant-table-cell-row-hover,
+.ant-table-wrapper .ant-table-tbody > tr > td.ant-table-cell-fix-right.copaw-table-actions-cell.ant-table-cell-row-hover {
+  background: var(--copaw-table-action-bg-hover) !important;
+}
+
+.copaw-table-wrapper .copaw-table-tbody > tr.copaw-table-row-selected > td.copaw-table-cell-fix-left,
+.copaw-table-wrapper .copaw-table-tbody > tr.copaw-table-row-selected > td.copaw-table-cell-fix-right,
+.copaw-table-wrapper .copaw-table-tbody > tr.ant-table-row-selected > td.copaw-table-cell-fix-left,
+.copaw-table-wrapper .copaw-table-tbody > tr.ant-table-row-selected > td.copaw-table-cell-fix-right,
+.copaw-table-wrapper .ant-table-tbody > tr.copaw-table-row-selected > td.copaw-table-cell-fix-left,
+.copaw-table-wrapper .ant-table-tbody > tr.copaw-table-row-selected > td.copaw-table-cell-fix-right,
+.copaw-table-wrapper .ant-table-tbody > tr.ant-table-row-selected > td.copaw-table-cell-fix-left,
+.copaw-table-wrapper .ant-table-tbody > tr.ant-table-row-selected > td.copaw-table-cell-fix-right,
+.ant-table-wrapper .copaw-table-tbody > tr.copaw-table-row-selected > td.copaw-table-cell-fix-left,
+.ant-table-wrapper .copaw-table-tbody > tr.copaw-table-row-selected > td.copaw-table-cell-fix-right,
+.ant-table-wrapper .copaw-table-tbody > tr.ant-table-row-selected > td.copaw-table-cell-fix-left,
+.ant-table-wrapper .copaw-table-tbody > tr.ant-table-row-selected > td.copaw-table-cell-fix-right,
+.ant-table-wrapper .ant-table-tbody > tr.copaw-table-row-selected > td.copaw-table-cell-fix-left,
+.ant-table-wrapper .ant-table-tbody > tr.copaw-table-row-selected > td.copaw-table-cell-fix-right,
+.ant-table-wrapper .ant-table-tbody > tr.ant-table-row-selected > td.copaw-table-cell-fix-left,
+.ant-table-wrapper .ant-table-tbody > tr.ant-table-row-selected > td.copaw-table-cell-fix-right {
+  background: var(--copaw-table-row-selected) !important;
+}
+
+.copaw-table-wrapper .copaw-table-tbody > tr.copaw-table-row-selected > td.copaw-table-cell-fix-right.copaw-table-actions-cell,
+.copaw-table-wrapper .copaw-table-tbody > tr.ant-table-row-selected > td.copaw-table-cell-fix-right.copaw-table-actions-cell,
+.copaw-table-wrapper .ant-table-tbody > tr.copaw-table-row-selected > td.copaw-table-cell-fix-right.copaw-table-actions-cell,
+.copaw-table-wrapper .ant-table-tbody > tr.ant-table-row-selected > td.copaw-table-cell-fix-right.copaw-table-actions-cell,
+.ant-table-wrapper .copaw-table-tbody > tr.copaw-table-row-selected > td.copaw-table-cell-fix-right.copaw-table-actions-cell,
+.ant-table-wrapper .copaw-table-tbody > tr.ant-table-row-selected > td.copaw-table-cell-fix-right.copaw-table-actions-cell,
+.ant-table-wrapper .ant-table-tbody > tr.copaw-table-row-selected > td.copaw-table-cell-fix-right.copaw-table-actions-cell,
+.ant-table-wrapper .ant-table-tbody > tr.ant-table-row-selected > td.copaw-table-cell-fix-right.copaw-table-actions-cell {
+  background: color-mix(
+    in srgb,
+    var(--copaw-table-row-selected) 58%,
+    var(--copaw-table-action-bg)
+  ) !important;
+}
+
+.copaw-table-wrapper .copaw-table-cell-fix-right.copaw-table-actions-cell,
+.copaw-table-wrapper .ant-table-cell-fix-right.copaw-table-actions-cell,
+.ant-table-wrapper .copaw-table-cell-fix-right.copaw-table-actions-cell,
+.ant-table-wrapper .ant-table-cell-fix-right.copaw-table-actions-cell {
+  background: var(--copaw-table-action-bg) !important;
+  box-shadow: inset 1px 0 0 var(--copaw-table-action-border);
+}
+
+.copaw-table-wrapper .copaw-table-cell-fix-left-first::before,
+.copaw-table-wrapper .copaw-table-cell-fix-left-first::after,
+.copaw-table-wrapper .copaw-table-cell-fix-left-last::before,
+.copaw-table-wrapper .copaw-table-cell-fix-left-last::after,
+.copaw-table-wrapper .copaw-table-cell-fix-right-first::before,
+.copaw-table-wrapper .copaw-table-cell-fix-right-first::after,
+.copaw-table-wrapper .copaw-table-cell-fix-right-last::before,
+.copaw-table-wrapper .copaw-table-cell-fix-right-last::after,
+.copaw-table-wrapper .ant-table-cell-fix-left-first::before,
+.copaw-table-wrapper .ant-table-cell-fix-left-first::after,
+.copaw-table-wrapper .ant-table-cell-fix-left-last::before,
+.copaw-table-wrapper .ant-table-cell-fix-left-last::after,
+.copaw-table-wrapper .ant-table-cell-fix-right-first::before,
+.copaw-table-wrapper .ant-table-cell-fix-right-first::after,
+.copaw-table-wrapper .ant-table-cell-fix-right-last::before,
+.copaw-table-wrapper .ant-table-cell-fix-right-last::after,
+.ant-table-wrapper .copaw-table-cell-fix-left-first::before,
+.ant-table-wrapper .copaw-table-cell-fix-left-first::after,
+.ant-table-wrapper .copaw-table-cell-fix-left-last::before,
+.ant-table-wrapper .copaw-table-cell-fix-left-last::after,
+.ant-table-wrapper .copaw-table-cell-fix-right-first::before,
+.ant-table-wrapper .copaw-table-cell-fix-right-first::after,
+.ant-table-wrapper .copaw-table-cell-fix-right-last::before,
+.ant-table-wrapper .copaw-table-cell-fix-right-last::after,
+.ant-table-wrapper .ant-table-cell-fix-left-first::before,
+.ant-table-wrapper .ant-table-cell-fix-left-first::after,
+.ant-table-wrapper .ant-table-cell-fix-left-last::before,
+.ant-table-wrapper .ant-table-cell-fix-left-last::after,
+.ant-table-wrapper .ant-table-cell-fix-right-first::before,
+.ant-table-wrapper .ant-table-cell-fix-right-first::after,
+.ant-table-wrapper .ant-table-cell-fix-right-last::before,
+.ant-table-wrapper .ant-table-cell-fix-right-last::after {
+  background: transparent !important;
+  box-shadow: none !important;
+  pointer-events: none !important;
+}
+
+.copaw-table-wrapper .copaw-table-thead > tr > th.copaw-table-actions-cell.copaw-table-cell-fix-right,
+.copaw-table-wrapper .copaw-table-thead > tr > th.ant-table-cell-fix-right.copaw-table-actions-cell,
+.copaw-table-wrapper .ant-table-thead > tr > th.copaw-table-cell-fix-right.copaw-table-actions-cell,
+.copaw-table-wrapper .ant-table-thead > tr > th.ant-table-cell-fix-right.copaw-table-actions-cell,
+.ant-table-wrapper .copaw-table-thead > tr > th.copaw-table-cell-fix-right.copaw-table-actions-cell,
+.ant-table-wrapper .copaw-table-thead > tr > th.ant-table-cell-fix-right.copaw-table-actions-cell,
+.ant-table-wrapper .ant-table-thead > tr > th.copaw-table-cell-fix-right.copaw-table-actions-cell,
+.ant-table-wrapper .ant-table-thead > tr > th.ant-table-cell-fix-right.copaw-table-actions-cell,
+.copaw-table-wrapper .copaw-table-tbody > tr > td.copaw-table-cell-fix-right.copaw-table-actions-cell,
+.copaw-table-wrapper .copaw-table-tbody > tr > td.ant-table-cell-fix-right.copaw-table-actions-cell,
+.copaw-table-wrapper .ant-table-tbody > tr > td.copaw-table-cell-fix-right.copaw-table-actions-cell,
+.copaw-table-wrapper .ant-table-tbody > tr > td.ant-table-cell-fix-right.copaw-table-actions-cell,
+.ant-table-wrapper .copaw-table-tbody > tr > td.copaw-table-cell-fix-right.copaw-table-actions-cell,
+.ant-table-wrapper .copaw-table-tbody > tr > td.ant-table-cell-fix-right.copaw-table-actions-cell,
+.ant-table-wrapper .ant-table-tbody > tr > td.copaw-table-cell-fix-right.copaw-table-actions-cell,
+.ant-table-wrapper .ant-table-tbody > tr > td.ant-table-cell-fix-right.copaw-table-actions-cell {
+  background: var(--copaw-table-action-bg) !important;
+  background-clip: padding-box;
 }
 
 .copaw-table-wrapper .copaw-table-column-sorter,
@@ -1209,6 +1480,28 @@ body[data-app-theme] .ant-checkbox-checked .ant-checkbox-inner {
   font-weight: 500;
 }
 
+.copaw-table-wrapper .copaw-table-actions-cell .copaw-btn.copaw-btn-link,
+.copaw-table-wrapper .copaw-table-actions-cell .copaw-btn.copaw-btn-text,
+.copaw-table-wrapper .copaw-table-actions-cell .ant-btn.ant-btn-link,
+.copaw-table-wrapper .copaw-table-actions-cell .ant-btn.ant-btn-text,
+.ant-table-wrapper .copaw-table-actions-cell .copaw-btn.copaw-btn-link,
+.ant-table-wrapper .copaw-table-actions-cell .copaw-btn.copaw-btn-text,
+.ant-table-wrapper .copaw-table-actions-cell .ant-btn.ant-btn-link,
+.ant-table-wrapper .copaw-table-actions-cell .ant-btn.ant-btn-text {
+  background: var(--copaw-table-action-bg) !important;
+  border-color: var(--copaw-table-action-border) !important;
+}
+
+.copaw-table-wrapper .copaw-table-actions-cell .copaw-btn,
+.copaw-table-wrapper .copaw-table-actions-cell .ant-btn,
+.ant-table-wrapper .copaw-table-actions-cell .copaw-btn,
+.ant-table-wrapper .copaw-table-actions-cell .ant-btn {
+  background: var(--copaw-table-action-bg) !important;
+  border: 1px solid var(--copaw-table-action-border) !important;
+  color: var(--copaw-table-action-text) !important;
+  box-shadow: none !important;
+}
+
 .copaw-table-wrapper .copaw-btn.copaw-btn-link:hover,
 .copaw-table-wrapper .copaw-btn.copaw-btn-link:focus,
 .copaw-table-wrapper .copaw-btn.copaw-btn-text:hover,
@@ -1264,6 +1557,53 @@ body[data-app-theme] .ant-checkbox-checked .ant-checkbox-inner {
   border-color: var(--copaw-table-action-danger-border) !important;
 }
 
+.copaw-table-wrapper .copaw-table-actions-cell .copaw-btn.copaw-btn-dangerous,
+.copaw-table-wrapper .copaw-table-actions-cell .copaw-btn.copaw-btn-color-dangerous,
+.copaw-table-wrapper .copaw-table-actions-cell .ant-btn.ant-btn-dangerous,
+.copaw-table-wrapper .copaw-table-actions-cell .ant-btn.ant-btn-color-dangerous,
+.ant-table-wrapper .copaw-table-actions-cell .copaw-btn.copaw-btn-dangerous,
+.ant-table-wrapper .copaw-table-actions-cell .copaw-btn.copaw-btn-color-dangerous,
+.ant-table-wrapper .copaw-table-actions-cell .ant-btn.ant-btn-dangerous,
+.ant-table-wrapper .copaw-table-actions-cell .ant-btn.ant-btn-color-dangerous {
+  color: var(--copaw-table-action-danger-text) !important;
+  background: var(--copaw-table-action-danger-bg) !important;
+  border-color: var(--copaw-table-action-danger-border) !important;
+}
+
+.copaw-table-wrapper .copaw-table-actions-cell .copaw-btn:hover,
+.copaw-table-wrapper .copaw-table-actions-cell .copaw-btn:focus,
+.copaw-table-wrapper .copaw-table-actions-cell .ant-btn:hover,
+.copaw-table-wrapper .copaw-table-actions-cell .ant-btn:focus,
+.ant-table-wrapper .copaw-table-actions-cell .copaw-btn:hover,
+.ant-table-wrapper .copaw-table-actions-cell .copaw-btn:focus,
+.ant-table-wrapper .copaw-table-actions-cell .ant-btn:hover,
+.ant-table-wrapper .copaw-table-actions-cell .ant-btn:focus {
+  background: var(--copaw-table-action-bg-hover) !important;
+  border-color: var(--copaw-table-action-border-hover) !important;
+  color: var(--copaw-table-accent) !important;
+}
+
+.copaw-table-wrapper .copaw-table-actions-cell .copaw-btn.copaw-btn-dangerous:hover,
+.copaw-table-wrapper .copaw-table-actions-cell .copaw-btn.copaw-btn-dangerous:focus,
+.copaw-table-wrapper .copaw-table-actions-cell .copaw-btn.copaw-btn-color-dangerous:hover,
+.copaw-table-wrapper .copaw-table-actions-cell .copaw-btn.copaw-btn-color-dangerous:focus,
+.copaw-table-wrapper .copaw-table-actions-cell .ant-btn.ant-btn-dangerous:hover,
+.copaw-table-wrapper .copaw-table-actions-cell .ant-btn.ant-btn-dangerous:focus,
+.copaw-table-wrapper .copaw-table-actions-cell .ant-btn.ant-btn-color-dangerous:hover,
+.copaw-table-wrapper .copaw-table-actions-cell .ant-btn.ant-btn-color-dangerous:focus,
+.ant-table-wrapper .copaw-table-actions-cell .copaw-btn.copaw-btn-dangerous:hover,
+.ant-table-wrapper .copaw-table-actions-cell .copaw-btn.copaw-btn-dangerous:focus,
+.ant-table-wrapper .copaw-table-actions-cell .copaw-btn.copaw-btn-color-dangerous:hover,
+.ant-table-wrapper .copaw-table-actions-cell .copaw-btn.copaw-btn-color-dangerous:focus,
+.ant-table-wrapper .copaw-table-actions-cell .ant-btn.ant-btn-dangerous:hover,
+.ant-table-wrapper .copaw-table-actions-cell .ant-btn.ant-btn-dangerous:focus,
+.ant-table-wrapper .copaw-table-actions-cell .ant-btn.ant-btn-color-dangerous:hover,
+.ant-table-wrapper .copaw-table-actions-cell .ant-btn.ant-btn-color-dangerous:focus {
+  color: #9f1239 !important;
+  background: var(--copaw-table-action-danger-bg-hover) !important;
+  border-color: var(--copaw-table-action-danger-border) !important;
+}
+
 .copaw-table-wrapper .copaw-btn.copaw-btn-link:disabled,
 .copaw-table-wrapper .copaw-btn.copaw-btn-link.copaw-btn-disabled,
 .copaw-table-wrapper .copaw-btn.copaw-btn-text:disabled,
@@ -1282,6 +1622,21 @@ body[data-app-theme] .ant-checkbox-checked .ant-checkbox-inner {
 .ant-table-wrapper .ant-btn.ant-btn-text.ant-btn-disabled {
   color: var(--copaw-table-text-soft) !important;
   background: color-mix(in srgb, var(--app-surface-strong) 88%, var(--copaw-table-surface))
+    !important;
+  border-color: var(--copaw-table-border) !important;
+  opacity: 1 !important;
+}
+
+.copaw-table-wrapper .copaw-table-actions-cell .copaw-btn:disabled,
+.copaw-table-wrapper .copaw-table-actions-cell .copaw-btn.copaw-btn-disabled,
+.copaw-table-wrapper .copaw-table-actions-cell .ant-btn:disabled,
+.copaw-table-wrapper .copaw-table-actions-cell .ant-btn.ant-btn-disabled,
+.ant-table-wrapper .copaw-table-actions-cell .copaw-btn:disabled,
+.ant-table-wrapper .copaw-table-actions-cell .copaw-btn.copaw-btn-disabled,
+.ant-table-wrapper .copaw-table-actions-cell .ant-btn:disabled,
+.ant-table-wrapper .copaw-table-actions-cell .ant-btn.ant-btn-disabled {
+  color: var(--copaw-table-text-soft) !important;
+  background: color-mix(in srgb, var(--app-surface-strong) 88%, var(--copaw-table-action-bg))
     !important;
   border-color: var(--copaw-table-border) !important;
   opacity: 1 !important;

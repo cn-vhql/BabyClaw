@@ -25,6 +25,8 @@ from ..models import (
 class SQLiteFocusRepository:
     """Persist focus tags, notes, runs, and archives in a workspace."""
 
+    _TAG_SINGLE_CHAR_PUNCTUATION = {"[", "]", '"', "'", ","}
+
     def __init__(self, path: Path | str):
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -98,6 +100,9 @@ class SQLiteFocusRepository:
                 )
                 self._backfill_preview_text(conn)
                 self._backfill_fingerprint(conn)
+                self._backfill_note_tags(conn)
+                self._backfill_run_tag_snapshots(conn)
+                self._sanitize_focus_tags(conn)
                 self._ensure_indexes(conn)
                 conn.commit()
 
@@ -158,6 +163,96 @@ class SQLiteFocusRepository:
                 (fingerprint, str(row["id"])),
             )
 
+    def _backfill_note_tags(self, conn: sqlite3.Connection) -> None:
+        rows = conn.execute(
+            """
+            SELECT id, title, content, source, tags_json
+            FROM focus_notes
+            """
+        ).fetchall()
+        for row in rows:
+            raw_tags = row["tags_json"] or "[]"
+            try:
+                parsed_tags: object = json.loads(raw_tags)
+            except Exception:
+                parsed_tags = raw_tags
+
+            normalized_tags = self._normalize_tags_input(parsed_tags)
+            normalized_json = json.dumps(normalized_tags, ensure_ascii=False)
+            if normalized_json == (raw_tags or "[]"):
+                continue
+
+            fingerprint = self._build_note_fingerprint(
+                title=str(row["title"]),
+                content=str(row["content"]),
+                tags=normalized_tags,
+                source=str(row["source"]),
+            )
+            conn.execute(
+                """
+                UPDATE focus_notes
+                SET tags_json = ?, fingerprint = ?
+                WHERE id = ?
+                """,
+                (normalized_json, fingerprint, str(row["id"])),
+            )
+
+    def _backfill_run_tag_snapshots(self, conn: sqlite3.Connection) -> None:
+        rows = conn.execute(
+            """
+            SELECT id, tag_snapshot_json
+            FROM focus_runs
+            """
+        ).fetchall()
+        for row in rows:
+            raw_tags = row["tag_snapshot_json"] or "[]"
+            try:
+                parsed_tags: object = json.loads(raw_tags)
+            except Exception:
+                parsed_tags = raw_tags
+
+            normalized_tags = self._normalize_watch_tags_input(parsed_tags)
+            normalized_json = json.dumps(normalized_tags, ensure_ascii=False)
+            if normalized_json == (raw_tags or "[]"):
+                continue
+
+            conn.execute(
+                """
+                UPDATE focus_runs
+                SET tag_snapshot_json = ?
+                WHERE id = ?
+                """,
+                (normalized_json, str(row["id"])),
+            )
+
+    def _sanitize_focus_tags(self, conn: sqlite3.Connection) -> None:
+        rows = conn.execute(
+            """
+            SELECT name
+            FROM focus_tags
+            ORDER BY position ASC, created_at ASC
+            """
+        ).fetchall()
+        existing_tags = [str(row["name"]) for row in rows]
+        if not existing_tags:
+            return
+
+        normalized_tags = self._normalize_watch_tags_input(existing_tags)
+        if normalized_tags == existing_tags:
+            return
+
+        now = datetime.now(timezone.utc).isoformat()
+        conn.execute("DELETE FROM focus_tags")
+        for position, name in enumerate(normalized_tags):
+            conn.execute(
+                """
+                INSERT INTO focus_tags (
+                    name, normalized_name, position, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?)
+                """,
+                (name, self._normalize_tag(name), position, now, now),
+            )
+
     def _ensure_indexes(self, conn: sqlite3.Connection) -> None:
         conn.executescript(
             """
@@ -185,6 +280,124 @@ class SQLiteFocusRepository:
     @staticmethod
     def _clean_tag(tag: str) -> str:
         return " ".join((tag or "").strip().split())
+
+    @classmethod
+    def _find_split_tag_suffix_start(cls, tags: list[str]) -> int | None:
+        cleaned = [cls._clean_tag(tag) for tag in tags if cls._clean_tag(tag)]
+        if len(cleaned) < 4:
+            return None
+
+        for index in range(1, len(cleaned)):
+            first_item = cleaned[index]
+            if len(first_item) > 1 and first_item not in cls._TAG_SINGLE_CHAR_PUNCTUATION:
+                continue
+            if cls._looks_like_split_tag_sequence(cleaned[index:]):
+                return index
+        return None
+
+    @classmethod
+    def _looks_like_split_tag_sequence(cls, values: list[str]) -> bool:
+        cleaned = [cls._clean_tag(value) for value in values if cls._clean_tag(value)]
+        if len(cleaned) < 4:
+            return False
+
+        single_like_count = 0
+        for item in cleaned:
+            if len(item) == 1 or item in cls._TAG_SINGLE_CHAR_PUNCTUATION:
+                single_like_count += 1
+
+        if single_like_count / len(cleaned) < 0.8:
+            return False
+
+        joined = "".join(cleaned)
+        return any(marker in joined for marker in ['[', ']', '"', ","])
+
+    @classmethod
+    def _parse_tag_text(cls, value: str) -> list[str]:
+        text = (value or "").strip()
+        if not text:
+            return []
+
+        try:
+            parsed = json.loads(text)
+        except Exception:
+            parsed = None
+
+        if parsed is not None and parsed != text:
+            return cls._normalize_tags_input(parsed)
+
+        if text.startswith("[") and text.endswith("]"):
+            text = text[1:-1].strip()
+
+        text = text.strip().strip('"').strip("'").strip()
+        if not text:
+            return []
+
+        parts = re.split(r"[\n,，、;；]+", text)
+        cleaned_parts = [
+            cls._clean_tag(part.strip().strip('"').strip("'")) for part in parts
+        ]
+        cleaned_parts = [part for part in cleaned_parts if part]
+        if cleaned_parts:
+            return cleaned_parts
+
+        cleaned = cls._clean_tag(text)
+        return [cleaned] if cleaned else []
+
+    @classmethod
+    def _normalize_tags_input(cls, tags: object) -> list[str]:
+        collected: list[str] = []
+
+        def consume(value: object) -> None:
+            if value is None:
+                return
+
+            if isinstance(value, str):
+                collected.extend(cls._parse_tag_text(value))
+                return
+
+            if isinstance(value, (list, tuple, set)):
+                string_items = [
+                    str(item)
+                    for item in value
+                    if item is not None and cls._clean_tag(str(item))
+                ]
+                if cls._looks_like_split_tag_sequence(string_items):
+                    consume("".join(string_items))
+                    return
+                for item in value:
+                    consume(item)
+                return
+
+            collected.extend(cls._parse_tag_text(str(value)))
+
+        consume(tags)
+
+        normalized: list[str] = []
+        seen: set[str] = set()
+        for raw_tag in collected:
+            tag = cls._clean_tag(raw_tag)
+            normalized_tag = cls._normalize_tag(tag)
+            if not tag or normalized_tag in seen:
+                continue
+            seen.add(normalized_tag)
+            normalized.append(tag)
+        return normalized
+
+    @classmethod
+    def _normalize_watch_tags_input(cls, tags: object) -> list[str]:
+        if isinstance(tags, (list, tuple, set)):
+            raw_tags = [
+                str(item)
+                for item in tags
+                if item is not None and cls._clean_tag(str(item))
+            ]
+            suffix_start = cls._find_split_tag_suffix_start(raw_tags)
+            if suffix_start is not None:
+                return cls._normalize_tags_input(raw_tags[:suffix_start])
+            if cls._looks_like_split_tag_sequence(raw_tags):
+                return cls._normalize_tags_input("".join(raw_tags))
+        return cls._normalize_tags_input(tags)
 
     @staticmethod
     def _build_preview_text(content: str) -> str:
@@ -234,16 +447,11 @@ class SQLiteFocusRepository:
                 ).fetchall()
         return [str(row["name"]) for row in rows]
 
-    def replace_tags(self, tags: list[str]) -> list[str]:
-        cleaned = []
-        seen = set()
-        for raw_tag in tags:
-            tag = self._clean_tag(raw_tag)
-            normalized = self._normalize_tag(tag)
-            if not tag or normalized in seen:
-                continue
-            seen.add(normalized)
-            cleaned.append((tag, normalized))
+    def replace_tags(self, tags: list[str] | str | None) -> list[str]:
+        cleaned = [
+            (tag, self._normalize_tag(tag))
+            for tag in self._normalize_watch_tags_input(tags)
+        ]
 
         now = datetime.now(timezone.utc).isoformat()
         with self._lock:
@@ -320,7 +528,7 @@ class SQLiteFocusRepository:
         *,
         title: str,
         content: str,
-        tags: list[str] | None = None,
+        tags: list[str] | str | None = None,
         source: str = "manual",
         session_id: str | None = None,
         run_id: str | None = None,
@@ -332,18 +540,7 @@ class SQLiteFocusRepository:
         if not clean_content:
             raise ValueError("content is required")
 
-        clean_tags = []
-        seen = set()
-        for raw_tag in tags or []:
-            tag = self._clean_tag(raw_tag)
-            normalized = self._normalize_tag(tag)
-            if not tag or normalized in seen:
-                continue
-            seen.add(normalized)
-            clean_tags.append(tag)
-
-        for tag in clean_tags:
-            self.add_tag(tag)
+        clean_tags = self._normalize_tags_input(tags)
 
         preview_text = self._build_preview_text(clean_content)
         fingerprint = self._build_note_fingerprint(
@@ -501,6 +698,7 @@ class SQLiteFocusRepository:
         tag_snapshot: list[str],
         session_id: str,
     ) -> tuple[FocusRunRecord | None, FocusRunRecord | None]:
+        clean_tag_snapshot = self._normalize_watch_tags_input(tag_snapshot)
         with self._lock:
             with self._connect() as conn:
                 existing = conn.execute(
@@ -528,7 +726,7 @@ class SQLiteFocusRepository:
                     summary="",
                     notificationStatus="pending",
                     archiveId=None,
-                    tagSnapshot=tag_snapshot,
+                    tagSnapshot=clean_tag_snapshot,
                     sessionId=session_id,
                 )
                 conn.execute(
@@ -558,6 +756,7 @@ class SQLiteFocusRepository:
         return run, None
 
     def save_run(self, run: FocusRunRecord) -> None:
+        run.tag_snapshot = self._normalize_watch_tags_input(run.tag_snapshot)
         with self._lock:
             with self._connect() as conn:
                 conn.execute(
@@ -721,7 +920,9 @@ class SQLiteFocusRepository:
             id=str(row["id"]),
             title=str(row["title"]),
             previewText=str(row["preview_text"] or ""),
-            tags=json.loads(row["tags_json"] or "[]"),
+            tags=SQLiteFocusRepository._normalize_tags_input(
+                json.loads(row["tags_json"] or "[]")
+            ),
             source=str(row["source"]),
             createdAt=datetime.fromisoformat(str(row["created_at"])),
             runId=row["run_id"],
@@ -734,7 +935,9 @@ class SQLiteFocusRepository:
             title=str(row["title"]),
             content=str(row["content"]),
             previewText=str(row["preview_text"] or ""),
-            tags=json.loads(row["tags_json"] or "[]"),
+            tags=SQLiteFocusRepository._normalize_tags_input(
+                json.loads(row["tags_json"] or "[]")
+            ),
             source=str(row["source"]),
             createdAt=datetime.fromisoformat(str(row["created_at"])),
             sessionId=row["session_id"],
@@ -759,6 +962,8 @@ class SQLiteFocusRepository:
             summary=str(row["summary"] or ""),
             notificationStatus=str(row["notification_status"] or "pending"),
             archiveId=row["archive_id"],
-            tagSnapshot=json.loads(row["tag_snapshot_json"] or "[]"),
+            tagSnapshot=SQLiteFocusRepository._normalize_watch_tags_input(
+                json.loads(row["tag_snapshot_json"] or "[]")
+            ),
             sessionId=row["session_id"],
         )

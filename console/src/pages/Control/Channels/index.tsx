@@ -171,6 +171,8 @@ function ChannelsPage() {
     {
       title: t("channels.actions"),
       key: "actions",
+      className: "copaw-table-actions-cell",
+      onHeaderCell: () => ({ className: "copaw-table-actions-cell" }),
       width: 150,
       render: (_: unknown, record: ChannelTableRow) => (
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>

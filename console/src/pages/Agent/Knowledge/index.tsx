@@ -192,6 +192,8 @@ export default function KnowledgePage() {
     {
       title: "操作",
       key: "actions",
+      className: "copaw-table-actions-cell",
+      onHeaderCell: () => ({ className: "copaw-table-actions-cell" }),
       width: 220,
       render: (_: unknown, record: KnowledgeBase) => (
         <div style={{ display: "flex", gap: 8 }}>

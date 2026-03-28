@@ -72,7 +72,13 @@ class FocusRunExecutor:
         if message_id:
             self._processed_message_ids.add(message_id)
 
-        content = getattr(event, "content", None)
+        self._process_message(event)
+
+    def _process_message(self, message: Any) -> None:
+        message_type = self._normalize_message_type(getattr(message, "type", None))
+        role = getattr(message, "role", None)
+
+        content = getattr(message, "content", None)
         if not isinstance(content, list):
             return
 
@@ -81,40 +87,114 @@ class FocusRunExecutor:
             if not isinstance(block_dict, dict):
                 continue
 
-            block_type = block_dict.get("type")
-            if block_type == "tool_use":
-                self._append_tool_call(
-                    tool_name=block_dict.get("name", ""),
-                    tool_input=block_dict.get("input", {}),
-                    call_id=block_dict.get("id"),
-                )
-                continue
+            self._process_block_dict(
+                block_dict,
+                message_type=message_type,
+                role=role,
+            )
 
-            if block_type == "tool_result":
-                output = self._deserialize_json_like(block_dict.get("output"))
-                self._attach_tool_result(
-                    output=output,
-                    tool_name=block_dict.get("name"),
-                    call_id=block_dict.get("id"),
+    def _process_block_dict(
+        self,
+        block_dict: dict[str, Any],
+        *,
+        message_type: str | None = None,
+        role: str | None = None,
+    ) -> None:
+        block_type = block_dict.get("type")
+        if block_type == "data":
+            self._process_data_payload(
+                block_dict.get("data"),
+                message_type=message_type,
+            )
+            return
+
+        if block_type == "tool_use":
+            self._append_tool_call(
+                tool_name=block_dict.get("name", ""),
+                tool_input=block_dict.get("input", {}),
+                call_id=block_dict.get("id"),
+            )
+            return
+
+        if block_type == "tool_result":
+            output = self._deserialize_json_like(block_dict.get("output"))
+            self._attach_tool_result(
+                output=output,
+                tool_name=block_dict.get("name"),
+                call_id=block_dict.get("id"),
+            )
+            tool_output_text = self._stringify_output_text(
+                self._normalize_tool_output(output),
+            )
+            if tool_output_text:
+                self._append_output_text(
+                    tool_output_text,
+                    prefix=f"[工具结果:{block_dict.get('name') or 'unknown_tool'}]",
                 )
-                tool_output_text = self._stringify_output_text(output)
+            return
+
+        if block_type == "thinking":
+            self._append_output_text(
+                block_dict.get("thinking", ""),
+                prefix="[思考]",
+                inline_prefix=True,
+            )
+            return
+
+        if block_type == "text":
+            text = block_dict.get("text", "")
+            if message_type == "reasoning":
+                self._append_output_text(text, prefix="[思考]", inline_prefix=True)
+            elif role != "user":
+                self._append_output_text(text)
+            return
+
+    def _process_data_payload(
+        self,
+        payload: Any,
+        *,
+        message_type: str | None = None,
+    ) -> None:
+        payload = self._deserialize_json_like(payload)
+        if payload in (None, "", {}, []):
+            return
+
+        if isinstance(payload, dict):
+            call_id = payload.get("call_id") or payload.get("id")
+            tool_name = payload.get("name") or payload.get("tool")
+
+            if message_type in {"plugin_call", "function_call", "mcp_call"} or (
+                tool_name and ("input" in payload or "arguments" in payload)
+            ):
+                tool_input = payload.get("input", payload.get("arguments"))
+                self._append_tool_call(
+                    tool_name=tool_name or "",
+                    tool_input=self._deserialize_json_like(tool_input),
+                    call_id=call_id,
+                )
+                return
+
+            if message_type in {
+                "plugin_call_output",
+                "function_call_output",
+                "mcp_call_output",
+            } or ("output" in payload or "result" in payload):
+                output = payload.get("output", payload.get("result"))
+                normalized_output = self._deserialize_json_like(output)
+                self._attach_tool_result(
+                    output=normalized_output,
+                    tool_name=tool_name,
+                    call_id=call_id,
+                )
+                tool_output_text = self._stringify_output_text(
+                    self._normalize_tool_output(normalized_output),
+                )
                 if tool_output_text:
                     self._append_output_text(
                         tool_output_text,
-                        prefix=f"[工具结果:{block_dict.get('name') or 'unknown_tool'}]",
+                        prefix=f"[工具结果:{tool_name or 'unknown_tool'}]",
                     )
-                continue
-
-            if block_type == "thinking":
-                self._append_output_text(
-                    block_dict.get("thinking", ""),
-                    prefix="[思考]",
-                    inline_prefix=True,
-                )
-                continue
-
-            if block_type == "text":
-                self._append_output_text(block_dict.get("text", ""))
+                return
 
     def _append_tool_call(
         self,
@@ -218,6 +298,25 @@ class FocusRunExecutor:
             return json.loads(stripped)
         except Exception:
             return value
+
+    def _normalize_message_type(self, message_type: Any) -> str | None:
+        if hasattr(message_type, "value"):
+            return message_type.value
+        if isinstance(message_type, str):
+            return message_type
+        return None
+
+    def _normalize_tool_output(self, output: Any) -> Any:
+        output = self._deserialize_json_like(output)
+        if isinstance(output, list):
+            text_parts = [
+                block.get("text", "")
+                for block in output
+                if isinstance(block, dict) and block.get("type") == "text"
+            ]
+            if text_parts and len(text_parts) == len(output):
+                return "\n".join(part for part in text_parts if part).strip()
+        return output
 
     @staticmethod
     def _stringify_output_text(value: Any) -> str:

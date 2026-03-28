@@ -80,7 +80,7 @@ def remove_focus_tag(tag: str) -> ToolResponse:
 def write_focus_note(
     title: str,
     content: str,
-    tags: list[str] | None = None,
+    tags: list[str] | str | None = None,
     source: str | None = None,
 ) -> ToolResponse:
     """Write a focus note that will appear in the focus timeline."""

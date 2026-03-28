@@ -343,6 +343,8 @@ export function KnowledgeDetailDrawer({ open, kbId, kb, onClose, onUpdate }: Pro
     {
       title: "操作",
       key: "actions",
+      className: "copaw-table-actions-cell",
+      onHeaderCell: () => ({ className: "copaw-table-actions-cell" }),
       width: 280,
       render: (_: unknown, record: Document) => (
         <div style={{ display: "flex", gap: 8 }}>
@@ -424,6 +426,8 @@ export function KnowledgeDetailDrawer({ open, kbId, kb, onClose, onUpdate }: Pro
     {
       title: "操作",
       key: "actions",
+      className: "copaw-table-actions-cell",
+      onHeaderCell: () => ({ className: "copaw-table-actions-cell" }),
       width: 100,
       render: (_: unknown, record: Chunk) => (
         <Popconfirm

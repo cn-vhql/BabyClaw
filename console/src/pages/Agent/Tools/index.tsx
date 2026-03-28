@@ -46,6 +46,8 @@ export default function ToolsPage() {
     {
       title: t("tools.actions"),
       key: "actions",
+      className: "copaw-table-actions-cell",
+      onHeaderCell: () => ({ className: "copaw-table-actions-cell" }),
       width: 120,
       render: (_: unknown, record: ToolInfo) => (
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>

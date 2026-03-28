@@ -148,6 +148,7 @@
 }
 
 .runItem {
+  position: relative;
   border: 1px solid var(--focus-card-border);
   border-radius: 16px;
   padding: 16px;
@@ -163,6 +164,16 @@
       color-mix(in srgb, var(--app-surface) 97%, var(--focus-accent-soft)) 100%
     );
   box-shadow: 0 10px 26px color-mix(in srgb, var(--focus-accent-shadow) 14%, transparent);
+}
+
+.runItem + .runItem::before {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: -7px;
+  height: 1px;
+  background: color-mix(in srgb, var(--focus-card-border) 72%, var(--app-border));
 }
 
 .runItemRunning {
@@ -504,10 +515,115 @@
   font-size: 12px;
 }
 
+.detailCard {
+  border-radius: 16px !important;
+
+  :global(.ant-card-body) {
+    padding: 18px !important;
+  }
+}
+
+.runMarkdownPanel {
+  min-height: 220px;
+  border: 1px solid var(--app-border);
+  border-radius: 14px;
+  background: var(--app-surface, #fff);
+  overflow: auto;
+}
+
+.runMarkdownContent {
+  padding: 20px 22px;
+  font-size: 14px;
+  line-height: 1.85;
+}
+
 .generatedNotesList {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.toolsTab,
+.notificationTab {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.toolLog {
+  padding: 16px;
+  border: 1px solid var(--app-border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--app-surface, #fff) 92%, var(--app-primary-soft, #eef6fa));
+}
+
+.toolLog + .toolLog {
+  margin-top: 14px;
+}
+
+.toolLogHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  strong {
+    color: var(--app-text);
+  }
+
+  span {
+    color: var(--app-text-secondary);
+    font-size: 12px;
+  }
+}
+
+.toolLogSection {
+  margin-top: 10px;
+
+  strong {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--app-text);
+  }
+}
+
+.fileContent {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--app-surface, #fff) 86%, var(--app-primary-soft, #eef6fa));
+  color: var(--app-text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow: auto;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.notificationSummary {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.notificationHeadline {
+  margin-top: 4px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+.notificationDescription {
+  margin: 0;
+  color: var(--app-text-secondary);
+  line-height: 1.7;
+}
+
+.notificationMetaLine {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .codeBlock {

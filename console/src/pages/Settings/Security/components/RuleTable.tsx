@@ -101,6 +101,8 @@ export function RuleTable({
     {
       title: t("security.rules.actions"),
       key: "actions",
+      className: "copaw-table-actions-cell",
+      onHeaderCell: () => ({ className: "copaw-table-actions-cell" }),
       width: 160,
       render: (_: unknown, record: MergedRule) => (
         <Space size="small">
