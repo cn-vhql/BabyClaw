@@ -374,6 +374,58 @@ body[data-app-theme] .ant-picker-focused {
   box-shadow: 0 0 0 2px var(--app-primary-soft) !important;
 }
 
+body[data-app-theme]
+  :is(
+    .copaw-input-affix-wrapper,
+    .copaw-input-textarea,
+    .copaw-input-textarea-affix-wrapper,
+    .copaw-input-number,
+    .copaw-input-number-affix-wrapper,
+    .ant-input-affix-wrapper,
+    .ant-input-textarea,
+    .ant-input-textarea-affix-wrapper,
+    .ant-input-number,
+    .ant-input-number-affix-wrapper
+  )
+  :is(
+    .copaw-input,
+    .copaw-input-number-input,
+    .ant-input,
+    .ant-input-number-input,
+    textarea
+  ) {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  border-radius: 0 !important;
+}
+
+body[data-app-theme]
+  :is(
+    .copaw-input-affix-wrapper,
+    .copaw-input-textarea,
+    .copaw-input-textarea-affix-wrapper,
+    .copaw-input-number,
+    .copaw-input-number-affix-wrapper,
+    .ant-input-affix-wrapper,
+    .ant-input-textarea,
+    .ant-input-textarea-affix-wrapper,
+    .ant-input-number,
+    .ant-input-number-affix-wrapper
+  )
+  :is(
+    .copaw-input,
+    .copaw-input-number-input,
+    .ant-input,
+    .ant-input-number-input,
+    textarea
+  ):is(:hover, :focus, :focus-visible, :focus-within) {
+  border-color: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
 body[data-app-theme] .copaw-dropdown-menu,
 body[data-app-theme] .copaw-select-dropdown,
 body[data-app-theme] .copaw-picker-dropdown .copaw-picker-panel-container,

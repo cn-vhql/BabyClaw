@@ -6,6 +6,7 @@ Provides RESTful API for managing multiple agent instances.
 import asyncio
 import json
 import logging
+import shutil
 from pathlib import Path
 from fastapi import APIRouter, Body, HTTPException, Request
 from fastapi import Path as PathParam
@@ -21,7 +22,6 @@ from ...config.config import (
 from ...config.utils import load_config, save_config
 from ...config.utils import (
     clear_agent_workspace_deleted,
-    mark_agent_workspace_deleted,
     recover_agent_profiles,
 )
 from ...agents.memory.agent_md_manager import AgentMdManager
@@ -303,13 +303,21 @@ async def delete_agent(
     manager = _get_multi_agent_manager(request)
     await manager.stop_agent(agentId)
 
+    try:
+        if workspace_dir.exists():
+            shutil.rmtree(workspace_dir)
+    except OSError as exc:
+        logger.exception("Failed to delete workspace for agent %s", agentId)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to delete workspace for agent '{agentId}': {exc}",
+        ) from exc
+
     # Remove from config
+    if config.agents.active_agent == agentId:
+        config.agents.active_agent = "default"
     del config.agents.profiles[agentId]
     save_config(config)
-    mark_agent_workspace_deleted(workspace_dir)
-
-    # Note: We don't delete the workspace directory for safety
-    # Users can manually delete it if needed
 
     return {"success": True, "agent_id": agentId}
 

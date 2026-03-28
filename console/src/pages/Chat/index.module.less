@@ -506,16 +506,30 @@
 
   :global(
       .copaw-sender-input :is(
+          .rc-textarea,
+          .rc-textarea-affix-wrapper,
+          .copaw-text-area,
           .copaw-input,
           .copaw-input-affix-wrapper,
+          .copaw-input-borderless,
           .copaw-input-textarea,
           .copaw-input-textarea-affix-wrapper,
+          .copaw-input-textarea-show-count,
+          .copaw-input-show-count-suffix,
+          .copaw-input-data-count,
+          .copaw-input-data-count-suffix,
           .copaw-input-outlined,
+          .ant-input-borderless,
           .ant-input,
           .ant-input-affix-wrapper,
           .ant-input-textarea,
           .ant-input-textarea-affix-wrapper,
+          .ant-input-textarea-show-count,
+          .ant-input-show-count-suffix,
+          .ant-input-data-count,
+          .ant-input-data-count-suffix,
           .ant-input-outlined,
+          .rc-textarea-affix-wrapper textarea,
           textarea
         )
     ) {
@@ -528,19 +542,40 @@
 
   :global(
       .copaw-sender-input :is(
+          .rc-textarea,
+          .rc-textarea-affix-wrapper,
+          .copaw-text-area,
           .copaw-input,
           .copaw-input-affix-wrapper,
+          .copaw-input-borderless,
           .copaw-input-textarea,
           .copaw-input-textarea-affix-wrapper,
+          .copaw-input-textarea-show-count,
+          .copaw-input-show-count-suffix,
+          .copaw-input-data-count,
+          .copaw-input-data-count-suffix,
           .copaw-input-outlined,
+          .ant-input-borderless,
           .ant-input,
           .ant-input-affix-wrapper,
           .ant-input-textarea,
           .ant-input-textarea-affix-wrapper,
+          .ant-input-textarea-show-count,
+          .ant-input-show-count-suffix,
+          .ant-input-data-count,
+          .ant-input-data-count-suffix,
           .ant-input-outlined,
+          .rc-textarea-affix-wrapper textarea,
           textarea
         ):is(:hover, :focus, :focus-within)
     ),
+  :global(.copaw-sender-input .rc-textarea),
+  :global(.copaw-sender-input .rc-textarea-affix-wrapper),
+  :global(.copaw-sender-input .copaw-text-area),
+  :global(.copaw-sender-input .copaw-input-borderless),
+  :global(.copaw-sender-input .copaw-input-textarea-show-count),
+  :global(.copaw-sender-input .ant-input-borderless),
+  :global(.copaw-sender-input .ant-input-textarea-show-count),
   :global(.copaw-sender-input .copaw-input-affix-wrapper-focused),
   :global(.copaw-sender-input .copaw-input-textarea-affix-wrapper-focused),
   :global(.copaw-sender-input .copaw-input-focused),
@@ -555,18 +590,48 @@
 
   :global(
       .copaw-sender-input :is(
+          .rc-textarea,
+          .rc-textarea-affix-wrapper,
+          .copaw-text-area,
           .copaw-input-affix-wrapper,
+          .copaw-input-borderless,
           .copaw-input-textarea-affix-wrapper,
+          .copaw-input-textarea-show-count,
+          .copaw-input-show-count-suffix,
+          .copaw-input-data-count,
+          .copaw-input-data-count-suffix,
+          .rc-textarea-affix-wrapper textarea,
           .ant-input-affix-wrapper,
+          .ant-input-borderless,
           .ant-input-textarea-affix-wrapper
+          ,
+          .ant-input-textarea-show-count,
+          .ant-input-show-count-suffix,
+          .ant-input-data-count,
+          .ant-input-data-count-suffix
         )::before
     ),
   :global(
       .copaw-sender-input :is(
+          .rc-textarea,
+          .rc-textarea-affix-wrapper,
+          .copaw-text-area,
           .copaw-input-affix-wrapper,
+          .copaw-input-borderless,
           .copaw-input-textarea-affix-wrapper,
+          .copaw-input-textarea-show-count,
+          .copaw-input-show-count-suffix,
+          .copaw-input-data-count,
+          .copaw-input-data-count-suffix,
+          .rc-textarea-affix-wrapper textarea,
           .ant-input-affix-wrapper,
+          .ant-input-borderless,
           .ant-input-textarea-affix-wrapper
+          ,
+          .ant-input-textarea-show-count,
+          .ant-input-show-count-suffix,
+          .ant-input-data-count,
+          .ant-input-data-count-suffix
         )::after
     ) {
     display: none !important;
@@ -781,6 +846,166 @@
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.runtimeSenderRoot {
+  border-color: var(--chat-border-color) !important;
+  box-shadow: 0 24px 56px -36px var(--chat-shadow-color) !important;
+
+  &::after {
+    display: none !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  &:focus-within {
+    border-color: var(--chat-border-color) !important;
+    box-shadow: 0 24px 56px -36px var(--chat-shadow-color) !important;
+    outline: none !important;
+
+    &::after {
+      display: none !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+  }
+}
+
+.runtimeSenderInput {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+
+  &::before,
+  &::after {
+    display: none !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  :global(
+      :is(
+          .rc-textarea,
+          .rc-textarea-affix-wrapper,
+          .copaw-text-area,
+          .copaw-input,
+          .copaw-input-affix-wrapper,
+          .copaw-input-borderless,
+          .copaw-input-textarea,
+          .copaw-input-textarea-affix-wrapper,
+          .copaw-input-textarea-show-count,
+          .copaw-input-show-count-suffix,
+          .copaw-input-data-count,
+          .copaw-input-data-count-suffix,
+          .ant-input-borderless,
+          .ant-input,
+          .ant-input-affix-wrapper,
+          .ant-input-textarea,
+          .ant-input-textarea-affix-wrapper,
+          .ant-input-textarea-show-count,
+          .ant-input-show-count-suffix,
+          .ant-input-data-count,
+          .ant-input-data-count-suffix,
+          .rc-textarea-affix-wrapper textarea,
+          textarea
+        )
+    ) {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+
+  :global(
+      :is(
+          .rc-textarea,
+          .rc-textarea-affix-wrapper,
+          .copaw-text-area,
+          .copaw-input,
+          .copaw-input-affix-wrapper,
+          .copaw-input-borderless,
+          .copaw-input-textarea,
+          .copaw-input-textarea-affix-wrapper,
+          .copaw-input-textarea-show-count,
+          .copaw-input-show-count-suffix,
+          .copaw-input-data-count,
+          .copaw-input-data-count-suffix,
+          .ant-input-borderless,
+          .ant-input,
+          .ant-input-affix-wrapper,
+          .ant-input-textarea,
+          .ant-input-textarea-affix-wrapper,
+          .ant-input-textarea-show-count,
+          .ant-input-show-count-suffix,
+          .ant-input-data-count,
+          .ant-input-data-count-suffix,
+          .rc-textarea-affix-wrapper textarea,
+          textarea
+        ):is(:hover, :focus, :focus-within, :focus-visible)
+    ),
+  :global(.rc-textarea),
+  :global(.rc-textarea-affix-wrapper),
+  :global(.copaw-input-affix-wrapper-focused),
+  :global(.copaw-input-textarea-affix-wrapper-focused),
+  :global(.copaw-input-focused),
+  :global(.ant-input-affix-wrapper-focused),
+  :global(.ant-input-textarea-affix-wrapper-focused),
+  :global(.ant-input-focused) {
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+
+  :global(
+      :is(
+          .rc-textarea,
+          .rc-textarea-affix-wrapper,
+          .copaw-text-area,
+          .copaw-input-affix-wrapper,
+          .copaw-input-borderless,
+          .copaw-input-textarea-affix-wrapper,
+          .copaw-input-textarea-show-count,
+          .copaw-input-show-count-suffix,
+          .copaw-input-data-count,
+          .copaw-input-data-count-suffix,
+          .rc-textarea-affix-wrapper textarea,
+          .ant-input-affix-wrapper,
+          .ant-input-borderless,
+          .ant-input-textarea-affix-wrapper,
+          .ant-input-textarea-show-count,
+          .ant-input-show-count-suffix,
+          .ant-input-data-count,
+          .ant-input-data-count-suffix
+        )::before
+    ),
+  :global(
+      :is(
+          .rc-textarea,
+          .rc-textarea-affix-wrapper,
+          .copaw-text-area,
+          .copaw-input-affix-wrapper,
+          .copaw-input-borderless,
+          .copaw-input-textarea-affix-wrapper,
+          .copaw-input-textarea-show-count,
+          .copaw-input-show-count-suffix,
+          .copaw-input-data-count,
+          .copaw-input-data-count-suffix,
+          .rc-textarea-affix-wrapper textarea,
+          .ant-input-affix-wrapper,
+          .ant-input-borderless,
+          .ant-input-textarea-affix-wrapper,
+          .ant-input-textarea-show-count,
+          .ant-input-show-count-suffix,
+          .ant-input-data-count,
+          .ant-input-data-count-suffix
+        )::after
+    ) {
+    display: none !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
 }
 
 /* Disabled input overlay */

@@ -2,8 +2,6 @@
 
 export const PYPI_URL = "https://pypi.org/pypi/copaw/json";
 
-export const GITHUB_URL = "https://github.com/agentscope-ai/CoPaw" as const;
-
 // ── Timing ────────────────────────────────────────────────────────────────
 
 export const ONE_HOUR_MS = 60 * 60 * 1000;

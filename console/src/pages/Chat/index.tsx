@@ -168,7 +168,8 @@ function useChatThemeContext() {
   return context;
 }
 const EMPTY_ASSISTANT_PLACEHOLDER = "\u200b";
-const QUICK_PROMPTS_STORAGE_KEY = "copaw.chat.quick-prompts.v1";
+const QUICK_PROMPTS_STORAGE_KEY = "copaw.chat.quick-prompts.v2";
+const LEGACY_QUICK_PROMPTS_STORAGE_KEY = "copaw.chat.quick-prompts.v1";
 const DEFAULT_QUICK_PROMPTS = ["保存为新技能", "更新自我认知"];
 const MAX_QUICK_PROMPTS = 6;
 const RUNTIME_CHAT_THEME = {
@@ -195,39 +196,93 @@ function normalizeQuickPrompts(prompts: string[]): string[] {
   return result.slice(0, MAX_QUICK_PROMPTS);
 }
 
-function loadQuickPrompts(): string[] {
-  if (typeof window === "undefined") {
-    return DEFAULT_QUICK_PROMPTS;
-  }
+function getQuickPromptStorageAgentKey(agentId?: string): string {
+  const trimmed = agentId?.trim();
+  return trimmed || "default";
+}
 
+function loadLegacyQuickPrompts(): string[] | null {
   try {
-    const raw = window.localStorage.getItem(QUICK_PROMPTS_STORAGE_KEY);
+    const raw = window.localStorage.getItem(LEGACY_QUICK_PROMPTS_STORAGE_KEY);
     if (raw === null) {
-      return DEFAULT_QUICK_PROMPTS;
+      return null;
     }
 
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) {
-      return DEFAULT_QUICK_PROMPTS;
+      return null;
     }
 
     return normalizeQuickPrompts(
       parsed.filter((item): item is string => typeof item === "string"),
     );
   } catch {
-    return DEFAULT_QUICK_PROMPTS;
+    return null;
   }
 }
 
-function persistQuickPrompts(prompts: string[]): void {
+function readQuickPromptsStorage(): Record<string, string[]> {
+  try {
+    const raw = window.localStorage.getItem(QUICK_PROMPTS_STORAGE_KEY);
+    if (raw === null) {
+      return {};
+    }
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return {};
+    }
+
+    return Object.fromEntries(
+      Object.entries(parsed).map(([key, value]) => [
+        key,
+        normalizeQuickPrompts(
+          Array.isArray(value)
+            ? value.filter((item): item is string => typeof item === "string")
+            : [],
+        ),
+      ]),
+    );
+  } catch {
+    return {};
+  }
+}
+
+function loadQuickPrompts(agentId?: string): string[] {
+  if (typeof window === "undefined") {
+    return DEFAULT_QUICK_PROMPTS;
+  }
+
+  try {
+    const agentKey = getQuickPromptStorageAgentKey(agentId);
+    const storage = readQuickPromptsStorage();
+    if (Object.prototype.hasOwnProperty.call(storage, agentKey)) {
+      return storage[agentKey] ?? [];
+    }
+
+    const legacyPrompts = loadLegacyQuickPrompts();
+    if (legacyPrompts) {
+      return legacyPrompts;
+    }
+  } catch {
+    return DEFAULT_QUICK_PROMPTS;
+  }
+
+  return DEFAULT_QUICK_PROMPTS;
+}
+
+function persistQuickPrompts(agentId: string | undefined, prompts: string[]): void {
   if (typeof window === "undefined") {
     return;
   }
 
   try {
+    const agentKey = getQuickPromptStorageAgentKey(agentId);
+    const storage = readQuickPromptsStorage();
+    storage[agentKey] = normalizeQuickPrompts(prompts);
     window.localStorage.setItem(
       QUICK_PROMPTS_STORAGE_KEY,
-      JSON.stringify(normalizeQuickPrompts(prompts)),
+      JSON.stringify(storage),
     );
   } catch {
     // Ignore local persistence failures.
@@ -576,17 +631,30 @@ function RuntimeLoadingBridge({
 
 function QuickPromptBar({
   chatRef,
+  agentId,
 }: {
   chatRef: { current: IAgentScopeRuntimeWebUIRef | null };
+  agentId?: string;
 }) {
   const { t } = useTranslation();
   const { loading, disabled } = useChatAnywhereInput((value) => ({
     loading: Boolean(value.loading),
     disabled: Boolean(value.disabled),
   }));
-  const [prompts, setPrompts] = useState<string[]>(() => loadQuickPrompts());
+  const [prompts, setPrompts] = useState<string[]>(() => loadQuickPrompts(agentId));
   const [editing, setEditing] = useState(false);
-  const [drafts, setDrafts] = useState<string[]>(() => loadQuickPrompts());
+  const [drafts, setDrafts] = useState<string[]>(() => loadQuickPrompts(agentId));
+
+  useEffect(() => {
+    const nextPrompts = loadQuickPrompts(agentId);
+    setPrompts(nextPrompts);
+    setDrafts(nextPrompts);
+    setEditing(false);
+  }, [agentId]);
+
+  useEffect(() => {
+    persistQuickPrompts(agentId, prompts);
+  }, [agentId, prompts]);
 
   const startEditing = () => {
     setDrafts(prompts);
@@ -601,7 +669,6 @@ function QuickPromptBar({
   const saveEditing = () => {
     const nextPrompts = normalizeQuickPrompts(drafts);
     setPrompts(nextPrompts);
-    persistQuickPrompts(nextPrompts);
     setEditing(false);
   };
 
@@ -1359,7 +1426,19 @@ export default function ChatPage() {
         ...((i18nConfig as { sender?: Record<string, unknown> }).sender ?? {}),
         disclaimer: "",
         beforeSubmit: handleBeforeSubmit,
-        beforeUI: <QuickPromptBar chatRef={chatRef} />,
+        beforeUI: <QuickPromptBar chatRef={chatRef} agentId={selectedAgent} />,
+        rootClassName: styles.runtimeSenderRoot,
+        classNames: {
+          input: styles.runtimeSenderInput,
+        },
+        styles: {
+          input: {
+            background: "transparent",
+            border: "none",
+            boxShadow: "none",
+            outline: "none",
+          },
+        },
         attachments: {
           trigger: function (props: { disabled?: boolean }) {
             return (
@@ -1434,6 +1513,7 @@ export default function ChatPage() {
     wrappedSessionApi,
     customFetch,
     copyResponse,
+    selectedAgent,
     t,
   ]);
 
