@@ -249,6 +249,9 @@
     "notificationHint": "特定チャンネルを選ぶと、そのチャンネルの直近アクティブなセッションへ通知します。利用可能なセッションが無い場合は静かなまま終了します。",
     "sourcePrefix": "ソース: {{source}}",
     "unknownSource": "不明なソース",
+    "viewDetails": "詳細を見る",
+    "noteDetails": "要点の詳細",
+    "emptyContent": "本文はまだありません",
     "noTags": "タグなし",
     "tools": {
       "addTagDesc": "将来の巡回対象として新しい注目タグを追加します。",

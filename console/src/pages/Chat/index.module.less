@@ -260,6 +260,45 @@
     box-shadow: var(--assistant-h2-shadow);
   }
 
+  :global(.copaw-chat-anywhere-message-list .copaw-bubble[data-role="assistant"] .copaw-markdown h1 a),
+  :global(.copaw-chat-anywhere-message-list .copaw-bubble[data-role="assistant"] .copaw-markdown h2 a) {
+    color: currentColor !important;
+    border-bottom-color: currentColor;
+  }
+
+  :global(.copaw-chat-anywhere-message-list .copaw-bubble[data-role="assistant"] .copaw-markdown h1 strong),
+  :global(.copaw-chat-anywhere-message-list .copaw-bubble[data-role="assistant"] .copaw-markdown h1 b),
+  :global(.copaw-chat-anywhere-message-list .copaw-bubble[data-role="assistant"] .copaw-markdown h2 strong),
+  :global(.copaw-chat-anywhere-message-list .copaw-bubble[data-role="assistant"] .copaw-markdown h2 b) {
+    color: inherit !important;
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
+  }
+
+  :global(.copaw-chat-anywhere-message-list .copaw-bubble[data-role="assistant"] .copaw-markdown h1 em),
+  :global(.copaw-chat-anywhere-message-list .copaw-bubble[data-role="assistant"] .copaw-markdown h2 em) {
+    color: inherit !important;
+    border-bottom: 0;
+  }
+
+  :global(.copaw-chat-anywhere-message-list .copaw-bubble[data-role="assistant"] .copaw-markdown h1 mark),
+  :global(.copaw-chat-anywhere-message-list .copaw-bubble[data-role="assistant"] .copaw-markdown h2 mark) {
+    color: inherit !important;
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
+  }
+
+  :global(.copaw-chat-anywhere-message-list .copaw-bubble[data-role="assistant"] .copaw-markdown h1 :not(pre) > code),
+  :global(.copaw-chat-anywhere-message-list .copaw-bubble[data-role="assistant"] .copaw-markdown h2 :not(pre) > code) {
+    color: inherit !important;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    border-radius: 0;
+  }
+
   :global(.copaw-chat-anywhere-message-list .copaw-bubble[data-role="assistant"] .copaw-markdown h3) {
     display: flex;
     align-items: center;

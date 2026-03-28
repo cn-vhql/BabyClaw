@@ -18,7 +18,6 @@ import {
 } from "./components";
 import styles from "./index.module.less";
 
-type FilterType = "all" | "builtin" | "custom";
 type ChannelConfig = Record<string, unknown>;
 type ChannelTableRow = {
   key: ChannelKey;
@@ -31,7 +30,6 @@ function ChannelsPage() {
   const { t } = useTranslation();
   const { channels, orderedKeys, isBuiltin, loading, fetchChannels } =
     useChannels();
-  const [filter, setFilter] = useState<FilterType>("all");
   const [saving, setSaving] = useState(false);
   const [activeKey, setActiveKey] = useState<ChannelKey | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -44,8 +42,6 @@ function ChannelsPage() {
     orderedKeys.forEach((key) => {
       const config = channels[key] || { enabled: false, bot_prefix: "" };
       const builtin = isBuiltin(key);
-      if (filter === "builtin" && !builtin) return;
-      if (filter === "custom" && builtin) return;
 
       data.push({
         key,
@@ -56,7 +52,7 @@ function ChannelsPage() {
     });
 
     return data;
-  }, [channels, orderedKeys, filter, isBuiltin]);
+  }, [channels, orderedKeys, isBuiltin]);
 
   const handleEdit = (key: ChannelKey) => {
     setActiveKey(key);
@@ -190,31 +186,12 @@ function ChannelsPage() {
     },
   ];
 
-  const FILTER_TABS: { key: FilterType; label: string }[] = [
-    { key: "all", label: t("channels.filterAll") },
-    { key: "builtin", label: t("channels.builtin") },
-    { key: "custom", label: t("channels.custom") },
-  ];
-
   return (
     <div className={styles.channelsPage}>
       <div className={styles.pageHeader}>
         <div>
           <h1 className={styles.title}>{t("channels.title")}</h1>
           <p className={styles.description}>{t("channels.description")}</p>
-        </div>
-        <div className={styles.filterTabs}>
-          {FILTER_TABS.map(({ key, label }) => (
-            <button
-              key={key}
-              className={`${styles.filterTab} ${
-                filter === key ? styles.filterTabActive : ""
-              }`}
-              onClick={() => setFilter(key)}
-            >
-              {label}
-            </button>
-          ))}
         </div>
       </div>
 

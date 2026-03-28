@@ -9,7 +9,6 @@ import {
   InputNumber,
   Select,
   Switch,
-  Tag,
   message,
 } from "@agentscope-ai/design";
 import { Pagination, TimePicker } from "antd";
@@ -25,12 +24,14 @@ import type {
   FocusRunResult,
   FocusSettings,
 } from "../../api/types/focus";
+import { LazyMarkdown } from "../../components/LazyMarkdown";
 import {
   parseEvery,
   serializeEvery,
   type EveryUnit,
 } from "../Control/Heartbeat/parseEvery";
 import { useAgentStore } from "../../stores/agentStore";
+import { stripFrontmatter } from "../../utils/markdown";
 import styles from "./index.module.less";
 
 dayjs.extend(customParseFormat);
@@ -79,6 +80,23 @@ function formatTimestamp(value: string) {
   return dayjs(date).format("YYYY-MM-DD HH:mm");
 }
 
+function toNotePreview(content: string) {
+  return stripFrontmatter(content || "")
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`([^`]*)`/g, "$1")
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/^>\s?/gm, "")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/^[-*+]\s+/gm, "")
+    .replace(/^\d+\.\s+/gm, "")
+    .replace(/\|/g, " ")
+    .replace(/[*_~]/g, "")
+    .replace(/\r?\n+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export default function FocusPage() {
   const { t } = useTranslation();
   const { selectedAgent } = useAgentStore();
@@ -86,6 +104,7 @@ export default function FocusPage() {
   const [saving, setSaving] = useState(false);
   const [runningNow, setRunningNow] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [detailNote, setDetailNote] = useState<FocusNote | null>(null);
   const [settings, setSettings] = useState<FocusSettings | null>(null);
   const [notes, setNotes] = useState<FocusNote[]>([]);
   const [searchKeyword, setSearchKeyword] = useState("");
@@ -321,36 +340,50 @@ export default function FocusPage() {
               ) : (
                 <>
                   <div className={styles.timeline}>
-                    {pagedNotes.map((note) => (
-                      <div key={note.id} className={styles.timelineItem}>
-                        <div className={styles.timelineDot} />
-                        <div className={styles.noteCard}>
-                          <div className={styles.noteTop}>
-                            <div>
-                              <h3 className={styles.noteTitle}>{note.title}</h3>
-                              <div className={styles.noteMeta}>
-                                <span>{formatTimestamp(note.createdAt)}</span>
-                                <span>
-                                  {t("focus.sourcePrefix", {
-                                    source: note.source || t("focus.unknownSource"),
-                                  })}
-                                </span>
+                    {pagedNotes.map((note) => {
+                      const fullContent = stripFrontmatter(note.content || "");
+                      const previewContent = toNotePreview(note.content || "");
+
+                      return (
+                        <div key={note.id} className={styles.timelineItem}>
+                          <div className={styles.timelineDot} />
+                          <div className={styles.noteCard}>
+                            <div className={styles.noteTop}>
+                              <div>
+                                <h3 className={styles.noteTitle}>{note.title}</h3>
+                                <div className={styles.noteMeta}>
+                                  <span>{formatTimestamp(note.createdAt)}</span>
+                                  <span>
+                                    {t("focus.sourcePrefix", {
+                                      source: note.source || t("focus.unknownSource"),
+                                    })}
+                                  </span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                          <p className={styles.noteContent}>{note.content}</p>
-                          <div className={styles.noteTags}>
-                            {note.tags.length > 0 ? (
-                              note.tags.map((tag) => (
-                                <Tag key={`${note.id}-${tag}`}>{tag}</Tag>
-                              ))
-                            ) : (
-                              <span className={styles.muted}>{t("focus.noTags")}</span>
-                            )}
+                            <div className={styles.noteContent}>
+                              <p className={styles.notePreview}>
+                                {previewContent || t("focus.emptyContent")}
+                              </p>
+                            </div>
+                            <div className={styles.noteFooter}>
+                              <Button
+                                type="link"
+                                className={styles.detailButton}
+                                onClick={() =>
+                                  setDetailNote({
+                                    ...note,
+                                    content: fullContent,
+                                  })
+                                }
+                              >
+                                {t("focus.viewDetails")}
+                              </Button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </>
               )}
@@ -370,6 +403,35 @@ export default function FocusPage() {
           </Card>
         </div>
       </div>
+
+      <Drawer
+        title={detailNote?.title || t("focus.noteDetails")}
+        placement="right"
+        open={!!detailNote}
+        onClose={() => setDetailNote(null)}
+        width={760}
+      >
+        {detailNote ? (
+          <div className={styles.detailBody}>
+            <div className={styles.detailMetaBlock}>
+              <div className={styles.noteMeta}>
+                <span>{formatTimestamp(detailNote.createdAt)}</span>
+                <span>
+                  {t("focus.sourcePrefix", {
+                    source: detailNote.source || t("focus.unknownSource"),
+                  })}
+                </span>
+              </div>
+            </div>
+            <div className={styles.detailMarkdownWrap}>
+              <LazyMarkdown
+                content={detailNote.content || ""}
+                className={styles.noteMarkdown}
+              />
+            </div>
+          </div>
+        ) : null}
+      </Drawer>
 
       <Drawer
         title={t("focus.configure")}

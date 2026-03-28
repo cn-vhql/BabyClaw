@@ -36,6 +36,42 @@ class KnowledgeBaseCreate(BaseModel):
     storage_type: str = Field(default="chroma", description="Storage type")
 
 
+def _normalize_document_meta(doc_path: Path, doc_meta: dict[str, Any]) -> dict[str, Any]:
+    """Return a stable document payload for mixed legacy/current metadata shapes."""
+    files = doc_meta.get("files")
+    primary_file = files[0] if isinstance(files, list) and files else {}
+
+    filename = (
+        doc_meta.get("filename")
+        or primary_file.get("filename")
+        or doc_meta.get("title")
+        or doc_path.name
+    )
+    file_type = doc_meta.get("file_type") or primary_file.get("type")
+    if not file_type and filename:
+        file_type = Path(str(filename)).suffix.lstrip(".").lower() or None
+
+    chunks = doc_meta.get("chunks")
+    chunk_count = doc_meta.get("chunk_count")
+    if chunk_count is None:
+        chunk_count = len(chunks) if isinstance(chunks, list) else 0
+
+    return {
+        "doc_id": doc_meta.get("doc_id") or doc_meta.get("id") or doc_path.name,
+        "filename": filename,
+        "file_type": file_type,
+        "size": doc_meta.get("size", 0),
+        "uploaded_at": (
+            doc_meta.get("uploaded_at")
+            or doc_meta.get("created_at")
+            or doc_meta.get("converted_at")
+        ),
+        "chunk_count": chunk_count,
+        "indexing_status": doc_meta.get("indexing_status"),
+        "indexing_error": doc_meta.get("indexing_error"),
+    }
+
+
 @router.get("/list")
 async def list_knowledge_bases(request: Request) -> dict:
     """List all knowledge bases."""
@@ -161,19 +197,7 @@ async def get_knowledge_base_detail(request: Request, kb_id: str) -> dict:
                     if doc_meta_file.exists():
                         with open(doc_meta_file, "r", encoding="utf-8") as f:
                             doc_meta = json.load(f)
-                            # For list view, only return metadata, not chunks
-                            # This significantly reduces payload size
-                            lightweight_doc = {
-                                "doc_id": doc_meta.get("doc_id"),
-                                "filename": doc_meta.get("filename"),
-                                "file_type": doc_meta.get("file_type"),
-                                "size": doc_meta.get("size", 0),
-                                "uploaded_at": doc_meta.get("uploaded_at"),
-                                "chunk_count": doc_meta.get("chunk_count", 0),
-                                "indexing_status": doc_meta.get("indexing_status"),
-                                "indexing_error": doc_meta.get("indexing_error"),
-                            }
-                            documents.append(lightweight_doc)
+                            documents.append(_normalize_document_meta(doc_path, doc_meta))
 
         return {
             "id": kb_id,

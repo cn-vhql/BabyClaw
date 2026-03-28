@@ -1,6 +1,12 @@
 .focusPage {
+  --focus-accent: var(--app-primary);
+  --focus-accent-soft: var(--app-primary-soft);
+  --focus-accent-softer: var(--app-primary-softer);
+  --focus-accent-shadow: var(--app-primary-shadow);
+  --focus-card-border: color-mix(in srgb, var(--focus-accent) 18%, var(--app-border));
+
   padding: 24px;
-  height: calc(100vh - 96px);
+  min-height: calc(100vh - 96px);
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -44,7 +50,7 @@
 }
 
 .layout {
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
   display: flex;
 }
@@ -60,13 +66,14 @@
 }
 
 .card {
-  height: 100%;
-  overflow: hidden;
+  min-height: 0;
+  border-color: var(--focus-card-border);
+  background: color-mix(in srgb, var(--app-surface-strong) 92%, var(--focus-accent-soft));
+  box-shadow: 0 18px 38px color-mix(in srgb, var(--focus-accent-shadow) 20%, transparent);
 }
 
 .cardContent {
-  height: 100%;
-  min-height: 0;
+  min-height: clamp(760px, calc(100vh - 220px), 1080px);
   display: flex;
   flex-direction: column;
 }
@@ -92,9 +99,7 @@
 }
 
 .timeline {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
+  flex: 0 0 auto;
   padding-right: 6px;
 }
 
@@ -111,7 +116,7 @@
     top: 20px;
     bottom: 0;
     width: 1px;
-    background: var(--app-border);
+    background: color-mix(in srgb, var(--focus-accent) 16%, var(--app-border));
   }
 }
 
@@ -119,20 +124,35 @@
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #fb923c, #f97316);
-  box-shadow: 0 0 0 4px color-mix(in srgb, #fb923c 18%, transparent);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--focus-accent) 78%, white),
+    var(--focus-accent)
+  );
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--focus-accent) 18%, transparent),
+    0 8px 18px color-mix(in srgb, var(--focus-accent-shadow) 46%, transparent);
   flex-shrink: 0;
   margin-top: 12px;
 }
 
 .noteCard {
   flex: 1;
-  border: 1px solid var(--app-border);
+  border: 1px solid var(--focus-card-border);
   border-radius: 16px;
   padding: 16px;
   background:
-    radial-gradient(circle at top right, rgba(249, 115, 22, 0.08), transparent 45%),
-    color-mix(in srgb, var(--app-surface) 94%, transparent);
+    radial-gradient(
+      circle at top right,
+      color-mix(in srgb, var(--focus-accent) 10%, transparent),
+      transparent 45%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--app-surface-strong) 92%, var(--focus-accent-softer)) 0%,
+      color-mix(in srgb, var(--app-surface) 94%, var(--focus-accent-soft)) 100%
+    );
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--focus-accent-shadow) 18%, transparent);
 }
 
 .noteTop {
@@ -158,17 +178,175 @@
 
 .noteContent {
   margin: 14px 0 0;
-  white-space: pre-wrap;
-  word-break: break-word;
   line-height: 1.7;
   font-size: 14px;
+  color: var(--app-text);
 }
 
-.noteTags {
+.notePreview {
+  margin: 0;
+  line-height: inherit;
+  color: inherit;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+  min-height: calc(1.7em * 3);
+}
+
+.noteMarkdown {
+  color: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  word-break: break-word;
+
+  :global(h1),
+  :global(h2),
+  :global(h3),
+  :global(h4),
+  :global(h5),
+  :global(h6) {
+    color: var(--app-text);
+    line-height: 1.4;
+    margin: 1em 0 0.55em;
+  }
+
+  :global(h1) {
+    font-size: 1.36em;
+  }
+
+  :global(h2) {
+    font-size: 1.22em;
+  }
+
+  :global(h3) {
+    font-size: 1.1em;
+  }
+
+  :global(p),
+  :global(ul),
+  :global(ol),
+  :global(blockquote),
+  :global(pre),
+  :global(table) {
+    margin: 0 0 0.9em;
+  }
+
+  :global(ul),
+  :global(ol) {
+    padding-left: 1.45em;
+  }
+
+  :global(li) {
+    margin: 0.26em 0;
+  }
+
+  :global(blockquote) {
+    margin-left: 0;
+    padding: 0.72em 0.9em;
+    border-inline-start: 3px solid var(--app-primary);
+    border-radius: 0 12px 12px 0;
+    background: color-mix(in srgb, var(--app-primary-soft) 72%, transparent);
+  }
+
+  :global(a) {
+    color: var(--app-primary);
+  }
+
+  :global(code) {
+    font-family: "Operator Mono", Consolas, Monaco, Menlo, monospace;
+  }
+
+  :global(:not(pre) > code) {
+    padding: 2px 6px;
+    border: 1px solid var(--app-border);
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--app-primary-soft) 42%, transparent);
+  }
+
+  :global(pre) {
+    overflow: auto;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #0f1c28;
+    color: #e6f3ff;
+  }
+
+  :global(pre code) {
+    color: inherit;
+  }
+
+  :global(table) {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid var(--app-border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  :global(th),
+  :global(td) {
+    padding: 9px 10px;
+    border: 1px solid var(--app-border);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  :global(th) {
+    background: color-mix(in srgb, var(--app-primary-soft) 72%, transparent);
+  }
+
+  :global(img) {
+    display: block;
+    max-width: 100%;
+    margin: 0.9em auto;
+    border-radius: 12px;
+  }
+
+  :global(hr) {
+    border-color: var(--app-border);
+    margin: 1em 0;
+  }
+
+  :global(*:last-child) {
+    margin-bottom: 0;
+  }
+}
+
+.noteFooter {
   margin-top: 14px;
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.detailButton {
+  flex-shrink: 0;
+  padding-inline: 0;
+  color: var(--focus-accent) !important;
+}
+
+.detailButton:hover {
+  color: var(--app-primary-hover) !important;
+}
+
+.detailBody {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--app-text);
+}
+
+.detailMetaBlock {
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.detailMarkdownWrap {
+  min-width: 0;
 }
 
 .state,
@@ -183,7 +361,7 @@
 .paginationBar {
   display: flex;
   justify-content: flex-end;
-  margin-top: 16px;
+  margin-top: auto;
   padding-top: 16px;
   border-top: 1px solid var(--app-border);
 }
@@ -237,16 +415,23 @@
 }
 
 @media (max-width: 1100px) {
+  .cardContent {
+    min-height: 680px;
+  }
+
   .timeline {
-    height: auto;
-    max-height: none;
+    padding-right: 0;
   }
 }
 
 @media (max-width: 768px) {
   .focusPage {
     padding: 16px;
-    height: auto;
+    min-height: auto;
+  }
+
+  .cardContent {
+    min-height: auto;
   }
 
   .header {
@@ -272,6 +457,18 @@
 
   .paginationBar {
     justify-content: center;
+    margin-top: 16px;
+    padding-top: 16px;
+  }
+
+  .noteFooter {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .detailButton {
+    align-self: flex-start;
   }
 
   .timeRange {

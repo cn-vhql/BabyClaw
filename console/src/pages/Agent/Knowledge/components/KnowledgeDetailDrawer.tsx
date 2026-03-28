@@ -12,6 +12,17 @@ interface Props {
   onUpdate: () => void;
 }
 
+function getDocumentSuffix(filename?: string, fileType?: string) {
+  const normalizedFilename = (filename || "").trim();
+  const lastDotIndex = normalizedFilename.lastIndexOf(".");
+  if (lastDotIndex > -1 && lastDotIndex < normalizedFilename.length - 1) {
+    return normalizedFilename.slice(lastDotIndex + 1).toLowerCase();
+  }
+
+  const normalizedFileType = (fileType || "").trim().replace(/^\./, "");
+  return normalizedFileType || "-";
+}
+
 export function KnowledgeDetailDrawer({ open, kbId, kb, onClose, onUpdate }: Props) {
   const [uploadChunkType, setUploadChunkType] = useState<"length" | "separator" | "tfidf">("length");
   const [uploadMaxLength, setUploadMaxLength] = useState(500);
@@ -273,7 +284,9 @@ export function KnowledgeDetailDrawer({ open, kbId, kb, onClose, onUpdate }: Pro
       dataIndex: "file_type",
       key: "file_type",
       width: 100,
-      render: (type: string) => <Tag>{type}</Tag>,
+      render: (type: string, record: Document) => (
+        <Tag>{getDocumentSuffix(record.filename, type)}</Tag>
+      ),
     },
     {
       title: "索引状态",

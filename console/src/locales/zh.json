@@ -280,6 +280,9 @@
     "notificationHint": "选择具体频道时，会优先使用该频道最近一次活跃会话作为通知目标；如果没有可用会话，则保持静默。",
     "sourcePrefix": "来源：{{source}}",
     "unknownSource": "未知来源",
+    "viewDetails": "查看详情",
+    "noteDetails": "要点详情",
+    "emptyContent": "暂无正文内容",
     "noTags": "无标签",
     "tools": {
       "addTagDesc": "新增一个关注标签，供后续巡检持续跟踪。",

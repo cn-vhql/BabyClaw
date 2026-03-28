@@ -8,8 +8,8 @@ import {
   Popconfirm,
   Tag,
 } from "@agentscope-ai/design";
-import { PlusOutlined, DeleteOutlined, SearchOutlined, EditOutlined } from "@ant-design/icons";
-import { knowledgeApi, type KnowledgeBase, type KnowledgeBaseDetail, type SearchResult } from "../../../api/modules/knowledge";
+import { PlusOutlined, DeleteOutlined, EditOutlined } from "@ant-design/icons";
+import { knowledgeApi, type KnowledgeBase, type KnowledgeBaseDetail } from "../../../api/modules/knowledge";
 import { useTranslation } from "react-i18next";
 import { KnowledgeDetailDrawer } from "./components/KnowledgeDetailDrawer";
 import styles from "./index.module.less";
@@ -28,10 +28,6 @@ export default function KnowledgePage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedKbId, setSelectedKbId] = useState<string | null>(null);
   const [selectedKb, setSelectedKb] = useState<KnowledgeBaseDetail | null>(null);
-  const [searchModalOpen, setSearchModalOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [searching, setSearching] = useState(false);
 
   const loadKnowledgeBases = useCallback(async () => {
     setLoading(true);
@@ -139,24 +135,6 @@ export default function KnowledgePage() {
     }
   };
 
-  const handleSearch = async (kbId: string) => {
-    if (!searchQuery.trim()) {
-      message.error("请输入检索内容");
-      return;
-    }
-
-    setSearching(true);
-    try {
-      const res = await knowledgeApi.search(kbId, searchQuery, 10);
-      setSearchResults(res.results || []);
-      setSearchModalOpen(true);
-    } catch {
-      message.error("检索失败");
-    } finally {
-      setSearching(false);
-    }
-  };
-
   const formatTimestamp = (timestamp: string) => {
     try {
       // Handle Unix timestamp (seconds) returned as string
@@ -223,7 +201,7 @@ export default function KnowledgePage() {
     {
       title: "操作",
       key: "actions",
-      width: 280,
+      width: 220,
       render: (_: unknown, record: KnowledgeBase) => (
         <div style={{ display: "flex", gap: 8 }}>
           <Button
@@ -240,18 +218,6 @@ export default function KnowledgePage() {
             onClick={() => handleViewDetail(record.id)}
           >
             详情
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            icon={<SearchOutlined />}
-            onClick={() => {
-              setSelectedKbId(record.id);
-              setSearchQuery("");
-              setSearchModalOpen(true);
-            }}
-          >
-            检索
           </Button>
           <Popconfirm
             title="确认删除"
@@ -271,28 +237,6 @@ export default function KnowledgePage() {
           </Popconfirm>
         </div>
       ),
-    },
-  ];
-
-  const searchColumns = [
-    {
-      title: "文件名",
-      dataIndex: "filename",
-      key: "filename",
-      width: 200,
-    },
-    {
-      title: "内容",
-      dataIndex: "content",
-      key: "content",
-      ellipsis: true,
-    },
-    {
-      title: "相似度",
-      dataIndex: "score",
-      key: "score",
-      width: 100,
-      render: (score: number) => score.toFixed(4),
     },
   ];
 
@@ -393,31 +337,6 @@ export default function KnowledgePage() {
             rows={4}
           />
         </div>
-      </Modal>
-
-      {/* Search Modal */}
-      <Modal
-        title="检索知识库"
-        open={searchModalOpen}
-        onCancel={() => setSearchModalOpen(false)}
-        footer={null}
-        width={800}
-      >
-        <Input.Search
-          placeholder="输入检索内容..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          onSearch={() => selectedKbId && handleSearch(selectedKbId)}
-          loading={searching}
-          enterButton={<Button type="primary" icon={<SearchOutlined />}>检索</Button>}
-          style={{ marginBottom: 16 }}
-        />
-        <Table
-          columns={searchColumns}
-          dataSource={searchResults}
-          rowKey={(record) => record.chunk_id}
-          pagination={{ pageSize: 10 }}
-        />
       </Modal>
 
       {/* Detail Drawer */}

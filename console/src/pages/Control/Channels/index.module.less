@@ -4,8 +4,8 @@
 
 .pageHeader {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  flex-direction: column;
+  gap: 8px;
   margin-bottom: 24px;
 }
 
@@ -19,38 +19,6 @@
   color: #999;
   font-size: 14px;
   margin: 0;
-}
-
-.filterTabs {
-  display: flex;
-  gap: 4px;
-  padding: 4px;
-  background: rgba(0, 0, 0, 0.04);
-  border-radius: 10px;
-  align-self: center;
-}
-
-.filterTab {
-  padding: 5px 14px;
-  border-radius: 7px;
-  border: none;
-  background: transparent;
-  font-size: 13px;
-  color: #666;
-  cursor: pointer;
-  transition: all 0.18s ease;
-
-  &:hover {
-    color: #333;
-    background: rgba(0, 0, 0, 0.04);
-  }
-}
-
-.filterTabActive {
-  background: #fff;
-  color: #615ced;
-  font-weight: 500;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
 .loading {
@@ -242,25 +210,6 @@
 
   .description {
     color: rgba(255, 255, 255, 0.35);
-  }
-
-  .filterTabs {
-    background: rgba(255, 255, 255, 0.06);
-  }
-
-  .filterTab {
-    color: rgba(255, 255, 255, 0.45);
-
-    &:hover {
-      color: rgba(255, 255, 255, 0.75);
-      background: rgba(255, 255, 255, 0.06);
-    }
-  }
-
-  .filterTabActive {
-    background: #2a2a2a;
-    color: #8b87f0;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
   }
 
   .loadingText {

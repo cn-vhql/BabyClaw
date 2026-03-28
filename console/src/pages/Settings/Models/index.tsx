@@ -128,16 +128,6 @@ function ModelsPage() {
       ),
     },
     {
-      title: t("models.providerType"),
-      key: "providerType",
-      width: 100,
-      render: (_: unknown, record: ProviderInfo) => (
-        <Tag color={record.is_local ? "purple" : "cyan"} style={{ fontSize: 11 }}>
-          {record.is_local ? t("models.local") : t("models.remote")}
-        </Tag>
-      ),
-    },
-    {
       title: t("models.status"),
       key: "status",
       width: 150,

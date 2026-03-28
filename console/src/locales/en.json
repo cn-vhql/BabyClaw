@@ -299,6 +299,9 @@
     "notificationHint": "When a specific channel is selected, notifications use that channel's most recent active session. If no valid session exists, the run stays silent.",
     "sourcePrefix": "Source: {{source}}",
     "unknownSource": "Unknown source",
+    "viewDetails": "View Details",
+    "noteDetails": "Note Details",
+    "emptyContent": "No note content",
     "noTags": "No tags",
     "tools": {
       "addTagDesc": "Add a new focus tag for future scheduled monitoring.",
