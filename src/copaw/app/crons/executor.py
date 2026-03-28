@@ -96,7 +96,9 @@ class CronExecutor:
 
     async def _execute_evolution(self, job: CronJobSpec) -> None:
         """Execute evolution task."""
+        from ..evolution.config_sync import sync_evolution_config_with_cron
         from ..evolution.executor import EvolutionExecutor
+        from ..evolution.models import EvolutionRunRequest
 
         logger.info(
             "cron evolution: job_id=%s executing evolution",
@@ -106,41 +108,69 @@ class CronExecutor:
         assert job.evolution_config is not None
         assert self._workspace is not None, "Workspace required for evolution tasks"
 
-        # Get evolution repository
-        evolution_repo = self._workspace.evolution_repo
+        await sync_evolution_config_with_cron(self._workspace)
 
-        # Create executor
+        if not self._workspace.config.evolution.enabled:
+            logger.info(
+                "cron evolution: job_id=%s skipped because evolution is disabled",
+                job.id,
+            )
+            return
+
+        evolution_repo = self._workspace.evolution_repo
+        running = await evolution_repo.get_running_record()
+        if running:
+            logger.info(
+                "cron evolution: job_id=%s skipped because record %s is running",
+                job.id,
+                running.id,
+            )
+            return
+
+        generation = await evolution_repo.get_current_generation()
+        next_generation = generation + 1
+        max_gen = self._workspace.config.evolution.max_generations
+        if max_gen is not None and max_gen > 0 and next_generation > max_gen:
+            await evolution_repo.create_failed_record(
+                generation=next_generation,
+                agent_id=self._workspace.agent_id,
+                agent_name=self._workspace.config.name,
+                trigger_type=job.evolution_config.trigger_type,
+                error_message=f"已达到最大代数限制 ({max_gen})",
+            )
+            logger.info(
+                "cron evolution: job_id=%s blocked by max generation limit",
+                job.id,
+            )
+            return
+
+        record, _ = await evolution_repo.create_running_record(
+            agent_id=self._workspace.agent_id,
+            agent_name=self._workspace.config.name,
+            trigger_type=job.evolution_config.trigger_type,
+        )
+        if record is None:
+            logger.info("cron evolution: job_id=%s skipped by single-flight lock", job.id)
+            return
+
         executor = EvolutionExecutor(
             workspace=self._workspace,
             repo=evolution_repo,
         )
-
-        # Build request
-        from ..evolution.models import EvolutionRunRequest
-
         request = EvolutionRunRequest(
             trigger_type=job.evolution_config.trigger_type,
-            max_iterations=job.evolution_config.max_iterations,
             timeout_seconds=job.evolution_config.timeout_seconds,
         )
 
         try:
-            # Execute evolution
-            await asyncio.wait_for(
-                executor.execute(request),
-                timeout=job.evolution_config.timeout_seconds,
-            )
+            current_task = asyncio.current_task()
+            if current_task is not None:
+                evolution_repo.register_task(record.id, current_task)
+            await executor.execute_with_record(request, record)
             logger.info(
                 "cron evolution: job_id=%s completed successfully",
                 job.id,
             )
-        except asyncio.TimeoutError:
-            logger.warning(
-                "cron evolution: job_id=%s timed out after %ss",
-                job.id,
-                job.evolution_config.timeout_seconds,
-            )
-            raise
         except Exception as e:
             logger.error(
                 "cron evolution: job_id=%s failed: %s",
@@ -149,3 +179,5 @@ class CronExecutor:
                 exc_info=True,
             )
             raise
+        finally:
+            evolution_repo.unregister_task(record.id)

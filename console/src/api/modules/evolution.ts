@@ -3,6 +3,7 @@ import type {
   EvolutionConfig,
   EvolutionRecord,
   EvolutionArchive,
+  EvolutionRollbackResult,
   EvolutionRunRequest,
 } from "../types/evolution";
 
@@ -32,6 +33,16 @@ export const evolutionApi = {
     request<EvolutionRecord>("/evolution/run", {
       method: "POST",
       body: JSON.stringify(req),
+    }),
+
+  cancelRecord: (recordId: string) =>
+    request<EvolutionRecord>(`/evolution/records/${recordId}/cancel`, {
+      method: "POST",
+    }),
+
+  rollbackRecord: (recordId: string) =>
+    request<EvolutionRollbackResult>(`/evolution/records/${recordId}/rollback`, {
+      method: "POST",
     }),
 
   getArchiveFile: (archiveId: string, filename: string) =>

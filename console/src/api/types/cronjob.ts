@@ -32,7 +32,6 @@ export interface CronJobRequest {
 
 export interface EvolutionJobConfig {
   trigger_type?: "cron" | "auto";
-  max_iterations?: number;
   timeout_seconds?: number;
 }
 

@@ -3,7 +3,12 @@
  */
 
 export type EvolutionTriggerType = "manual" | "cron" | "auto";
-export type EvolutionStatus = "running" | "success" | "failed" | "cancelled";
+export type EvolutionStatus =
+  | "running"
+  | "success"
+  | "failed"
+  | "cancelled"
+  | "reverted";
 
 export interface EvolutionConfig {
   enabled: boolean;
@@ -19,22 +24,14 @@ export interface EvolutionRecord {
   agent_name: string;
   timestamp: string;
   trigger_type: EvolutionTriggerType;
-
-  soul_before?: string;
-  soul_after?: string;
-  profile_before?: string;
-  profile_after?: string;
-  plan_before?: string;
-  plan_after?: string;
-
   status: EvolutionStatus;
+  is_active: boolean;
+  archive_id?: string;
+  reverted_to_record_id?: string;
   error_message?: string;
-
   tool_calls_count: number;
   tools_used: string[];
-
   output_summary: string;
-
   duration_seconds?: number;
   tokens_used?: number;
 }
@@ -44,7 +41,9 @@ export interface EvolutionArchive {
   evolution_id: string;
   generation: number;
   timestamp: string;
-  files: Record<string, string>;
+  before_files: Record<string, string>;
+  after_files: Record<string, string>;
+  changed_files: string[];
   tool_execution_log: Array<{
     tool?: string;
     call_id?: string;
@@ -60,11 +59,17 @@ export interface EvolutionArchive {
   }>;
   full_output: string;
   memory_snapshot?: Record<string, unknown>;
+  reverted_to_record_id?: string;
+}
+
+export interface EvolutionRollbackResult {
+  active_record_id: string;
+  reverted_record: EvolutionRecord;
+  active_record: EvolutionRecord;
 }
 
 export interface EvolutionRunRequest {
   trigger_type?: EvolutionTriggerType;
   custom_prompt?: string;
-  max_iterations?: number;
   timeout_seconds?: number;
 }

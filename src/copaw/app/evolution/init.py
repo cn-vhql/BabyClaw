@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 """Initialize evolution-related preset files."""
 
+import logging
 from datetime import datetime
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 DEFAULT_PLAN_TEMPLATE = """# 智能体进化计划

@@ -9,7 +9,10 @@ from agentscope.message import TextBlock
 from agentscope.tool import ToolResponse
 
 from ...constant import WORKING_DIR
-from ...config.context import get_current_workspace_dir
+from ...config.context import (
+    get_current_allowed_write_files,
+    get_current_workspace_dir,
+)
 from .utils import truncate_file_output, read_file_safe
 
 
@@ -30,6 +33,28 @@ def _resolve_file_path(file_path: str) -> str:
         # Use current workspace_dir from context, fallback to WORKING_DIR
         workspace_dir = get_current_workspace_dir() or WORKING_DIR
         return str(workspace_dir / file_path)
+
+
+def _validate_write_path(file_path: str) -> str | None:
+    """Return an error message when the resolved path is not writable."""
+    allowed_files = get_current_allowed_write_files()
+    if not allowed_files:
+        return None
+
+    resolved = Path(file_path).resolve()
+    workspace_dir = (get_current_workspace_dir() or WORKING_DIR).resolve()
+    allowed_paths = {
+        (workspace_dir / allowed_file).resolve()
+        for allowed_file in allowed_files
+    }
+    if resolved in allowed_paths:
+        return None
+
+    allowed_names = ", ".join(sorted(allowed_files))
+    return (
+        "Error: This operation can only modify the following files: "
+        f"{allowed_names}."
+    )
 
 
 async def read_file(  # pylint: disable=too-many-return-statements
@@ -186,6 +211,16 @@ async def write_file(
         )
 
     file_path = _resolve_file_path(file_path)
+    validation_error = _validate_write_path(file_path)
+    if validation_error:
+        return ToolResponse(
+            content=[
+                TextBlock(
+                    type="text",
+                    text=validation_error,
+                ),
+            ],
+        )
 
     try:
         with open(file_path, "w", encoding="utf-8") as file:
@@ -238,6 +273,16 @@ async def edit_file(
         )
 
     resolved_path = _resolve_file_path(file_path)
+    validation_error = _validate_write_path(resolved_path)
+    if validation_error:
+        return ToolResponse(
+            content=[
+                TextBlock(
+                    type="text",
+                    text=validation_error,
+                ),
+            ],
+        )
 
     if not os.path.exists(resolved_path):
         return ToolResponse(

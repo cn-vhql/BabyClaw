@@ -225,6 +225,11 @@ class AgentRunner(Runner):
             session_id = request.session_id
             user_id = request.user_id
             channel = getattr(request, "channel", DEFAULT_CHANNEL)
+            is_evolution_request = bool(
+                user_id == "evolution_system"
+                and session_id
+                and str(session_id).startswith("evolution:")
+            )
 
             logger.info(
                 "Handle agent query:\n%s",
@@ -263,6 +268,7 @@ class AgentRunner(Runner):
             agent = CoPawAgent(
                 agent_config=agent_config,
                 env_context=env_context,
+                enable_memory_manager=not is_evolution_request,
                 mcp_clients=mcp_clients,
                 memory_manager=self.memory_manager,
                 request_context={
@@ -270,6 +276,7 @@ class AgentRunner(Runner):
                     "user_id": user_id,
                     "channel": channel,
                     "agent_id": self.agent_id,
+                    "is_evolution": "1" if is_evolution_request else "",
                 },
                 workspace_dir=self.workspace_dir,
             )
@@ -295,7 +302,7 @@ class AgentRunner(Runner):
                 f"agent_id={self.agent_id}",
             )
 
-            if self._chat_manager is not None:
+            if self._chat_manager is not None and not is_evolution_request:
                 logger.debug(
                     f"Runner: Calling get_or_create_chat for "
                     f"session_id={session_id}, user_id={user_id}, "
@@ -308,7 +315,7 @@ class AgentRunner(Runner):
                     name=name,
                 )
                 logger.debug(f"Runner: Got chat: {chat.id}")
-            else:
+            elif self._chat_manager is None:
                 logger.warning(
                     f"ChatManager is None! Cannot auto-register chat for "
                     f"session_id={session_id}",

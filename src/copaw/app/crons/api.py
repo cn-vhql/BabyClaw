@@ -6,6 +6,10 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from .manager import CronManager
 from .models import CronJobSpec, CronJobView
+from ..evolution.config_sync import (
+    AUTO_EVOLUTION_JOB_ID,
+    sync_evolution_config_with_cron,
+)
 
 router = APIRouter(prefix="/cron", tags=["cron"])
 
@@ -40,6 +44,7 @@ async def get_job(job_id: str, mgr: CronManager = Depends(get_cron_manager)):
 
 @router.post("/jobs", response_model=CronJobSpec)
 async def create_job(
+    request: Request,
     spec: CronJobSpec,
     mgr: CronManager = Depends(get_cron_manager),
 ):
@@ -47,11 +52,16 @@ async def create_job(
     job_id = str(uuid.uuid4())
     created = spec.model_copy(update={"id": job_id})
     await mgr.create_or_replace_job(created)
+    from ..agent_context import get_agent_for_request
+
+    workspace = await get_agent_for_request(request)
+    await sync_evolution_config_with_cron(workspace)
     return created
 
 
 @router.put("/jobs/{job_id}", response_model=CronJobSpec)
 async def replace_job(
+    request: Request,
     job_id: str,
     spec: CronJobSpec,
     mgr: CronManager = Depends(get_cron_manager),
@@ -59,17 +69,28 @@ async def replace_job(
     if spec.id != job_id:
         raise HTTPException(status_code=400, detail="job_id mismatch")
     await mgr.create_or_replace_job(spec)
+    if job_id == AUTO_EVOLUTION_JOB_ID:
+        from ..agent_context import get_agent_for_request
+
+        workspace = await get_agent_for_request(request)
+        await sync_evolution_config_with_cron(workspace)
     return spec
 
 
 @router.delete("/jobs/{job_id}")
 async def delete_job(
+    request: Request,
     job_id: str,
     mgr: CronManager = Depends(get_cron_manager),
 ):
     ok = await mgr.delete_job(job_id)
     if not ok:
         raise HTTPException(status_code=404, detail="job not found")
+    if job_id == AUTO_EVOLUTION_JOB_ID:
+        from ..agent_context import get_agent_for_request
+
+        workspace = await get_agent_for_request(request)
+        await sync_evolution_config_with_cron(workspace)
     return {"deleted": True}
 
 

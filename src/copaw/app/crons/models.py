@@ -124,7 +124,6 @@ class EvolutionJobConfig(BaseModel):
     """Configuration for evolution task type."""
 
     trigger_type: Literal["cron", "auto"] = "cron"
-    max_iterations: int = 10
     timeout_seconds: int = 300
 
 

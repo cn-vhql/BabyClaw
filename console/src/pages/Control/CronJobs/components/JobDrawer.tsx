@@ -272,14 +272,6 @@ export function JobDrawer({
                   </Form.Item>
 
                   <Form.Item
-                    name={["evolution_config", "max_iterations"]}
-                    label="最大迭代次数"
-                    initialValue={10}
-                  >
-                    <InputNumber min={1} max={100} style={{ width: "100%" }} />
-                  </Form.Item>
-
-                  <Form.Item
                     name={["evolution_config", "timeout_seconds"]}
                     label="超时时间（秒）"
                     initialValue={300}

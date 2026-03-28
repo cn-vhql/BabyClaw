@@ -17,6 +17,7 @@ export function EvolutionSettingsModal({
 }: Props) {
   const [form] = Form.useForm<EvolutionConfig>();
   const [loading, setLoading] = useState(false);
+  const enabled = Form.useWatch("enabled", form);
 
   const loadConfig = useCallback(async () => {
     try {
@@ -72,7 +73,7 @@ export function EvolutionSettingsModal({
           valuePropName="checked"
           tooltip="开启后会创建默认定时任务（每日12:00），可在定时任务页面修改"
         >
-          <Switch />
+          <Switch disabled={!enabled} />
         </Form.Item>
 
         <Form.Item noStyle shouldUpdate={(prev, cur) => prev.auto_evolution !== cur.auto_evolution}>

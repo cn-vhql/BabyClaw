@@ -79,8 +79,9 @@ async def list_chats(
     tracker = workspace.task_tracker
     result = []
     for spec in chats:
+        if spec.is_evolution:
+            continue
         status = await tracker.get_status(spec.id)
-        # Include is_evolution in serialized output
         result.append(spec.model_copy(update={
             "status": status,
             "meta": {**spec.meta, "is_evolution": spec.is_evolution}

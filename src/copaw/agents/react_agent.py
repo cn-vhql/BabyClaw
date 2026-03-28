@@ -56,6 +56,7 @@ from ..constant import (
     WORKING_DIR,
 )
 from ..agents.memory import MemoryManager
+from ..app.evolution.models import CORE_EVOLUTION_FILES
 
 if TYPE_CHECKING:
     from ..config.config import AgentProfileConfig
@@ -123,6 +124,7 @@ class CoPawAgent(ToolGuardMixin, ReActAgent):
         self._mcp_clients = mcp_clients or []
         self._namesake_strategy = namesake_strategy
         self._workspace_dir = workspace_dir
+        self._is_evolution_mode = bool(self._request_context.get("is_evolution"))
 
         # Extract configuration from agent_config
         running_config = agent_config.running
@@ -132,7 +134,8 @@ class CoPawAgent(ToolGuardMixin, ReActAgent):
         toolkit = self._create_toolkit(namesake_strategy=namesake_strategy)
 
         # Load and register skills
-        self._register_skills(toolkit)
+        if not self._is_evolution_mode:
+            self._register_skills(toolkit)
 
         # Build system prompt
         sys_prompt = self._build_sys_prompt()
@@ -202,28 +205,37 @@ class CoPawAgent(ToolGuardMixin, ReActAgent):
                 "all tools will be disabled",
             )
 
-        # Map of tool functions
-        tool_functions = {
-            "execute_shell_command": execute_shell_command,
-            "read_file": read_file,
-            "write_file": write_file,
-            "edit_file": edit_file,
-            "grep_search": grep_search,
-            "glob_search": glob_search,
-            "browser_use": browser_use,
-            "desktop_screenshot": desktop_screenshot,
-            "view_image": view_image,
-            "send_file_to_user": send_file_to_user,
-            "get_current_time": get_current_time,
-            "set_user_timezone": set_user_timezone,
-            "get_token_usage": get_token_usage,
-            "knowledge_search": knowledge_search,
-            "list_knowledge_bases": list_knowledge_bases,
-            "add_focus_tag": add_focus_tag,
-            "list_focus_tags": list_focus_tags,
-            "remove_focus_tag": remove_focus_tag,
-            "write_focus_note": write_focus_note,
-        }
+        if self._is_evolution_mode:
+            tool_functions = {
+                "read_file": read_file,
+                "write_file": write_file,
+                "edit_file": edit_file,
+                "grep_search": grep_search,
+                "glob_search": glob_search,
+            }
+        else:
+            # Map of tool functions
+            tool_functions = {
+                "execute_shell_command": execute_shell_command,
+                "read_file": read_file,
+                "write_file": write_file,
+                "edit_file": edit_file,
+                "grep_search": grep_search,
+                "glob_search": glob_search,
+                "browser_use": browser_use,
+                "desktop_screenshot": desktop_screenshot,
+                "view_image": view_image,
+                "send_file_to_user": send_file_to_user,
+                "get_current_time": get_current_time,
+                "set_user_timezone": set_user_timezone,
+                "get_token_usage": get_token_usage,
+                "knowledge_search": knowledge_search,
+                "list_knowledge_bases": list_knowledge_bases,
+                "add_focus_tag": add_focus_tag,
+                "list_focus_tags": list_focus_tags,
+                "remove_focus_tag": remove_focus_tag,
+                "write_focus_note": write_focus_note,
+            }
 
         # Register only enabled tools
         for tool_name, tool_func in tool_functions.items():
@@ -311,6 +323,9 @@ class CoPawAgent(ToolGuardMixin, ReActAgent):
             namesake_strategy: Strategy to handle namesake tool functions
         """
         # Check env var: if ENABLE_MEMORY_MANAGER=false, disable memory manager
+        if self._is_evolution_mode:
+            enable_memory_manager = False
+
         env_enable_mm = os.getenv("ENABLE_MEMORY_MANAGER", "")
         if env_enable_mm.lower() == "false":
             enable_memory_manager = False
@@ -810,9 +825,15 @@ class CoPawAgent(ToolGuardMixin, ReActAgent):
             Response message
         """
         # Set workspace_dir in context for tool functions
-        from ..config.context import set_current_workspace_dir
+        from ..config.context import (
+            set_current_allowed_write_files,
+            set_current_workspace_dir,
+        )
 
         set_current_workspace_dir(self._workspace_dir)
+        set_current_allowed_write_files(
+            CORE_EVOLUTION_FILES if self._is_evolution_mode else None,
+        )
 
         # Process file and media blocks in messages
         if msg is not None:

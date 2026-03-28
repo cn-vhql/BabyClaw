@@ -1,7 +1,10 @@
-import { Drawer, Tabs, Card, Spinner, Empty, Tag } from "@agentscope-ai/design";
-import { useState, useEffect } from "react";
+import { Card, Drawer, Empty, Spinner, Tabs, Tag } from "@agentscope-ai/design";
+import { useEffect, useState } from "react";
 import { evolutionApi } from "../../../../api/modules/evolution";
-import type { EvolutionRecord, EvolutionArchive } from "../../../../api/types/evolution";
+import type {
+  EvolutionArchive,
+  EvolutionRecord,
+} from "../../../../api/types/evolution";
 import { LazyMarkdown } from "../../../../components/LazyMarkdown";
 import { stripFrontmatter } from "../../../../utils/markdown";
 import styles from "./EvolutionDetailDrawer.module.less";
@@ -106,35 +109,47 @@ function normalizeStructuredRecords(
 
 export function EvolutionDetailDrawer({ open, record, onClose }: Props) {
   const [archive, setArchive] = useState<EvolutionArchive | null>(null);
+  const [detail, setDetail] = useState<EvolutionRecord | null>(null);
   const [activeTab, setActiveTab] = useState("soul");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (open && record) {
       setArchive(null);
+      setDetail(null);
       setActiveTab("soul");
-      loadArchive(record.id);
-    } else if (!open) {
-      setArchive(null);
-      setActiveTab("soul");
+      void loadDetail(record.id);
+      return;
     }
+
+    setArchive(null);
+    setDetail(null);
+    setActiveTab("soul");
   }, [open, record]);
 
-  const loadArchive = async (recordId: string) => {
+  const loadDetail = async (recordId: string) => {
     setLoading(true);
     try {
-      const archive = await evolutionApi.getArchiveByRecord(recordId);
-      setArchive(archive);
+      const [nextRecord, nextArchive] = await Promise.all([
+        evolutionApi.getRecord(recordId),
+        evolutionApi.getArchiveByRecord(recordId).catch(() => null),
+      ]);
+      setDetail(nextRecord);
+      setArchive(nextArchive);
     } catch (error) {
-      console.error("Failed to load archive:", error);
+      console.error("Failed to load evolution detail:", error);
+      setDetail(null);
       setArchive(null);
     } finally {
       setLoading(false);
     }
   };
 
-  const renderFileDiff = (before: string | undefined, after: string | undefined) => {
+  const renderFileDiff = (filename: string) => {
+    const before = archive?.before_files?.[filename];
+    const after = archive?.after_files?.[filename];
     if (!before && !after) return renderCenteredEmpty("无数据");
+
     return (
       <div className={styles.fileDiff}>
         <Card title="进化前" size="small" className={styles.detailCard}>
@@ -155,30 +170,15 @@ export function EvolutionDetailDrawer({ open, record, onClose }: Props) {
     );
   };
 
-  const renderSoulTab = () => {
-    if (!record) return null;
-    return renderFileDiff(record.soul_before, record.soul_after);
-  };
-
-  const renderProfileTab = () => {
-    if (!record) return null;
-    return renderFileDiff(record.profile_before, record.profile_after);
-  };
-
-  const renderPlanTab = () => {
-    if (!record) return null;
-    return renderFileDiff(record.plan_before, record.plan_after);
-  };
-
   const renderToolsTab = () => {
-    if (!record) return null;
+    if (!detail) return null;
     const toolLogs = normalizeToolLogs(archive);
-    const toolsUsed = Array.isArray(record.tools_used) ? record.tools_used : [];
+    const toolsUsed = Array.isArray(detail.tools_used) ? detail.tools_used : [];
     const derivedToolsUsed =
       toolsUsed.length > 0
         ? toolsUsed
         : Array.from(new Set(toolLogs.map((log) => log.tool).filter(Boolean)));
-    const toolCallCount = Math.max(record.tool_calls_count || 0, toolLogs.length);
+    const toolCallCount = Math.max(detail.tool_calls_count || 0, toolLogs.length);
 
     return (
       <div className={styles.toolsTab}>
@@ -210,23 +210,21 @@ export function EvolutionDetailDrawer({ open, record, onClose }: Props) {
               <div key={log.key} className={styles.toolLog}>
                 <div className={styles.toolLogHeader}>
                   <strong>{log.tool}</strong>
-                  {log.callId && <Tag>{log.callId}</Tag>}
+                  {log.callId ? <Tag>{log.callId}</Tag> : null}
                   <span>{formatDisplayTime(log.timestamp)}</span>
                 </div>
-
-                {log.args !== undefined && stringifyValue(log.args) && (
+                {log.args !== undefined && stringifyValue(log.args) ? (
                   <div className={styles.toolLogSection}>
                     <strong>参数:</strong>
                     <pre className={styles.fileContent}>{stringifyValue(log.args)}</pre>
                   </div>
-                )}
-
-                {log.result !== undefined && log.result !== null && (
+                ) : null}
+                {log.result !== undefined && log.result !== null ? (
                   <div className={styles.toolLogSection}>
                     <strong>结果:</strong>
                     <pre className={styles.fileContent}>{stringifyValue(log.result)}</pre>
                   </div>
-                )}
+                ) : null}
               </div>
             ))}
           </Card>
@@ -241,7 +239,7 @@ export function EvolutionDetailDrawer({ open, record, onClose }: Props) {
 
   const renderStructuredTab = () => {
     const structuredRecords = normalizeStructuredRecords(archive);
-    const evolutionLog = archive?.files?.["EVOLUTION.md"];
+    const evolutionLog = archive?.after_files?.["EVOLUTION.md"];
 
     if (!evolutionLog && structuredRecords.length === 0) {
       return renderCenteredEmpty("无结构记录");
@@ -254,7 +252,6 @@ export function EvolutionDetailDrawer({ open, record, onClose }: Props) {
             <MarkdownPreview content={evolutionLog} />
           </Card>
         ) : null}
-
         {structuredRecords.length > 0 ? (
           <Card
             title={`结构记录 (${structuredRecords.length})`}
@@ -278,15 +275,9 @@ export function EvolutionDetailDrawer({ open, record, onClose }: Props) {
   };
 
   const renderOutputTab = () => {
-    const output = archive?.full_output || record?.output_summary || "";
-    const outputLength = output?.length || 0;
-
+    const output = archive?.full_output || detail?.output_summary || "";
     return (
-      <Card
-        title={`智能体输出 ${outputLength > 0 ? `(${outputLength} 字符)` : ""}`}
-        size="small"
-        className={styles.detailCard}
-      >
+      <Card title="智能体输出" size="small" className={styles.detailCard}>
         {output ? (
           <pre className={styles.fileContent}>{output}</pre>
         ) : (
@@ -297,7 +288,7 @@ export function EvolutionDetailDrawer({ open, record, onClose }: Props) {
   };
 
   const renderMemoryTab = () => {
-    if (!archive) return renderCenteredEmpty("无记忆快照");
+    if (!archive?.memory_snapshot) return renderCenteredEmpty("无记忆快照");
     return (
       <Card title="记忆快照" size="small" className={styles.detailCard}>
         <pre className={styles.fileContent}>
@@ -307,22 +298,43 @@ export function EvolutionDetailDrawer({ open, record, onClose }: Props) {
     );
   };
 
+  const renderActiveTab = () => {
+    switch (activeTab) {
+      case "soul":
+        return renderFileDiff("SOUL.md");
+      case "profile":
+        return renderFileDiff("PROFILE.md");
+      case "plan":
+        return renderFileDiff("PLAN.md");
+      case "tools":
+        return renderToolsTab();
+      case "structured":
+        return renderStructuredTab();
+      case "output":
+        return renderOutputTab();
+      case "memory":
+        return renderMemoryTab();
+      default:
+        return null;
+    }
+  };
+
   const tabItems = [
-    { key: "soul", label: "Soul", children: renderSoulTab() },
-    { key: "profile", label: "Profile", children: renderProfileTab() },
-    { key: "plan", label: "Plan", children: renderPlanTab() },
-    { key: "tools", label: "工具记录", children: renderToolsTab() },
-    { key: "structured", label: "结构记录", children: renderStructuredTab() },
-    { key: "output", label: "输出", children: renderOutputTab() },
-    { key: "memory", label: "记忆", children: renderMemoryTab() },
+    { key: "soul", label: "Soul" },
+    { key: "profile", label: "Profile" },
+    { key: "plan", label: "Plan" },
+    { key: "tools", label: "工具记录" },
+    { key: "structured", label: "结构记录" },
+    { key: "output", label: "输出" },
+    ...(archive?.memory_snapshot ? [{ key: "memory", label: "记忆" }] : []),
   ];
 
   return (
     <Drawer
-      title={`进化详情 - 第${record?.generation}代`}
+      title={`进化详情 - 第${detail?.generation || record?.generation || "-"}代`}
       onClose={onClose}
       open={open}
-      width={800}
+      width={860}
     >
       {loading ? (
         <div className={styles.loadingPanel}>
@@ -330,11 +342,8 @@ export function EvolutionDetailDrawer({ open, record, onClose }: Props) {
         </div>
       ) : (
         <div className={styles.tabsWrapper}>
-          <Tabs
-            activeKey={activeTab}
-            onChange={setActiveTab}
-            items={tabItems}
-          />
+          <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} />
+          {renderActiveTab()}
         </div>
       )}
     </Drawer>

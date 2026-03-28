@@ -1,14 +1,17 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Button,
-  Table,
-  message,
-  Tag,
   Popconfirm,
+  Table,
+  Tag,
+  message,
 } from "@agentscope-ai/design";
-import { useAgentStore } from "../../../stores/agentStore";
 import { evolutionApi } from "../../../api/modules/evolution";
-import type { EvolutionRecord } from "../../../api/types/evolution";
+import type {
+  EvolutionConfig,
+  EvolutionRecord,
+} from "../../../api/types/evolution";
+import { useAgentStore } from "../../../stores/agentStore";
 import { EvolutionDetailDrawer } from "./components/EvolutionDetailDrawer";
 import { EvolutionSettingsModal } from "./components/EvolutionSettingsModal";
 import styles from "./index.module.less";
@@ -24,88 +27,133 @@ type EvolutionApiError = Error & {
 function EvolutionPage() {
   const { selectedAgent } = useAgentStore();
   const [records, setRecords] = useState<EvolutionRecord[]>([]);
+  const [config, setConfig] = useState<EvolutionConfig | null>(null);
   const [loading, setLoading] = useState(false);
-  const [evolving, setEvolving] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<EvolutionRecord | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [pageVisible, setPageVisible] = useState(
+    typeof document === "undefined" ? true : !document.hidden,
+  );
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
-  const stopPolling = useCallback(() => {
+  const hasRunningRecord = records.some((record) => record.status === "running");
+
+  const stopPolling = () => {
     if (pollingRef.current) {
       clearInterval(pollingRef.current);
       pollingRef.current = null;
     }
-    setEvolving(false);
-  }, []);
+  };
 
-  const loadRecordsRef = useRef<() => Promise<void>>(async () => {});
+  const loadConfig = async () => {
+    if (!selectedAgent) return;
+    try {
+      const nextConfig = await evolutionApi.getConfig();
+      setConfig(nextConfig);
+    } catch {
+      message.error("加载进化配置失败");
+    }
+  };
 
-  const startPolling = useCallback(() => {
-    if (pollingRef.current) return;
-    setEvolving(true);
-    pollingRef.current = setInterval(() => {
-      void loadRecordsRef.current();
-    }, 3000);
-  }, []);
-
-  const loadRecords = useCallback(async () => {
+  const loadRecords = async () => {
     if (!selectedAgent) return;
     setLoading(true);
     try {
-      const records = await evolutionApi.listRecords(50);
-      setRecords(records || []);
-
-      // Check if there's a running record
-      const runningRecord = records?.find(r => r.status === "running");
-      if (runningRecord && !pollingRef.current) {
-        startPolling();
-      } else if (!runningRecord && pollingRef.current) {
-        stopPolling();
-      }
+      const nextRecords = await evolutionApi.listRecords(50);
+      setRecords(nextRecords || []);
     } catch {
       message.error("加载进化记录失败");
     } finally {
       setLoading(false);
     }
-  }, [selectedAgent, startPolling, stopPolling]);
+  };
 
   useEffect(() => {
-    loadRecordsRef.current = loadRecords;
-  }, [loadRecords]);
-
-  useEffect(() => {
+    void loadConfig();
     void loadRecords();
-    return stopPolling;
-  }, [loadRecords, stopPolling]);
+    return () => stopPolling();
+  }, [selectedAgent]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setPageVisible(!document.hidden);
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (pageVisible && hasRunningRecord) {
+      if (!pollingRef.current) {
+        pollingRef.current = setInterval(() => {
+          void loadRecords();
+        }, 5000);
+      }
+      return;
+    }
+    stopPolling();
+  }, [hasRunningRecord, pageVisible, selectedAgent]);
 
   const handleRunEvolution = async () => {
     try {
-      setEvolving(true);
+      setActionLoading(true);
       await evolutionApi.runEvolution({ trigger_type: "manual" });
       message.success("进化任务已启动");
-      startPolling();
-      void loadRecords();
-    } catch {
-      message.error("启动进化失败");
-      setEvolving(false);
+      await loadRecords();
+    } catch (error) {
+      const evolutionError = error as EvolutionApiError;
+      message.error(evolutionError.response?.data?.detail || "启动进化失败");
+    } finally {
+      setActionLoading(false);
     }
   };
 
-  const handleViewDetail = (record: EvolutionRecord) => {
-    setSelectedRecord(record);
-    setDrawerOpen(true);
+  const handleCancelRecord = async (record: EvolutionRecord) => {
+    try {
+      setActionLoading(true);
+      await evolutionApi.cancelRecord(record.id);
+      message.success("进化任务已取消");
+      await loadRecords();
+    } catch (error) {
+      const evolutionError = error as EvolutionApiError;
+      message.error(evolutionError.response?.data?.detail || "取消失败");
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleDeleteRecord = async (record: EvolutionRecord) => {
     try {
+      setActionLoading(true);
       await evolutionApi.deleteRecord(record.id);
       message.success("记录已删除");
-      loadRecords();
+      await loadRecords();
     } catch (error) {
       const evolutionError = error as EvolutionApiError;
-      const messageText = evolutionError.response?.data?.detail || "删除失败";
-      message.error(messageText);
+      message.error(evolutionError.response?.data?.detail || "删除失败");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRollbackRecord = async (record: EvolutionRecord) => {
+    try {
+      setActionLoading(true);
+      await evolutionApi.rollbackRecord(record.id);
+      message.success("已回退到上一成功版本");
+      await loadRecords();
+      if (selectedRecord?.id === record.id) {
+        setSelectedRecord({ ...record, status: "reverted", is_active: false });
+      }
+    } catch (error) {
+      const evolutionError = error as EvolutionApiError;
+      message.error(evolutionError.response?.data?.detail || "回退失败");
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -115,6 +163,7 @@ function EvolutionPage() {
       success: { color: "green", text: "成功" },
       failed: { color: "red", text: "失败" },
       cancelled: { color: "orange", text: "已取消" },
+      reverted: { color: "default", text: "已作废" },
     };
     const { color, text } = statusMap[status] || { color: "default", text: status };
     return <Tag color={color}>{text}</Tag>;
@@ -124,11 +173,11 @@ function EvolutionPage() {
     try {
       const date = new Date(timestamp);
       const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      const hours = String(date.getHours()).padStart(2, '0');
-      const minutes = String(date.getMinutes()).padStart(2, '0');
-      const seconds = String(date.getSeconds()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      const hours = String(date.getHours()).padStart(2, "0");
+      const minutes = String(date.getMinutes()).padStart(2, "0");
+      const seconds = String(date.getSeconds()).padStart(2, "0");
       return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     } catch {
       return timestamp;
@@ -136,7 +185,17 @@ function EvolutionPage() {
   };
 
   const columns = [
-    { title: "代数", dataIndex: "generation", width: 80 },
+    {
+      title: "代数",
+      dataIndex: "generation",
+      width: 140,
+      render: (_: number, record: EvolutionRecord) => (
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span>第 {record.generation} 代</span>
+          {record.is_active ? <Tag color="gold">当前生效</Tag> : null}
+        </div>
+      ),
+    },
     {
       title: "时间",
       dataIndex: "timestamp",
@@ -171,20 +230,32 @@ function EvolutionPage() {
     {
       title: "操作",
       key: "actions",
-      width: 150,
+      width: 220,
       render: (_: unknown, record: EvolutionRecord) => (
         <div style={{ display: "flex", gap: 8 }}>
-          <Button
-            type="link"
-            size="small"
-            onClick={() => handleViewDetail(record)}
-          >
+          <Button type="link" size="small" onClick={() => {
+            setSelectedRecord(record);
+            setDrawerOpen(true);
+          }}>
             查看详情
           </Button>
-          {record.status === "failed" && (
+          {record.status === "running" ? (
+            <Popconfirm
+              title="确认取消"
+              description="确定要取消这条运行中的进化任务吗？"
+              onConfirm={() => handleCancelRecord(record)}
+              okText="确定"
+              cancelText="取消"
+            >
+              <Button type="link" size="small" danger>
+                取消
+              </Button>
+            </Popconfirm>
+          ) : null}
+          {record.status === "failed" || record.status === "cancelled" ? (
             <Popconfirm
               title="确认删除"
-              description="确定要删除这条失败的进化记录吗？"
+              description="确定要删除这条记录吗？"
               onConfirm={() => handleDeleteRecord(record)}
               okText="确定"
               cancelText="取消"
@@ -193,24 +264,26 @@ function EvolutionPage() {
                 删除
               </Button>
             </Popconfirm>
-          )}
-          {record.status === "running" && (
+          ) : null}
+          {record.status === "success" && record.is_active ? (
             <Popconfirm
-              title="确认终止"
-              description="确定要终止并删除这条运行中的进化记录吗？"
-              onConfirm={() => handleDeleteRecord(record)}
+              title="确认作废并回退"
+              description="确定要作废当前生效版本，并回退到上一成功版本吗？"
+              onConfirm={() => handleRollbackRecord(record)}
               okText="确定"
               cancelText="取消"
             >
-              <Button type="link" size="small" danger>
-                终止
+              <Button type="link" size="small">
+                作废并回退
               </Button>
             </Popconfirm>
-          )}
+          ) : null}
         </div>
       ),
     },
   ];
+
+  const runDisabled = actionLoading || hasRunningRecord || config?.enabled === false;
 
   return (
     <div className={styles.evolutionPage}>
@@ -226,10 +299,9 @@ function EvolutionPage() {
           <Button
             type="primary"
             onClick={handleRunEvolution}
-            disabled={evolving}
-            loading={evolving}
+            disabled={runDisabled}
           >
-            {evolving ? "进化中..." : "立即进化"}
+            {hasRunningRecord ? "进化中..." : "立即进化"}
           </Button>
         </div>
       </div>
@@ -237,7 +309,7 @@ function EvolutionPage() {
       <Table
         columns={columns}
         dataSource={records}
-        loading={loading}
+        loading={loading || actionLoading}
         rowKey="id"
         pagination={{ pageSize: 10 }}
       />
@@ -255,7 +327,8 @@ function EvolutionPage() {
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
         onConfigSaved={() => {
-          loadRecords();
+          void loadConfig();
+          void loadRecords();
         }}
       />
     </div>

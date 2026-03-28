@@ -4,13 +4,28 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 from shortuuid import ShortUUID
 
-# Generate short UUIDs
 _uuid = ShortUUID()
+
+CORE_EVOLUTION_FILES: tuple[str, ...] = (
+    "SOUL.md",
+    "PROFILE.md",
+    "PLAN.md",
+    "EVOLUTION.md",
+)
+
+EvolutionTriggerType = Literal["manual", "cron", "auto"]
+EvolutionStatus = Literal[
+    "running",
+    "success",
+    "failed",
+    "cancelled",
+    "reverted",
+]
 
 
 class EvolutionConfig(BaseModel):
@@ -18,73 +33,84 @@ class EvolutionConfig(BaseModel):
 
     enabled: bool = False
     auto_evolution: bool = False
-    max_generations: int | None = None  # None or 0 means unlimited
+    max_generations: int | None = None
     archive_enabled: bool = True
-    # Manual archive management, no max_archives limit
 
 
 class EvolutionRecord(BaseModel):
-    """Single evolution record."""
+    """Lightweight evolution record used by list/detail APIs."""
 
     id: str = Field(default_factory=lambda: _uuid.uuid())
     generation: int
     agent_id: str
     agent_name: str
     timestamp: datetime
-    trigger_type: str = "manual"  # manual, cron, auto
-
-    # Snapshots before and after evolution
-    soul_before: Optional[str] = None
-    soul_after: Optional[str] = None
-    profile_before: Optional[str] = None
-    profile_after: Optional[str] = None
-    plan_before: Optional[str] = None
-    plan_after: Optional[str] = None
-
-    # Execution result
-    status: str = "running"  # running, success, failed, cancelled
+    trigger_type: EvolutionTriggerType = "manual"
+    status: EvolutionStatus = "running"
+    is_active: bool = False
+    archive_id: Optional[str] = None
+    reverted_to_record_id: Optional[str] = None
     error_message: Optional[str] = None
-
-    # Tool usage records
     tool_calls_count: int = 0
     tools_used: list[str] = Field(default_factory=list)
-
-    # Output summary
     output_summary: str = ""
-
-    # Metadata
     duration_seconds: Optional[float] = None
     tokens_used: Optional[int] = None
 
 
-class EvolutionArchive(BaseModel):
-    """Evolution archive (complete snapshot)."""
+class EvolutionArchiveMeta(BaseModel):
+    """Archive metadata saved to meta.json."""
 
-    archive_id: str = Field(default_factory=lambda: _uuid.uuid())
+    archive_id: str
     evolution_id: str
     generation: int
     timestamp: datetime
-
-    # File snapshots
-    files: dict[str, str] = Field(default_factory=dict)
-
-    # Tool execution log
+    changed_files: list[str] = Field(default_factory=list)
     tool_execution_log: list[dict] = Field(default_factory=list)
-
-    # Structured records captured from completed message metadata/data blocks
     structured_records: list[dict] = Field(default_factory=list)
-
-    # Full output
     full_output: str = ""
-
-    # Memory snapshot
     memory_snapshot: Optional[dict] = None
+    reverted_to_record_id: Optional[str] = None
+
+
+class EvolutionArchive(BaseModel):
+    """Evolution archive returned by the API."""
+
+    archive_id: str
+    evolution_id: str
+    generation: int
+    timestamp: datetime
+    before_files: dict[str, str] = Field(default_factory=dict)
+    after_files: dict[str, str] = Field(default_factory=dict)
+    changed_files: list[str] = Field(default_factory=list)
+    tool_execution_log: list[dict] = Field(default_factory=list)
+    structured_records: list[dict] = Field(default_factory=list)
+    full_output: str = ""
+    memory_snapshot: Optional[dict] = None
+    reverted_to_record_id: Optional[str] = None
+
+
+class EvolutionIndexFile(BaseModel):
+    """On-disk JSON index for evolution records."""
+
+    version: int = 2
+    generation_counter: int = 0
+    active_record_id: Optional[str] = None
+    running_record_id: Optional[str] = None
+    records: list[EvolutionRecord] = Field(default_factory=list)
 
 
 class EvolutionRunRequest(BaseModel):
     """Request to execute evolution."""
 
-    trigger_type: str = "manual"  # manual, cron, auto
-    custom_prompt: Optional[str] = None  # Override SOUL.md
-    max_iterations: int = 10
+    trigger_type: EvolutionTriggerType = "manual"
+    custom_prompt: Optional[str] = None
     timeout_seconds: int = 300
+
+
+class EvolutionRollbackResult(BaseModel):
+    """Rollback response payload."""
+
+    active_record_id: str
+    reverted_record: EvolutionRecord
+    active_record: EvolutionRecord
