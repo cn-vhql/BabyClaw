@@ -6,6 +6,7 @@
 #   docker compose up -d --build
 #   docker compose -f docker-compose.full.yml up -d --build
 #   COPAW_APT_MIRROR=http://mirrors.tuna.tsinghua.edu.cn docker compose up -d --build
+#   COPAW_PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple docker compose up -d --build
 
 volumes:
   copaw-data:
@@ -20,6 +21,12 @@ services:
       dockerfile: deploy/Dockerfile
       args:
         APT_MIRROR: ${COPAW_APT_MIRROR:-http://mirrors.tuna.tsinghua.edu.cn}
+        NPM_REGISTRY: ${COPAW_NPM_REGISTRY:-https://registry.npmmirror.com}
+        PNPM_REGISTRY: ${COPAW_PNPM_REGISTRY:-https://registry.npmmirror.com}
+        PIP_INDEX_URL: ${COPAW_PIP_INDEX_URL:-https://pypi.tuna.tsinghua.edu.cn/simple}
+        PIP_TRUSTED_HOST: ${COPAW_PIP_TRUSTED_HOST:-pypi.tuna.tsinghua.edu.cn}
+        UV_DEFAULT_INDEX: ${COPAW_UV_DEFAULT_INDEX:-https://pypi.tuna.tsinghua.edu.cn/simple}
+        UV_INDEX_URL: ${COPAW_UV_INDEX_URL:-https://pypi.tuna.tsinghua.edu.cn/simple}
         INCLUDE_BROWSER: "false"
         INSTALL_OLLAMA: ${COPAW_INSTALL_OLLAMA:-false}
         COPAW_DISABLED_CHANNELS: ${COPAW_DISABLED_CHANNELS:-imessage}
@@ -47,7 +54,7 @@ services:
     mem_reservation: ${COPAW_MEM_RESERVATION:-1g}
     shm_size: ${COPAW_SHM_SIZE:-256m}
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8088/api/health"]
+      test: ["CMD", "curl", "-fsS", "http://localhost:8088/health"]
       interval: 30s
       timeout: 10s
       retries: 3

@@ -53,6 +53,13 @@ COPAW_IMAGE_TAG=my-copaw:dev docker compose up -d --build
 - `COPAW_BIND_HOST`: 对外绑定地址，默认 `0.0.0.0`
 - `COPAW_EXTERNAL_PORT`: 对外端口，默认 `8088`
 - `COPAW_DISABLED_CHANNELS`: 默认 `imessage`
+- `COPAW_APT_MIRROR`: APT 镜像，默认 `http://mirrors.tuna.tsinghua.edu.cn`
+- `COPAW_NPM_REGISTRY`: npm 镜像，默认 `https://registry.npmmirror.com`
+- `COPAW_PNPM_REGISTRY`: pnpm 镜像，默认 `https://registry.npmmirror.com`
+- `COPAW_PIP_INDEX_URL`: pip 镜像，默认 `https://pypi.tuna.tsinghua.edu.cn/simple`
+- `COPAW_PIP_TRUSTED_HOST`: pip 信任主机，默认 `pypi.tuna.tsinghua.edu.cn`
+- `COPAW_UV_DEFAULT_INDEX`: uv 默认索引，默认 `https://pypi.tuna.tsinghua.edu.cn/simple`
+- `COPAW_UV_INDEX_URL`: uv 兼容索引，默认 `https://pypi.tuna.tsinghua.edu.cn/simple`
 
 ### 资源限制
 
@@ -63,6 +70,11 @@ COPAW_IMAGE_TAG=my-copaw:dev docker compose up -d --build
 示例：
 
 ```bash
+COPAW_APT_MIRROR=http://mirrors.tuna.tsinghua.edu.cn \
+COPAW_NPM_REGISTRY=https://registry.npmmirror.com \
+COPAW_PNPM_REGISTRY=https://registry.npmmirror.com \
+COPAW_PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple \
+COPAW_UV_DEFAULT_INDEX=https://pypi.tuna.tsinghua.edu.cn/simple \
 COPAW_MEM_LIMIT=2g \
 COPAW_MEM_RESERVATION=1g \
 docker compose up -d --build
@@ -94,7 +106,7 @@ docker compose -f docker-compose.full.yml up -d --build
 两个版本都使用：
 
 ```text
-http://localhost:8088/api/health
+http://localhost:8088/health
 ```
 
 ## 何时选 Slim / Full

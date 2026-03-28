@@ -2,9 +2,13 @@
 # Stage 1: build console frontend (dist not committed in repo).
 # -----------------------------------------------------------------------------
 FROM agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/node:slim AS console-builder
+ARG NPM_REGISTRY="https://registry.npmmirror.com"
+ARG PNPM_REGISTRY="https://registry.npmmirror.com"
 WORKDIR /app
-# Install pnpm
-RUN npm install -g pnpm
+# Install pnpm from a configurable registry and keep pnpm on the same mirror.
+RUN if [ -n "$NPM_REGISTRY" ]; then npm config set registry "$NPM_REGISTRY"; fi \
+ && npm install -g pnpm \
+ && if [ -n "$PNPM_REGISTRY" ]; then pnpm config set registry "$PNPM_REGISTRY"; fi
 COPY console /app/console
 RUN cd /app/console && pnpm install && pnpm run build
 
@@ -19,6 +23,11 @@ ARG INCLUDE_BROWSER=false
 # Optional Debian mirror for faster builds in mainland China. Accepts either a
 # hostname or a full URL, for example http://mirrors.tuna.tsinghua.edu.cn.
 ARG APT_MIRROR=""
+# Python package mirrors for pip and uv during image build.
+ARG PIP_INDEX_URL="https://pypi.tuna.tsinghua.edu.cn/simple"
+ARG PIP_TRUSTED_HOST="pypi.tuna.tsinghua.edu.cn"
+ARG UV_DEFAULT_INDEX="https://pypi.tuna.tsinghua.edu.cn/simple"
+ARG UV_INDEX_URL="https://pypi.tuna.tsinghua.edu.cn/simple"
 # Optional provider dependencies. Keep Ollama off by default to reduce build
 # time and image size for installations that do not use a local Ollama server.
 ARG INSTALL_OLLAMA=false
@@ -28,6 +37,11 @@ ENV NODE_ENV=production
 ENV WORKSPACE_DIR=/app
 ENV COPAW_WORKING_DIR=/app/working
 ENV COPAW_SECRET_DIR=/app/working.secret
+ENV COPAW_INCLUDE_BROWSER=${INCLUDE_BROWSER}
+ENV PIP_INDEX_URL=${PIP_INDEX_URL}
+ENV PIP_TRUSTED_HOST=${PIP_TRUSTED_HOST}
+ENV UV_DEFAULT_INDEX=${UV_DEFAULT_INDEX}
+ENV UV_INDEX_URL=${UV_INDEX_URL}
 
 # Channel filtering: use COPAW_DISABLED_CHANNELS (exclusion, recommended)
 # or COPAW_ENABLED_CHANNELS (whitelist). Override at runtime with -e.
@@ -136,7 +150,8 @@ RUN copaw init --defaults --accept-security
 # CoPaw app port (default 8088). Override at runtime with -e COPAW_PORT=3000.
 ENV COPAW_PORT=8088
 
-COPY deploy/config/supervisord.conf.template /etc/supervisor/conf.d/supervisord.conf.template
+COPY deploy/config/supervisord.base.conf.template /etc/supervisor/conf.d/supervisord.base.conf.template
+COPY deploy/config/supervisord.browser.conf.template /etc/supervisor/conf.d/supervisord.browser.conf.template
 COPY --chmod=755 deploy/entrypoint.sh /entrypoint.sh
 
 EXPOSE 8088

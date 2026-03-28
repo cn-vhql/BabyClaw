@@ -1,0 +1,14 @@
+[supervisord]
+user=root
+logfile=/var/log/supervisord.log
+pidfile=/var/log/supervisord.pid
+nodaemon=true
+
+[program:app]
+command=copaw app --host 0.0.0.0 --port ${COPAW_PORT}
+autostart=true
+autorestart=true
+priority=30
+stderr_logfile=/var/log/app.err.log
+stdout_logfile=/var/log/app.out.log
+environment=COPAW_RUNNING_IN_CONTAINER="1"

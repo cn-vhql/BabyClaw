@@ -49,13 +49,27 @@ def _normalize_working_dir_bound_paths(data: object) -> object:
     legacy_root_abs = str(Path(legacy_root_tilde).expanduser().resolve())
     new_root_abs = str(WORKING_DIR)
 
-    def _rewrite_path_value(v: object) -> object:
+    def _rewrite_path_value(v: object, key: str | None) -> object:
         if not isinstance(v, str) or not v:
             return v
         if v.startswith(legacy_root_tilde):
             return new_root_abs + v[len(legacy_root_tilde) :]
         if v.startswith(legacy_root_abs):
             return new_root_abs + v[len(legacy_root_abs) :]
+        # Workspace directories should always live under WORKING_DIR. If a
+        # config file stores an old host-specific absolute path such as
+        # /vol1/app/CoPaw/copaw-data/workspaces/default, remap it to the
+        # current runtime root so containerized runs keep working.
+        if key == "workspace_dir":
+            try:
+                expanded = Path(v).expanduser()
+                parts = list(expanded.parts)
+                if "workspaces" in parts:
+                    idx = parts.index("workspaces")
+                    if idx + 1 < len(parts):
+                        return str(WORKING_DIR.joinpath(*parts[idx:]))
+            except Exception:
+                return v
         return v
 
     def _walk(obj: object, key: str | None = None) -> object:
@@ -67,7 +81,7 @@ def _normalize_working_dir_bound_paths(data: object) -> object:
         if isinstance(obj, list):
             return [_walk(x, key) for x in obj]
         if key in {"workspace_dir", "media_dir"}:
-            return _rewrite_path_value(obj)
+            return _rewrite_path_value(obj, key)
         return obj
 
     return _walk(data, None)
