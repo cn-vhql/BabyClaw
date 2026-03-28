@@ -12,10 +12,11 @@ import logging
 import os
 from typing import Any, Dict, List, TYPE_CHECKING
 
-from agentscope.mcp import HttpStatefulClient, StdIOStatefulClient
+from agentscope.mcp import StdIOStatefulClient
 
 if TYPE_CHECKING:
     from ...config.config import MCPClientConfig, MCPConfig
+from .safe_http_stateful_client import SafeHttpStatefulClient
 
 logger = logging.getLogger(__name__)
 
@@ -297,7 +298,7 @@ class MCPClientManager:
         if headers:
             headers = {k: os.path.expandvars(v) for k, v in headers.items()}
 
-        client = HttpStatefulClient(
+        client = SafeHttpStatefulClient(
             name=client_config.name,
             transport=client_config.transport,
             url=client_config.url,

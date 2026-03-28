@@ -230,6 +230,11 @@ class AgentRunner(Runner):
                 and session_id
                 and str(session_id).startswith("evolution:")
             )
+            is_focus_watch_request = bool(
+                user_id == "focus_watch"
+                and session_id
+                and str(session_id).startswith("focus:watch:")
+            )
 
             logger.info(
                 "Handle agent query:\n%s",
@@ -268,7 +273,9 @@ class AgentRunner(Runner):
             agent = CoPawAgent(
                 agent_config=agent_config,
                 env_context=env_context,
-                enable_memory_manager=not is_evolution_request,
+                enable_memory_manager=not (
+                    is_evolution_request or is_focus_watch_request
+                ),
                 mcp_clients=mcp_clients,
                 memory_manager=self.memory_manager,
                 request_context={
@@ -277,6 +284,7 @@ class AgentRunner(Runner):
                     "channel": channel,
                     "agent_id": self.agent_id,
                     "is_evolution": "1" if is_evolution_request else "",
+                    "is_focus_watch": "1" if is_focus_watch_request else "",
                 },
                 workspace_dir=self.workspace_dir,
             )
@@ -302,7 +310,11 @@ class AgentRunner(Runner):
                 f"agent_id={self.agent_id}",
             )
 
-            if self._chat_manager is not None and not is_evolution_request:
+            if (
+                self._chat_manager is not None
+                and not is_evolution_request
+                and not is_focus_watch_request
+            ):
                 logger.debug(
                     f"Runner: Calling get_or_create_chat for "
                     f"session_id={session_id}, user_id={user_id}, "

@@ -8,20 +8,73 @@ export interface FocusSettings {
   tags: string[];
 }
 
-export interface FocusNote {
+export interface FocusNoteSummary {
   id: string;
   title: string;
-  content: string;
+  previewText: string;
   tags: string[];
   source: string;
   createdAt: string;
-  sessionId?: string | null;
   runId?: string | null;
 }
 
-export interface FocusRunResult {
-  status: "completed" | "skipped" | "timed_out";
+export interface FocusNoteDetail extends FocusNoteSummary {
+  content: string;
+  sessionId?: string | null;
+  fingerprint?: string | null;
+}
+
+export type FocusRunStatus =
+  | "running"
+  | "completed"
+  | "skipped"
+  | "timed_out"
+  | "failed"
+  | "cancelled";
+
+export type FocusTriggerType = "manual" | "scheduled";
+
+export interface FocusRunRecord {
+  id: string;
+  status: FocusRunStatus;
   reason?: string | null;
+  triggerType: FocusTriggerType;
+  startedAt: string;
+  finishedAt?: string | null;
   noteCount: number;
-  runId?: string | null;
+  summary: string;
+  notificationStatus: string;
+  archiveId?: string | null;
+  tagSnapshot: string[];
+  sessionId?: string | null;
+}
+
+export interface FocusRunDetail extends FocusRunRecord {
+  generatedNotes: FocusNoteSummary[];
+}
+
+export interface FocusRunArchive {
+  runId: string;
+  prompt: string;
+  fullOutput: string;
+  toolExecutionLog: Array<Record<string, unknown>>;
+  noteIds: string[];
+  tagSnapshot: string[];
+  notificationResult: Record<string, unknown>;
+  errorMessage?: string | null;
+  createdAt: string;
+}
+
+export interface FocusNotesPage {
+  items: FocusNoteSummary[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface FocusRunsPage {
+  items: FocusRunRecord[];
+  total: number;
+  page: number;
+  pageSize: number;
 }

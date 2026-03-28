@@ -49,20 +49,21 @@
   font-weight: 500;
 }
 
-.layout {
+.contentGrid {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
+  min-width: 0;
 }
 
-.timelineColumn {
-  min-height: 0;
+.noteColumn {
+  min-width: 0;
   display: flex;
   flex: 1;
+}
 
-  > * {
-    flex: 1;
-  }
+.noteColumn > * {
+  flex: 1;
 }
 
 .card {
@@ -72,10 +73,46 @@
   box-shadow: 0 18px 38px color-mix(in srgb, var(--focus-accent-shadow) 20%, transparent);
 }
 
+.runsCardContent,
 .cardContent {
   min-height: clamp(760px, calc(100vh - 220px), 1080px);
   display: flex;
   flex-direction: column;
+}
+
+.runsDrawerBody {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.sectionDescription {
+  margin: 6px 0 0;
+  color: var(--app-text-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.sectionTools {
+  flex-shrink: 0;
+}
+
+.runFilter {
+  min-width: 148px;
 }
 
 .toolbar {
@@ -92,14 +129,107 @@
   max-width: 420px;
 }
 
+.metricRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
 .metric {
   color: var(--app-text-muted);
   font-size: 13px;
   flex-shrink: 0;
 }
 
+.runList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.runItem {
+  border: 1px solid var(--focus-card-border);
+  border-radius: 16px;
+  padding: 16px;
+  background:
+    radial-gradient(
+      circle at top right,
+      color-mix(in srgb, var(--focus-accent) 9%, transparent),
+      transparent 46%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--app-surface-strong) 96%, var(--focus-accent-softer)) 0%,
+      color-mix(in srgb, var(--app-surface) 97%, var(--focus-accent-soft)) 100%
+    );
+  box-shadow: 0 10px 26px color-mix(in srgb, var(--focus-accent-shadow) 14%, transparent);
+}
+
+.runItemRunning {
+  border-color: color-mix(in srgb, var(--focus-accent) 38%, var(--app-border));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--focus-accent) 16%, transparent),
+    0 12px 30px color-mix(in srgb, var(--focus-accent-shadow) 22%, transparent);
+}
+
+.runItemHeader,
+.generatedNoteTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.runItemTags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.runSummary {
+  margin: 12px 0 0;
+  color: var(--app-text);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.runMeta {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--app-text-muted);
+  font-size: 12px;
+}
+
+.tagList {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.runActions,
+.noteFooter {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.detailButton {
+  flex-shrink: 0;
+  padding-inline: 0;
+  color: var(--focus-accent) !important;
+}
+
+.detailButton:hover {
+  color: var(--app-primary-hover) !important;
+}
+
 .timeline {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
   padding-right: 6px;
 }
 
@@ -136,7 +266,8 @@
   margin-top: 12px;
 }
 
-.noteCard {
+.noteCard,
+.generatedNoteCard {
   flex: 1;
   border: 1px solid var(--focus-card-border);
   border-radius: 16px;
@@ -161,7 +292,8 @@
   gap: 12px;
 }
 
-.noteTitle {
+.noteTitle,
+.generatedNoteTitle {
   margin: 0;
   font-size: 17px;
   font-weight: 600;
@@ -183,7 +315,8 @@
   color: var(--app-text);
 }
 
-.notePreview {
+.notePreview,
+.generatedNotePreview {
   margin: 0;
   line-height: inherit;
   color: inherit;
@@ -315,28 +448,19 @@
   }
 }
 
-.noteFooter {
-  margin-top: 14px;
-  display: flex;
-  justify-content: flex-end;
-  align-items: flex-start;
-  gap: 16px;
-}
-
-.detailButton {
-  flex-shrink: 0;
-  padding-inline: 0;
-  color: var(--focus-accent) !important;
-}
-
-.detailButton:hover {
-  color: var(--app-primary-hover) !important;
-}
-
+.runDetailBody,
 .detailBody {
   font-size: 14px;
   line-height: 1.7;
   color: var(--app-text);
+}
+
+.runDetailHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .detailMetaBlock {
@@ -347,6 +471,56 @@
 
 .detailMarkdownWrap {
   min-width: 0;
+}
+
+.tabsWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.runOverviewGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.overviewCard {
+  padding: 14px;
+  border: 1px solid var(--app-border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--app-surface) 97%, var(--focus-accent-soft));
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.overviewCardWide {
+  grid-column: 1 / -1;
+}
+
+.overviewLabel {
+  color: var(--app-text-muted);
+  font-size: 12px;
+}
+
+.generatedNotesList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.codeBlock {
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #0f1c28;
+  color: #e6f3ff;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 13px;
+  line-height: 1.7;
 }
 
 .state,
@@ -403,18 +577,8 @@
   gap: 16px;
 }
 
-.drawerHint {
-  margin-top: 8px;
-}
-
-.hintTitleRow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
-}
-
 @media (max-width: 1100px) {
+  .runsCardContent,
   .cardContent {
     min-height: 680px;
   }
@@ -430,6 +594,7 @@
     min-height: auto;
   }
 
+  .runsCardContent,
   .cardContent {
     min-height: auto;
   }
@@ -447,7 +612,10 @@
     flex: 1;
   }
 
-  .toolbar {
+  .toolbar,
+  .sectionHeader,
+  .runDetailHeader {
+    flex-direction: column;
     align-items: stretch;
   }
 
@@ -461,7 +629,8 @@
     padding-top: 16px;
   }
 
-  .noteFooter {
+  .noteFooter,
+  .runActions {
     flex-direction: column;
     align-items: stretch;
     gap: 12px;
@@ -471,7 +640,8 @@
     align-self: flex-start;
   }
 
-  .timeRange {
+  .timeRange,
+  .runOverviewGrid {
     grid-template-columns: 1fr;
   }
 }

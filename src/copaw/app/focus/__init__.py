@@ -3,7 +3,12 @@
 
 from .models import (
     FocusNote,
-    FocusRunResponse,
+    FocusNoteSummary,
+    FocusNotesPage,
+    FocusRunArchive,
+    FocusRunDetail,
+    FocusRunRecord,
+    FocusRunsPage,
     FocusSettingsResponse,
     FocusSettingsUpdate,
 )
@@ -11,7 +16,12 @@ from .service import FocusService
 
 __all__ = [
     "FocusNote",
-    "FocusRunResponse",
+    "FocusNoteSummary",
+    "FocusNotesPage",
+    "FocusRunArchive",
+    "FocusRunDetail",
+    "FocusRunRecord",
+    "FocusRunsPage",
     "FocusService",
     "FocusSettingsResponse",
     "FocusSettingsUpdate",

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
   Button,
   Card,
@@ -7,21 +7,28 @@ import {
   Form,
   Input,
   InputNumber,
+  Popconfirm,
   Select,
+  Spinner,
   Switch,
+  Tabs,
+  Tag,
   message,
 } from "@agentscope-ai/design";
 import { Pagination, TimePicker } from "antd";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
-import { Clock3, Tags } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import api from "../../api";
 import type { ChannelConfig } from "../../api/types";
 import type {
-  FocusNote,
-  FocusRunResult,
+  FocusNoteDetail,
+  FocusNoteSummary,
+  FocusRunArchive,
+  FocusRunDetail,
+  FocusRunRecord,
+  FocusRunStatus,
   FocusSettings,
 } from "../../api/types/focus";
 import { LazyMarkdown } from "../../components/LazyMarkdown";
@@ -31,13 +38,13 @@ import {
   type EveryUnit,
 } from "../Control/Heartbeat/parseEvery";
 import { useAgentStore } from "../../stores/agentStore";
-import { stripFrontmatter } from "../../utils/markdown";
 import styles from "./index.module.less";
 
 dayjs.extend(customParseFormat);
 
 const TIME_FORMAT = "HH:mm";
 const NOTE_PAGE_SIZE = 10;
+const RUN_PAGE_SIZE = 8;
 
 const EVERY_UNIT_OPTIONS: { value: EveryUnit; labelKey: string }[] = [
   { value: "m", labelKey: "focus.unitMinutes" },
@@ -51,6 +58,9 @@ type FocusFormValues = Omit<FocusSettings, "every" | "doNotDisturb"> & {
   doNotDisturbStart?: string;
   doNotDisturbEnd?: string;
 };
+
+type RunFilterValue = "all" | FocusRunStatus;
+type RunTabKey = "overview" | "notes" | "prompt" | "output" | "tools" | "notification";
 
 function TimePickerHHmm({
   value,
@@ -74,57 +84,118 @@ function TimePickerHHmm({
   );
 }
 
-function formatTimestamp(value: string) {
+function formatTimestamp(value?: string | null) {
+  if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return dayjs(date).format("YYYY-MM-DD HH:mm");
 }
 
-function toNotePreview(content: string) {
-  return stripFrontmatter(content || "")
-    .replace(/```[\s\S]*?```/g, " ")
-    .replace(/`([^`]*)`/g, "$1")
-    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-    .replace(/^>\s?/gm, "")
-    .replace(/^#{1,6}\s+/gm, "")
-    .replace(/^[-*+]\s+/gm, "")
-    .replace(/^\d+\.\s+/gm, "")
-    .replace(/\|/g, " ")
-    .replace(/[*_~]/g, "")
-    .replace(/\r?\n+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+function extractRequestError(error: unknown, fallback: string): string {
+  if (!(error instanceof Error) || !error.message) {
+    return fallback;
+  }
+
+  const separatorIndex = error.message.indexOf(" - ");
+  if (separatorIndex === -1) {
+    return error.message || fallback;
+  }
+
+  const responseText = error.message.slice(separatorIndex + 3).trim();
+  try {
+    const parsed = JSON.parse(responseText) as {
+      detail?: string | Array<{ loc?: Array<string | number>; msg?: string }>;
+    };
+
+    if (typeof parsed.detail === "string" && parsed.detail) {
+      return parsed.detail;
+    }
+
+    if (Array.isArray(parsed.detail) && parsed.detail.length > 0) {
+      return parsed.detail
+        .map((item) => {
+          const location = item.loc?.join(".") || "body";
+          return item.msg ? `${location}: ${item.msg}` : location;
+        })
+        .join("; ");
+    }
+  } catch {
+    return responseText || fallback;
+  }
+
+  return responseText || fallback;
+}
+
+function isNotFoundError(error: unknown) {
+  return error instanceof Error && error.message.includes("404");
+}
+
+function renderJson(value: unknown) {
+  if (value == null) return "";
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
 }
 
 export default function FocusPage() {
   const { t } = useTranslation();
   const { selectedAgent } = useAgentStore();
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [runningNow, setRunningNow] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [detailNote, setDetailNote] = useState<FocusNote | null>(null);
+  const [form] = Form.useForm<FocusFormValues>();
+
   const [settings, setSettings] = useState<FocusSettings | null>(null);
-  const [notes, setNotes] = useState<FocusNote[]>([]);
-  const [searchKeyword, setSearchKeyword] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [settingsLoading, setSettingsLoading] = useState(true);
+  const [notesLoading, setNotesLoading] = useState(true);
+  const [runsLoading, setRunsLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [startingRun, setStartingRun] = useState(false);
+
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [runsDrawerOpen, setRunsDrawerOpen] = useState(false);
   const [notificationOptions, setNotificationOptions] = useState<
     { label: string; value: string }[]
   >([]);
-  const [form] = Form.useForm<FocusFormValues>();
 
-  const loadPageData = async () => {
-    setLoading(true);
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const deferredSearchKeyword = useDeferredValue(searchKeyword);
+  const [notePage, setNotePage] = useState(1);
+  const [noteTotal, setNoteTotal] = useState(0);
+  const [notes, setNotes] = useState<FocusNoteSummary[]>([]);
+
+  const [runPage, setRunPage] = useState(1);
+  const [runFilter, setRunFilter] = useState<RunFilterValue>("all");
+  const [runTotal, setRunTotal] = useState(0);
+  const [runs, setRuns] = useState<FocusRunRecord[]>([]);
+
+  const [noteDetailOpen, setNoteDetailOpen] = useState(false);
+  const [noteDetailLoading, setNoteDetailLoading] = useState(false);
+  const [detailNote, setDetailNote] = useState<FocusNoteDetail | null>(null);
+
+  const [runDetailOpen, setRunDetailOpen] = useState(false);
+  const [runDetailLoading, setRunDetailLoading] = useState(false);
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const [runDetail, setRunDetail] = useState<FocusRunDetail | null>(null);
+  const [runArchive, setRunArchive] = useState<FocusRunArchive | null>(null);
+  const [activeRunTab, setActiveRunTab] = useState<RunTabKey>("overview");
+
+  const [pageVisible, setPageVisible] = useState(
+    typeof document === "undefined" ? true : !document.hidden,
+  );
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const hasRunningRun = runs.some((run) => run.status === "running");
+  const tags = settings?.tags || [];
+
+  const loadSettings = async () => {
+    setSettingsLoading(true);
     try {
-      const [focusSettings, notesResult, channelConfigs] = await Promise.all([
+      const [focusSettings, channelConfigs] = await Promise.all([
         api.getFocusSettings(),
-        api.listFocusNotes(),
         api.listChannels().catch(() => null),
       ]);
 
       setSettings(focusSettings);
-      setNotes(notesResult.notes || []);
 
       const everyParts = parseEvery(focusSettings.every || "6h");
       form.setFieldsValue({
@@ -149,53 +220,156 @@ export default function FocusPage() {
         .map(([key]) => ({ label: key, value: key }));
       setNotificationOptions([...baseOptions, ...channelEntries]);
     } catch (error) {
-      console.error("Failed to load focus data:", error);
+      console.error("Failed to load focus settings:", error);
       message.error(t("focus.loadFailed"));
     } finally {
-      setLoading(false);
+      setSettingsLoading(false);
     }
   };
 
+  const loadNotes = async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (!silent) setNotesLoading(true);
+    try {
+      const result = await api.listFocusNotes({
+        page: notePage,
+        pageSize: NOTE_PAGE_SIZE,
+        q: deferredSearchKeyword.trim() || undefined,
+      });
+      setNotes(result.items || []);
+      setNoteTotal(result.total || 0);
+    } catch (error) {
+      console.error("Failed to load focus notes:", error);
+      if (!silent) {
+        message.error(t("focus.notesLoadFailed"));
+      }
+    } finally {
+      if (!silent) setNotesLoading(false);
+    }
+  };
+
+  const loadRuns = async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (!silent) setRunsLoading(true);
+    try {
+      const result = await api.listFocusRuns({
+        page: runPage,
+        pageSize: RUN_PAGE_SIZE,
+        status: runFilter === "all" ? undefined : runFilter,
+      });
+      setRuns(result.items || []);
+      setRunTotal(result.total || 0);
+    } catch (error) {
+      console.error("Failed to load focus runs:", error);
+      if (!silent) {
+        message.error(t("focus.runsLoadFailed"));
+      }
+    } finally {
+      if (!silent) setRunsLoading(false);
+    }
+  };
+
+  const loadRunDetail = async (
+    runId: string,
+    { silent = false }: { silent?: boolean } = {},
+  ) => {
+    if (!silent) setRunDetailLoading(true);
+    try {
+      const detail = await api.getFocusRun(runId);
+      setRunDetail(detail);
+      try {
+        const archive = await api.getFocusRunArchive(runId);
+        setRunArchive(archive);
+      } catch (error) {
+        if (!isNotFoundError(error)) {
+          throw error;
+        }
+        setRunArchive(null);
+      }
+    } catch (error) {
+      console.error("Failed to load focus run detail:", error);
+      if (!silent) {
+        message.error(t("focus.runDetailLoadFailed"));
+      }
+    } finally {
+      if (!silent) setRunDetailLoading(false);
+    }
+  };
+
+  const refreshAll = async () => {
+    await Promise.all([loadSettings(), loadNotes(), loadRuns()]);
+  };
+
   useEffect(() => {
-    loadPageData();
+    setSearchKeyword("");
+    setNotePage(1);
+    setRunPage(1);
+    setRunFilter("all");
+    setDetailNote(null);
+    setRunDetail(null);
+    setRunArchive(null);
+    setNoteDetailOpen(false);
+    setRunDetailOpen(false);
+    void loadSettings();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAgent]);
 
-  const filteredNotes = useMemo(() => {
-    const keyword = searchKeyword.trim().toLowerCase();
-    if (!keyword) {
-      return notes;
-    }
-
-    return notes.filter((note) => {
-      const haystack = [
-        note.title,
-        note.content,
-        note.source,
-        note.tags.join(" "),
-      ]
-        .join(" ")
-        .toLowerCase();
-
-      return haystack.includes(keyword);
-    });
-  }, [notes, searchKeyword]);
-
-  const pagedNotes = useMemo(() => {
-    const start = (currentPage - 1) * NOTE_PAGE_SIZE;
-    return filteredNotes.slice(start, start + NOTE_PAGE_SIZE);
-  }, [currentPage, filteredNotes]);
+  useEffect(() => {
+    void loadNotes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAgent, notePage, deferredSearchKeyword]);
 
   useEffect(() => {
-    setCurrentPage(1);
-  }, [searchKeyword, selectedAgent]);
+    void loadRuns();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAgent, runPage, runFilter]);
 
   useEffect(() => {
-    const totalPages = Math.max(1, Math.ceil(filteredNotes.length / NOTE_PAGE_SIZE));
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
+    if (notePage !== 1) {
+      setNotePage(1);
     }
-  }, [currentPage, filteredNotes.length]);
+  }, [deferredSearchKeyword]);
+
+  useEffect(() => {
+    if (runPage !== 1) {
+      setRunPage(1);
+    }
+  }, [runFilter]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setPageVisible(!document.hidden);
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!(pageVisible && hasRunningRun)) {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+      return;
+    }
+
+    if (!pollingRef.current) {
+      pollingRef.current = setInterval(() => {
+        void loadNotes({ silent: true });
+        void loadRuns({ silent: true });
+        if (selectedRunId) {
+          void loadRunDetail(selectedRunId, { silent: true });
+        }
+      }, 5000);
+    }
+
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
+  }, [hasRunningRun, pageVisible, selectedRunId]);
 
   const handleSave = async (values: FocusFormValues) => {
     const payload: FocusSettings = {
@@ -223,56 +397,129 @@ export default function FocusPage() {
       setSettings(saved);
       message.success(t("focus.saveSuccess"));
       setDrawerOpen(false);
-      await loadPageData();
+      await loadSettings();
+      await loadRuns({ silent: true });
     } catch (error) {
       console.error("Failed to save focus settings:", error);
-      message.error(t("focus.saveFailed"));
+      message.error(extractRequestError(error, t("focus.saveFailed")));
     } finally {
       setSaving(false);
     }
   };
 
-  const showRunResultMessage = (result: FocusRunResult) => {
-    if (result.status === "skipped") {
-      if (result.reason === "no_tags") {
-        message.warning(t("focus.runSkippedNoTags"));
-        return;
-      }
-
-      message.warning(t("focus.runSkipped"));
-      return;
-    }
-
-    if (result.status === "timed_out") {
-      message.warning(t("focus.runTimedOut"));
-      return;
-    }
-
-    if (result.noteCount > 0) {
-      message.success(t("focus.runSuccessWithNotes", { count: result.noteCount }));
-      return;
-    }
-
-    message.success(t("focus.runSuccessNoChanges"));
-  };
-
   const handleRunNow = async () => {
-    setRunningNow(true);
+    setStartingRun(true);
     try {
-      const result = await api.runFocusNow();
-      if (result.status !== "skipped") {
-        await loadPageData();
-      }
-      showRunResultMessage(result);
+      await api.runFocusNow();
+      message.success(t("focus.runStarted"));
+      await loadRuns({ silent: true });
     } catch (error) {
-      console.error("Failed to run focus now:", error);
-      message.error(t("focus.runFailed"));
+      console.error("Failed to start focus run:", error);
+      message.error(extractRequestError(error, t("focus.runFailed")));
     } finally {
-      setRunningNow(false);
+      setStartingRun(false);
     }
   };
 
-  const tags = settings?.tags || [];
+  const handleCancelRun = async (runId: string) => {
+    try {
+      await api.cancelFocusRun(runId);
+      message.success(t("focus.cancelRunSuccess"));
+      await loadRuns({ silent: true });
+      if (selectedRunId === runId) {
+        await loadRunDetail(runId, { silent: true });
+      }
+    } catch (error) {
+      console.error("Failed to cancel focus run:", error);
+      message.error(extractRequestError(error, t("focus.cancelRunFailed")));
+    }
+  };
+
+  const handleOpenNote = async (noteId: string) => {
+    setNoteDetailOpen(true);
+    setNoteDetailLoading(true);
+    setDetailNote(null);
+    try {
+      const note = await api.getFocusNote(noteId);
+      setDetailNote(note);
+    } catch (error) {
+      console.error("Failed to load focus note detail:", error);
+      message.error(t("focus.noteDetailLoadFailed"));
+      setNoteDetailOpen(false);
+    } finally {
+      setNoteDetailLoading(false);
+    }
+  };
+
+  const handleOpenRun = async (runId: string) => {
+    setSelectedRunId(runId);
+    setRunDetailOpen(true);
+    setActiveRunTab("overview");
+    setRunArchive(null);
+    setRunDetail(null);
+    await loadRunDetail(runId);
+  };
+
+  const runStatusOptions = useMemo(
+    () => [
+      { value: "all", label: t("focus.runsFilterAll") },
+      { value: "running", label: t("focus.statusRunning") },
+      { value: "completed", label: t("focus.statusCompleted") },
+      { value: "failed", label: t("focus.statusFailed") },
+      { value: "cancelled", label: t("focus.statusCancelled") },
+      { value: "skipped", label: t("focus.statusSkipped") },
+      { value: "timed_out", label: t("focus.statusTimedOut") },
+    ],
+    [t],
+  );
+
+  const getStatusTag = (status: FocusRunStatus) => {
+    const map: Record<FocusRunStatus, { color: string; text: string }> = {
+      running: { color: "blue", text: t("focus.statusRunning") },
+      completed: { color: "green", text: t("focus.statusCompleted") },
+      skipped: { color: "default", text: t("focus.statusSkipped") },
+      timed_out: { color: "orange", text: t("focus.statusTimedOut") },
+      failed: { color: "red", text: t("focus.statusFailed") },
+      cancelled: { color: "default", text: t("focus.statusCancelled") },
+    };
+    const meta = map[status];
+    return <Tag color={meta.color}>{meta.text}</Tag>;
+  };
+
+  const getTriggerTag = (triggerType: string) => {
+    return (
+      <Tag color="default">
+        {triggerType === "scheduled"
+          ? t("focus.triggerScheduled")
+          : t("focus.triggerManual")}
+      </Tag>
+    );
+  };
+
+  const formatNotificationStatus = (status?: string | null) => {
+    const map: Record<string, string> = {
+      pending: t("focus.notificationPending"),
+      sent: t("focus.notificationSent"),
+      failed: t("focus.notificationFailed"),
+      timeout: t("focus.notificationTimedOut"),
+      cancelled: t("focus.notificationCancelled"),
+      skipped_no_target: t("focus.notificationSkippedNoTarget"),
+      skipped_no_notes: t("focus.notificationSkippedNoNotes"),
+      not_applicable: t("focus.notificationNotApplicable"),
+    };
+    return map[status || "pending"] || status || t("focus.notificationPending");
+  };
+
+  const runTabItems = [
+    { key: "overview", label: t("focus.runTabOverview") },
+    { key: "notes", label: t("focus.runTabNotes") },
+    { key: "prompt", label: t("focus.runTabPrompt") },
+    { key: "output", label: t("focus.runTabOutput") },
+    { key: "tools", label: t("focus.runTabTools") },
+    { key: "notification", label: t("focus.runTabNotification") },
+  ];
+
+  const initialLoading = settingsLoading && notesLoading && runsLoading;
 
   return (
     <div className={styles.focusPage}>
@@ -282,24 +529,25 @@ export default function FocusPage() {
           <p className={styles.description}>{t("focus.description")}</p>
         </div>
         <div className={styles.headerActions}>
-          <Button
-            onClick={loadPageData}
-            disabled={runningNow}
-            className={styles.headerButton}
-          >
+          <Button onClick={refreshAll} className={styles.headerButton}>
             {t("common.refresh")}
           </Button>
           <Button
             onClick={handleRunNow}
-            loading={runningNow}
+            loading={startingRun}
             className={styles.headerButton}
           >
             {t("focus.executeNow")}
           </Button>
           <Button
+            onClick={() => setRunsDrawerOpen(true)}
+            className={styles.headerButton}
+          >
+            {t("focus.runsPanel")}
+          </Button>
+          <Button
             type="primary"
             onClick={() => setDrawerOpen(true)}
-            disabled={runningNow}
             className={styles.headerButton}
           >
             {t("focus.configure")}
@@ -307,8 +555,8 @@ export default function FocusPage() {
         </div>
       </div>
 
-      <div className={styles.layout}>
-        <div className={styles.timelineColumn}>
+      <div className={styles.contentGrid}>
+        <div className={styles.noteColumn}>
           <Card className={styles.card}>
             <div className={styles.cardContent}>
               <div className={styles.toolbar}>
@@ -321,97 +569,207 @@ export default function FocusPage() {
                   className={styles.searchBox}
                 />
                 <span className={styles.metric}>
-                  {t("common.total", { count: filteredNotes.length })}
+                  {t("common.total", { count: noteTotal })}
                 </span>
               </div>
 
-              {loading ? (
-                <div className={styles.state}>{t("common.loading")}</div>
-              ) : filteredNotes.length === 0 ? (
+              {initialLoading || (notesLoading && notes.length === 0) ? (
+                <div className={styles.state}>
+                  <Spinner />
+                </div>
+              ) : notes.length === 0 ? (
                 <div className={styles.emptyWrap}>
                   <Empty
                     description={
-                      searchKeyword.trim()
+                      deferredSearchKeyword.trim()
                         ? t("focus.emptySearch")
                         : t("focus.emptyNotes")
                     }
                   />
                 </div>
               ) : (
-                <>
-                  <div className={styles.timeline}>
-                    {pagedNotes.map((note) => {
-                      const fullContent = stripFrontmatter(note.content || "");
-                      const previewContent = toNotePreview(note.content || "");
-
-                      return (
-                        <div key={note.id} className={styles.timelineItem}>
-                          <div className={styles.timelineDot} />
-                          <div className={styles.noteCard}>
-                            <div className={styles.noteTop}>
-                              <div>
-                                <h3 className={styles.noteTitle}>{note.title}</h3>
-                                <div className={styles.noteMeta}>
-                                  <span>{formatTimestamp(note.createdAt)}</span>
-                                  <span>
-                                    {t("focus.sourcePrefix", {
-                                      source: note.source || t("focus.unknownSource"),
-                                    })}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                            <div className={styles.noteContent}>
-                              <p className={styles.notePreview}>
-                                {previewContent || t("focus.emptyContent")}
-                              </p>
-                            </div>
-                            <div className={styles.noteFooter}>
-                              <Button
-                                type="link"
-                                className={styles.detailButton}
-                                onClick={() =>
-                                  setDetailNote({
-                                    ...note,
-                                    content: fullContent,
-                                  })
-                                }
-                              >
-                                {t("focus.viewDetails")}
-                              </Button>
+                <div className={styles.timeline}>
+                  {notes.map((note) => (
+                    <div key={note.id} className={styles.timelineItem}>
+                      <div className={styles.timelineDot} />
+                      <div className={styles.noteCard}>
+                        <div className={styles.noteTop}>
+                          <div>
+                            <h3 className={styles.noteTitle}>{note.title}</h3>
+                            <div className={styles.noteMeta}>
+                              <span>{formatTimestamp(note.createdAt)}</span>
+                              <span>
+                                {t("focus.sourcePrefix", {
+                                  source: note.source || t("focus.unknownSource"),
+                                })}
+                              </span>
                             </div>
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-
-              {!loading && filteredNotes.length > 0 && (
-                <div className={styles.paginationBar}>
-                  <Pagination
-                    current={currentPage}
-                    pageSize={NOTE_PAGE_SIZE}
-                    total={filteredNotes.length}
-                    showSizeChanger={false}
-                    onChange={setCurrentPage}
-                  />
+                        <div className={styles.noteContent}>
+                          <p className={styles.notePreview}>
+                            {note.previewText || t("focus.emptyContent")}
+                          </p>
+                        </div>
+                        <div className={styles.noteFooter}>
+                          <Button
+                            type="link"
+                            className={styles.detailButton}
+                            onClick={() => void handleOpenNote(note.id)}
+                          >
+                            {t("focus.viewDetails")}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
+
+              {!notesLoading && noteTotal > NOTE_PAGE_SIZE ? (
+                <div className={styles.paginationBar}>
+                  <Pagination
+                    current={notePage}
+                    pageSize={NOTE_PAGE_SIZE}
+                    total={noteTotal}
+                    showSizeChanger={false}
+                    onChange={setNotePage}
+                  />
+                </div>
+              ) : null}
             </div>
           </Card>
         </div>
       </div>
 
       <Drawer
+        title={t("focus.runsTitle")}
+        placement="right"
+        open={runsDrawerOpen}
+        onClose={() => setRunsDrawerOpen(false)}
+        width={520}
+      >
+        <div className={styles.runsDrawerBody}>
+          <div className={styles.sectionHeader}>
+            <div>
+              <p className={styles.sectionDescription}>{t("focus.runsDescription")}</p>
+            </div>
+            <div className={styles.sectionTools}>
+              <Select
+                value={runFilter}
+                options={runStatusOptions}
+                onChange={(value) => setRunFilter(value as RunFilterValue)}
+                className={styles.runFilter}
+              />
+            </div>
+          </div>
+
+          <div className={styles.metricRow}>
+            <span className={styles.metric}>
+              {t("common.total", { count: runTotal })}
+            </span>
+          </div>
+
+          {runsLoading && runs.length === 0 ? (
+            <div className={styles.state}>
+              <Spinner />
+            </div>
+          ) : runs.length === 0 ? (
+            <div className={styles.emptyWrap}>
+              <Empty description={t("focus.emptyRuns")} />
+            </div>
+          ) : (
+            <div className={styles.runList}>
+              {runs.map((run) => (
+                <div
+                  key={run.id}
+                  className={`${styles.runItem} ${
+                    run.status === "running" ? styles.runItemRunning : ""
+                  }`}
+                >
+                  <div className={styles.runItemHeader}>
+                    <div className={styles.runItemTags}>
+                      {getStatusTag(run.status)}
+                      {getTriggerTag(run.triggerType)}
+                    </div>
+                    <span className={styles.muted}>
+                      {formatTimestamp(run.startedAt)}
+                    </span>
+                  </div>
+                  <p className={styles.runSummary}>
+                    {run.summary || t("focus.runSummaryEmpty")}
+                  </p>
+                  <div className={styles.runMeta}>
+                    <span>{t("focus.noteCount", { count: run.noteCount })}</span>
+                    <span>
+                      {t("focus.notificationStatusLabel", {
+                        value: formatNotificationStatus(run.notificationStatus),
+                      })}
+                    </span>
+                  </div>
+                  {run.tagSnapshot.length > 0 ? (
+                    <div className={styles.tagList}>
+                      {run.tagSnapshot.map((tag) => (
+                        <Tag key={`${run.id}:${tag}`}>{tag}</Tag>
+                      ))}
+                    </div>
+                  ) : null}
+                  <div className={styles.runActions}>
+                    <Button
+                      type="link"
+                      className={styles.detailButton}
+                      onClick={() => void handleOpenRun(run.id)}
+                    >
+                      {t("focus.viewDetails")}
+                    </Button>
+                    {run.status === "running" ? (
+                      <Popconfirm
+                        title={t("focus.cancelRunTitle")}
+                        description={t("focus.cancelRunConfirm")}
+                        onConfirm={() => void handleCancelRun(run.id)}
+                        okText={t("common.confirm")}
+                        cancelText={t("common.cancel")}
+                      >
+                        <Button type="link" danger className={styles.detailButton}>
+                          {t("focus.cancelRun")}
+                        </Button>
+                      </Popconfirm>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!runsLoading && runTotal > RUN_PAGE_SIZE ? (
+            <div className={styles.paginationBar}>
+              <Pagination
+                current={runPage}
+                pageSize={RUN_PAGE_SIZE}
+                total={runTotal}
+                showSizeChanger={false}
+                onChange={setRunPage}
+              />
+            </div>
+          ) : null}
+        </div>
+      </Drawer>
+
+      <Drawer
         title={detailNote?.title || t("focus.noteDetails")}
         placement="right"
-        open={!!detailNote}
-        onClose={() => setDetailNote(null)}
+        open={noteDetailOpen}
+        onClose={() => {
+          setNoteDetailOpen(false);
+          setDetailNote(null);
+        }}
         width={760}
       >
-        {detailNote ? (
+        {noteDetailLoading ? (
+          <div className={styles.state}>
+            <Spinner />
+          </div>
+        ) : detailNote ? (
           <div className={styles.detailBody}>
             <div className={styles.detailMetaBlock}>
               <div className={styles.noteMeta}>
@@ -430,7 +788,168 @@ export default function FocusPage() {
               />
             </div>
           </div>
-        ) : null}
+        ) : (
+          <Empty description={t("focus.emptyContent")} />
+        )}
+      </Drawer>
+
+      <Drawer
+        title={t("focus.runDetails")}
+        placement="right"
+        open={runDetailOpen}
+        onClose={() => {
+          setRunDetailOpen(false);
+          setSelectedRunId(null);
+          setRunDetail(null);
+          setRunArchive(null);
+          setActiveRunTab("overview");
+        }}
+        width={820}
+      >
+        {runDetailLoading ? (
+          <div className={styles.state}>
+            <Spinner />
+          </div>
+        ) : runDetail ? (
+          <div className={styles.runDetailBody}>
+            <div className={styles.runDetailHeader}>
+              <div className={styles.runItemTags}>
+                {getStatusTag(runDetail.status)}
+                {getTriggerTag(runDetail.triggerType)}
+              </div>
+              {runDetail.status === "running" ? (
+                <Popconfirm
+                  title={t("focus.cancelRunTitle")}
+                  description={t("focus.cancelRunConfirm")}
+                  onConfirm={() => void handleCancelRun(runDetail.id)}
+                  okText={t("common.confirm")}
+                  cancelText={t("common.cancel")}
+                >
+                  <Button>{t("focus.cancelRun")}</Button>
+                </Popconfirm>
+              ) : null}
+            </div>
+
+            <div className={styles.tabsWrapper}>
+              <Tabs
+                activeKey={activeRunTab}
+                onChange={(key) => setActiveRunTab(key as RunTabKey)}
+                items={runTabItems}
+              />
+              {activeRunTab === "overview" ? (
+                <div className={styles.runOverviewGrid}>
+                  <div className={styles.overviewCard}>
+                    <span className={styles.overviewLabel}>
+                      {t("focus.startedAt")}
+                    </span>
+                    <span>{formatTimestamp(runDetail.startedAt)}</span>
+                  </div>
+                  <div className={styles.overviewCard}>
+                    <span className={styles.overviewLabel}>
+                      {t("focus.finishedAt")}
+                    </span>
+                    <span>{formatTimestamp(runDetail.finishedAt)}</span>
+                  </div>
+                  <div className={styles.overviewCard}>
+                    <span className={styles.overviewLabel}>
+                      {t("focus.noteCountLabel")}
+                    </span>
+                    <span>{runDetail.noteCount}</span>
+                  </div>
+                  <div className={styles.overviewCard}>
+                    <span className={styles.overviewLabel}>
+                      {t("focus.notificationStatus")}
+                    </span>
+                    <span>{formatNotificationStatus(runDetail.notificationStatus)}</span>
+                  </div>
+                  <div className={`${styles.overviewCard} ${styles.overviewCardWide}`}>
+                    <span className={styles.overviewLabel}>{t("focus.summaryLabel")}</span>
+                    <span>{runDetail.summary || t("focus.runSummaryEmpty")}</span>
+                  </div>
+                  {runDetail.reason ? (
+                    <div className={`${styles.overviewCard} ${styles.overviewCardWide}`}>
+                      <span className={styles.overviewLabel}>{t("focus.reasonLabel")}</span>
+                      <span>{runDetail.reason}</span>
+                    </div>
+                  ) : null}
+                  <div className={`${styles.overviewCard} ${styles.overviewCardWide}`}>
+                    <span className={styles.overviewLabel}>
+                      {t("focus.tagSnapshotLabel")}
+                    </span>
+                    <div className={styles.tagList}>
+                      {runDetail.tagSnapshot.length > 0 ? (
+                        runDetail.tagSnapshot.map((tag) => <Tag key={tag}>{tag}</Tag>)
+                      ) : (
+                        <span className={styles.muted}>{t("focus.noTags")}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              {activeRunTab === "notes" ? (
+                <div className={styles.generatedNotesList}>
+                  {runDetail.generatedNotes.length > 0 ? (
+                    runDetail.generatedNotes.map((note) => (
+                      <div key={note.id} className={styles.generatedNoteCard}>
+                        <div className={styles.generatedNoteTop}>
+                          <h4 className={styles.generatedNoteTitle}>{note.title}</h4>
+                          <span className={styles.muted}>
+                            {formatTimestamp(note.createdAt)}
+                          </span>
+                        </div>
+                        <p className={styles.generatedNotePreview}>
+                          {note.previewText || t("focus.emptyContent")}
+                        </p>
+                        <div className={styles.runActions}>
+                          <Button
+                            type="link"
+                            className={styles.detailButton}
+                            onClick={() => void handleOpenNote(note.id)}
+                          >
+                            {t("focus.viewDetails")}
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <Empty description={t("focus.emptyGeneratedNotes")} />
+                  )}
+                </div>
+              ) : null}
+
+              {activeRunTab === "prompt" ? (
+                <pre className={styles.codeBlock}>
+                  {runArchive?.prompt || t("focus.runArchivePending")}
+                </pre>
+              ) : null}
+
+              {activeRunTab === "output" ? (
+                <pre className={styles.codeBlock}>
+                  {runArchive?.fullOutput || t("focus.runArchivePending")}
+                </pre>
+              ) : null}
+
+              {activeRunTab === "tools" ? (
+                <pre className={styles.codeBlock}>
+                  {runArchive
+                    ? renderJson(runArchive.toolExecutionLog)
+                    : t("focus.runArchivePending")}
+                </pre>
+              ) : null}
+
+              {activeRunTab === "notification" ? (
+                <pre className={styles.codeBlock}>
+                  {runArchive
+                    ? renderJson(runArchive.notificationResult)
+                    : t("focus.runArchivePending")}
+                </pre>
+              ) : null}
+            </div>
+          </div>
+        ) : (
+          <Empty description={t("focus.emptyRuns")} />
+        )}
       </Drawer>
 
       <Drawer
@@ -512,11 +1031,17 @@ export default function FocusPage() {
             <Switch />
           </Form.Item>
 
-          <Form.Item noStyle shouldUpdate={(prev, cur) => prev.useDoNotDisturb !== cur.useDoNotDisturb}>
+          <Form.Item
+            noStyle
+            shouldUpdate={(prev, cur) => prev.useDoNotDisturb !== cur.useDoNotDisturb}
+          >
             {({ getFieldValue }) =>
               getFieldValue("useDoNotDisturb") ? (
                 <div className={styles.timeRange}>
-                  <Form.Item name="doNotDisturbStart" label={t("focus.doNotDisturbStart")}>
+                  <Form.Item
+                    name="doNotDisturbStart"
+                    label={t("focus.doNotDisturbStart")}
+                  >
                     <TimePickerHHmm />
                   </Form.Item>
                   <Form.Item name="doNotDisturbEnd" label={t("focus.doNotDisturbEnd")}>
@@ -526,19 +1051,6 @@ export default function FocusPage() {
               ) : null
             }
           </Form.Item>
-
-          <Card size="small" className={styles.drawerHint}>
-            <div className={styles.hintTitleRow}>
-              <Clock3 size={16} />
-              <strong>{t("focus.behaviorTitle")}</strong>
-            </div>
-            <p>{t("focus.behaviorDescription")}</p>
-            <div className={styles.hintTitleRow}>
-              <Tags size={16} />
-              <strong>{t("focus.notificationHintTitle")}</strong>
-            </div>
-            <p>{t("focus.notificationHint")}</p>
-          </Card>
         </Form>
       </Drawer>
     </div>
