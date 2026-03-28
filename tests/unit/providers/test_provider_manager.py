@@ -79,6 +79,7 @@ LEGACY_PROVIDER = {
 def isolated_secret_dir(monkeypatch, tmp_path):
     secret_dir = tmp_path / ".copaw.secret"
     monkeypatch.setattr(provider_manager_module, "SECRET_DIR", secret_dir)
+    monkeypatch.setenv("COPAW_ONLINE_ONLY", "0")
     return secret_dir
 
 
@@ -417,7 +418,6 @@ def test_init_from_storage_migrates_with_different_provider(
     assert provider.api_key == "sk-legacy-minimax"
 
     from agentscope.model import AnthropicChatModel
-
     assert provider.get_chat_model_cls() == AnthropicChatModel
 
     legacy_ollama_provider = {
@@ -437,3 +437,32 @@ def test_init_from_storage_migrates_with_different_provider(
     assert (
         manager.get_provider("ollama").base_url == "http://legacy-ollama:11434"
     )
+
+
+def test_online_only_mode_skips_local_providers_and_stale_active_model(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    secret_dir = tmp_path / ".copaw.secret"
+    monkeypatch.setattr(provider_manager_module, "SECRET_DIR", secret_dir)
+    monkeypatch.setenv("COPAW_ONLINE_ONLY", "1")
+
+    providers_dir = secret_dir / "providers"
+    providers_dir.mkdir(parents=True, exist_ok=True)
+    (providers_dir / "active_model.json").write_text(
+        json.dumps(
+            {"provider_id": "ollama", "model": "qwen2.5:3b"},
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    manager = ProviderManager()
+
+    assert manager.get_provider("ollama") is None
+    assert manager.get_provider("lmstudio") is None
+    assert manager.get_provider("llamacpp") is None
+    assert manager.get_provider("mlx") is None
+    assert manager.get_active_model() is None
+    assert (providers_dir / "active_model.json").exists() is False

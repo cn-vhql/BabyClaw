@@ -8,6 +8,7 @@ import { rootApi } from "./modules/root";
 import { channelApi } from "./modules/channel";
 import { heartbeatApi } from "./modules/heartbeat";
 import { cronJobApi } from "./modules/cronjob";
+import { focusApi } from "./modules/focus";
 import { chatApi, sessionApi } from "./modules/chat";
 import { envApi } from "./modules/env";
 import { providerApi } from "./modules/provider";
@@ -32,6 +33,9 @@ export const api = {
 
   // Heartbeat
   ...heartbeatApi,
+
+  // Focus
+  ...focusApi,
 
   // Cron Jobs
   ...cronJobApi,

@@ -11,15 +11,17 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
-from ...config import get_heartbeat_config
+from ...config import get_focus_config, get_heartbeat_config
 
 from ..console_push_store import append as push_store_append
+from ..focus.scheduler import run_focus_once
 from .executor import CronExecutor
 from .heartbeat import parse_heartbeat_every, run_heartbeat_once
 from .models import CronJobSpec, CronJobState
 from .repo.base import BaseJobRepository
 
 HEARTBEAT_JOB_ID = "_heartbeat"
+FOCUS_JOB_ID = "_focus"
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +105,22 @@ class CronManager:
                     f"every={hb.every} (interval={interval_seconds}s)",
                 )
 
+            focus = get_focus_config(self._agent_id)
+            if getattr(focus, "enabled", False):
+                interval_seconds = parse_heartbeat_every(focus.every)
+                self._scheduler.add_job(
+                    self._focus_callback,
+                    trigger=IntervalTrigger(seconds=interval_seconds),
+                    id=FOCUS_JOB_ID,
+                    replace_existing=True,
+                )
+                logger.info(
+                    "Focus job scheduled for agent %s: every=%s (interval=%ss)",
+                    self._agent_id,
+                    focus.every,
+                    interval_seconds,
+                )
+
             self._started = True
 
     async def stop(self) -> None:
@@ -183,6 +201,37 @@ class CronManager:
                 )
             else:
                 logger.info("heartbeat disabled, job removed")
+
+    async def reschedule_focus(self) -> None:
+        """Reload focus config and update or remove the focus job."""
+        async with self._lock:
+            if not self._started:
+                logger.warning(
+                    "CronManager not started for agent %s, cannot reschedule focus.",
+                    self._agent_id,
+                )
+                return
+
+            focus = get_focus_config(self._agent_id)
+
+            if self._scheduler.get_job(FOCUS_JOB_ID):
+                self._scheduler.remove_job(FOCUS_JOB_ID)
+
+            if getattr(focus, "enabled", False):
+                interval_seconds = parse_heartbeat_every(focus.every)
+                self._scheduler.add_job(
+                    self._focus_callback,
+                    trigger=IntervalTrigger(seconds=interval_seconds),
+                    id=FOCUS_JOB_ID,
+                    replace_existing=True,
+                )
+                logger.info(
+                    "focus rescheduled: every=%s (interval=%ss)",
+                    focus.every,
+                    interval_seconds,
+                )
+            else:
+                logger.info("focus disabled, job removed")
 
     async def run_job(self, job_id: str) -> None:
         """Trigger a job to run in the background (fire-and-forget).
@@ -319,6 +368,21 @@ class CronManager:
             raise
         except Exception:  # pylint: disable=broad-except
             logger.exception("heartbeat run failed")
+
+    async def _focus_callback(self) -> None:
+        """Run one focus monitoring cycle."""
+        try:
+            await run_focus_once(
+                runner=self._runner,
+                channel_manager=self._channel_manager,
+                workspace=self._workspace,
+                agent_id=self._agent_id,
+            )
+        except asyncio.CancelledError:
+            logger.info("focus cancelled")
+            raise
+        except Exception:  # pylint: disable=broad-except
+            logger.exception("focus run failed")
 
     async def _execute_once(self, job: CronJobSpec) -> None:
         rt = self._rt.get(job.id)

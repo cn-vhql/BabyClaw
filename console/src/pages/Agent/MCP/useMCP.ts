@@ -11,6 +11,18 @@ export function useMCP() {
   const [clients, setClients] = useState<MCPClientInfo[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "message" in error &&
+      typeof error.message === "string"
+    ) {
+      return error.message;
+    }
+    return fallback;
+  };
+
   const loadClients = useCallback(async () => {
     setLoading(true);
     try {
@@ -52,8 +64,8 @@ export function useMCP() {
         message.success(t("mcp.createSuccess"));
         await loadClients();
         return true;
-      } catch (error: any) {
-        const errorMsg = error?.message || t("mcp.createError");
+      } catch (error) {
+        const errorMsg = getErrorMessage(error, t("mcp.createError"));
         message.error(errorMsg);
         return false;
       }
@@ -82,8 +94,8 @@ export function useMCP() {
         message.success(t("mcp.updateSuccess"));
         await loadClients();
         return true;
-      } catch (error: any) {
-        const errorMsg = error?.message || t("mcp.updateError");
+      } catch (error) {
+        const errorMsg = getErrorMessage(error, t("mcp.updateError"));
         message.error(errorMsg);
         return false;
       }
@@ -99,7 +111,7 @@ export function useMCP() {
           client.enabled ? t("mcp.disableSuccess") : t("mcp.enableSuccess"),
         );
         await loadClients();
-      } catch (error) {
+      } catch {
         message.error(t("mcp.toggleError"));
       }
     },
@@ -112,7 +124,7 @@ export function useMCP() {
         await api.deleteMCPClient(client.key);
         message.success(t("mcp.deleteSuccess"));
         await loadClients();
-      } catch (error) {
+      } catch {
         message.error(t("mcp.deleteError"));
       }
     },

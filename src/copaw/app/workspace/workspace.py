@@ -27,6 +27,7 @@ from ..runner.task_tracker import TaskTracker
 from ..mcp import MCPClientManager
 from ..crons.manager import CronManager
 from ..crons.repo.json_repo import JsonJobRepository
+from ..focus.service import FocusService
 from ...agents.memory import MemoryManager
 from ...config.config import load_agent_config
 
@@ -124,6 +125,11 @@ class Workspace:
     def evolution_repo(self):
         """Get evolution repository instance from ServiceManager."""
         return self._service_manager.services.get("evolution_repo")
+
+    @property
+    def focus_service(self):
+        """Get focus service instance from ServiceManager."""
+        return self._service_manager.services.get("focus_service")
 
     # Non-service state
     @property
@@ -270,6 +276,18 @@ class Workspace:
         )
 
         # Priority 45: Evolution repository
+        sm.register(
+            ServiceDescriptor(
+                name="focus_service",
+                service_class=FocusService,
+                init_args=lambda ws: {
+                    "workspace_dir": ws.workspace_dir,
+                },
+                priority=44,
+                concurrent_init=False,
+            ),
+        )
+
         sm.register(
             ServiceDescriptor(
                 name="evolution_repo",

@@ -104,6 +104,14 @@ export const knowledgeApi = {
       method: "DELETE",
     }),
 
+  reindexDocument: (kbId: string, docId: string) =>
+    request<{ doc_id: string; filename: string; indexing_status: string }>(
+      `/knowledge/${kbId}/documents/${docId}/reindex`,
+      {
+        method: "POST",
+      }
+    ),
+
   getDocumentStatus: (kbId: string, docId: string) =>
     request<{ doc_id: string; indexing_status: string; chunk_count: number; indexing_error?: string }>(
       `/knowledge/${kbId}/documents/${docId}/status`

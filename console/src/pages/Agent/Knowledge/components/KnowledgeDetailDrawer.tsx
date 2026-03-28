@@ -1,8 +1,8 @@
 import { Drawer, Tabs, Button, Upload, Input, Table, Tag, message, Modal, Card, Popconfirm, Select } from "@agentscope-ai/design";
-import { useState, useEffect } from "react";
-import { PlusOutlined, DeleteOutlined, UploadOutlined, FileTextOutlined, SaveOutlined, SearchOutlined } from "@ant-design/icons";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { PlusOutlined, DeleteOutlined, UploadOutlined, FileTextOutlined, SaveOutlined, SearchOutlined, ReloadOutlined } from "@ant-design/icons";
 import type { UploadFile } from "antd";
-import { knowledgeApi, type KnowledgeBaseDetail, type Document, type Chunk } from "../../../../api/modules/knowledge";
+import { knowledgeApi, type KnowledgeBaseDetail, type Document, type Chunk, type SearchResult } from "../../../../api/modules/knowledge";
 
 interface Props {
   open: boolean;
@@ -21,7 +21,7 @@ export function KnowledgeDetailDrawer({ open, kbId, kb, onClose, onUpdate }: Pro
   const [uploading, setUploading] = useState(false);
   const [activeTab, setActiveTab] = useState("documents");
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [editingChunks, setEditingChunks] = useState<Chunk[]>([]);
@@ -33,10 +33,11 @@ export function KnowledgeDetailDrawer({ open, kbId, kb, onClose, onUpdate }: Pro
   const [addChunkModalOpen, setAddChunkModalOpen] = useState(false);
   const [searchPage, setSearchPage] = useState(1);
   const searchPageSize = 10;
-  const [indexingDocsMap, setIndexingDocsMap] = useState<Record<string, boolean>>({});
+  const [reindexingDocIds, setReindexingDocIds] = useState<Set<string>>(new Set());
+  const indexingDocsMapRef = useRef<Record<string, boolean>>({});
 
   // Poll document indexing status
-  const pollIndexingStatus = async (docIds: string[]) => {
+  const pollIndexingStatus = useCallback(async (docIds: string[]) => {
     if (!kbId || docIds.length === 0) return;
 
     try {
@@ -59,26 +60,32 @@ export function KnowledgeDetailDrawer({ open, kbId, kb, onClose, onUpdate }: Pro
           allCompleted = false;
         }
 
-        const oldStatus = indexingDocsMap[docId];
+        const oldStatus = indexingDocsMapRef.current[docId];
         if (oldStatus !== isCompleted) {
           hasChanges = true;
         }
       });
 
-      if (hasChanges || Object.keys(indexingDocsMap).length !== Object.keys(newStatuses).length) {
-        setIndexingDocsMap(newStatuses);
+      if (
+        hasChanges ||
+        Object.keys(indexingDocsMapRef.current).length !==
+          Object.keys(newStatuses).length
+      ) {
+        indexingDocsMapRef.current = newStatuses;
         if (hasChanges) {
           onUpdate();
         }
       }
 
       if (!allCompleted) {
-        setTimeout(() => pollIndexingStatus(docIds), 3000);
+        window.setTimeout(() => {
+          void pollIndexingStatus(docIds);
+        }, 3000);
       }
     } catch (error) {
       console.error("Failed to poll indexing status:", error);
     }
-  };
+  }, [kbId, onUpdate]);
 
   // Start polling when kb changes
   useEffect(() => {
@@ -88,10 +95,10 @@ export function KnowledgeDetailDrawer({ open, kbId, kb, onClose, onUpdate }: Pro
         .map(doc => doc.doc_id);
 
       if (pendingDocIds.length > 0) {
-        pollIndexingStatus(pendingDocIds);
+        void pollIndexingStatus(pendingDocIds);
       }
     }
-  }, [kb]);
+  }, [kb, pollIndexingStatus]);
 
   const handleUpload = async () => {
     if (!kbId || uploadFiles.length === 0) {
@@ -137,7 +144,7 @@ export function KnowledgeDetailDrawer({ open, kbId, kb, onClose, onUpdate }: Pro
       if (uploadedDocIds.length > 0) {
         pollIndexingStatus(uploadedDocIds);
       }
-    } catch (error) {
+    } catch {
       message.error("上传失败");
     } finally {
       setUploading(false);
@@ -151,8 +158,28 @@ export function KnowledgeDetailDrawer({ open, kbId, kb, onClose, onUpdate }: Pro
       await knowledgeApi.deleteDocument(kbId, docId);
       message.success("文档已删除");
       onUpdate();
-    } catch (error) {
+    } catch {
       message.error("删除失败");
+    }
+  };
+
+  const handleReindexDocument = async (docId: string) => {
+    if (!kbId) return;
+
+    setReindexingDocIds(prev => new Set(prev).add(docId));
+    try {
+      await knowledgeApi.reindexDocument(kbId, docId);
+      message.success("文档重新索引已启动");
+
+      // Start polling for this document
+      pollIndexingStatus([docId]);
+    } catch {
+      message.error("重新索引失败");
+      setReindexingDocIds(prev => {
+        const next = new Set(prev);
+        next.delete(docId);
+        return next;
+      });
     }
   };
 
@@ -165,7 +192,7 @@ export function KnowledgeDetailDrawer({ open, kbId, kb, onClose, onUpdate }: Pro
       setCurrentPreviewDocId(docId);
       setPreviewModalOpen(true);
       setPreviewPage(1);
-    } catch (error) {
+    } catch {
       message.error("加载分块失败");
     }
   };
@@ -179,7 +206,7 @@ export function KnowledgeDetailDrawer({ open, kbId, kb, onClose, onUpdate }: Pro
       message.success("分块已保存并重新生成向量");
       setPreviewModalOpen(false);
       onUpdate();
-    } catch (error) {
+    } catch {
       message.error("保存失败");
     } finally {
       setSavingChunks(false);
@@ -198,7 +225,7 @@ export function KnowledgeDetailDrawer({ open, kbId, kb, onClose, onUpdate }: Pro
       // Reload chunks
       const res = await knowledgeApi.getChunks(kbId, currentPreviewDocId);
       setEditingChunks(res.chunks || []);
-    } catch (error) {
+    } catch {
       message.error("添加失败");
     }
   };
@@ -212,7 +239,7 @@ export function KnowledgeDetailDrawer({ open, kbId, kb, onClose, onUpdate }: Pro
       // Reload chunks
       const res = await knowledgeApi.getChunks(kbId, currentPreviewDocId);
       setEditingChunks(res.chunks || []);
-    } catch (error) {
+    } catch {
       message.error("删除失败");
     }
   };
@@ -227,7 +254,7 @@ export function KnowledgeDetailDrawer({ open, kbId, kb, onClose, onUpdate }: Pro
       const res = await knowledgeApi.search(kbId, searchQuery, 10);
       setSearchResults(res.results || []);
       setSearchPage(1);
-    } catch (error) {
+    } catch {
       message.error("检索失败");
     } finally {
       setSearching(false);
@@ -303,7 +330,7 @@ export function KnowledgeDetailDrawer({ open, kbId, kb, onClose, onUpdate }: Pro
     {
       title: "操作",
       key: "actions",
-      width: 200,
+      width: 280,
       render: (_: unknown, record: Document) => (
         <div style={{ display: "flex", gap: 8 }}>
           <Button
@@ -314,6 +341,16 @@ export function KnowledgeDetailDrawer({ open, kbId, kb, onClose, onUpdate }: Pro
             disabled={record.chunk_count === 0}
           >
             查看分块
+          </Button>
+          <Button
+            type="link"
+            size="small"
+            icon={<ReloadOutlined />}
+            onClick={() => handleReindexDocument(record.doc_id)}
+            loading={reindexingDocIds.has(record.doc_id) || record.indexing_status === "processing"}
+            disabled={record.indexing_status === "processing"}
+          >
+            重新索引
           </Button>
           <Popconfirm
             title="确认删除"
@@ -463,14 +500,15 @@ export function KnowledgeDetailDrawer({ open, kbId, kb, onClose, onUpdate }: Pro
         </div>
       </Card>
 
-      <Card title="已上传文档" size="small">
-        <Table
-          columns={docColumns}
-          dataSource={kb?.documents || []}
-          rowKey="doc_id"
-          pagination={{ pageSize: 10 }}
-        />
-      </Card>
+      <div style={{ marginBottom: 12, fontSize: 16, fontWeight: 600 }}>
+        已上传文档
+      </div>
+      <Table
+        columns={docColumns}
+        dataSource={kb?.documents || []}
+        rowKey="doc_id"
+        pagination={{ pageSize: 10 }}
+      />
     </div>
   );
 
@@ -487,19 +525,20 @@ export function KnowledgeDetailDrawer({ open, kbId, kb, onClose, onUpdate }: Pro
         />
       </Card>
 
-      <Card title="检索结果" size="small">
-        <Table
-          columns={searchColumns}
-          dataSource={searchResults}
-          rowKey={(record) => record.chunk_id}
-          pagination={{
-            current: searchPage,
-            pageSize: searchPageSize,
-            total: searchResults.length,
-            onChange: (page) => setSearchPage(page),
-          }}
-        />
-      </Card>
+      <div style={{ marginBottom: 12, fontSize: 16, fontWeight: 600 }}>
+        检索结果
+      </div>
+      <Table
+        columns={searchColumns}
+        dataSource={searchResults}
+        rowKey={(record) => record.chunk_id}
+        pagination={{
+          current: searchPage,
+          pageSize: searchPageSize,
+          total: searchResults.length,
+          onChange: (page) => setSearchPage(page),
+        }}
+      />
     </div>
   );
 

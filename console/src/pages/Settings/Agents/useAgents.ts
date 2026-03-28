@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { message } from "antd";
 import { useTranslation } from "react-i18next";
 import { agentsApi } from "@/api/modules/agents";
@@ -20,7 +20,7 @@ export function useAgents(): UseAgentsReturn {
   const [error, setError] = useState<Error | null>(null);
   const { setAgents: updateStoreAgents } = useAgentStore();
 
-  const loadAgents = async () => {
+  const loadAgents = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -36,22 +36,22 @@ export function useAgents(): UseAgentsReturn {
     } finally {
       setLoading(false);
     }
-  };
+  }, [t, updateStoreAgents]);
 
   const deleteAgent = async (agentId: string) => {
     try {
       await agentsApi.deleteAgent(agentId);
       message.success(t("agent.deleteSuccess"));
       await loadAgents();
-    } catch (err: any) {
-      message.error(err.message || t("agent.deleteFailed"));
+    } catch (err) {
+      message.error(err instanceof Error ? err.message : t("agent.deleteFailed"));
       throw err;
     }
   };
 
   useEffect(() => {
-    loadAgents();
-  }, []);
+    void loadAgents();
+  }, [loadAgents]);
 
   return {
     agents,

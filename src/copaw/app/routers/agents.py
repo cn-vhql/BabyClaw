@@ -19,6 +19,11 @@ from ...config.config import (
     generate_short_agent_id,
 )
 from ...config.utils import load_config, save_config
+from ...config.utils import (
+    clear_agent_workspace_deleted,
+    mark_agent_workspace_deleted,
+    recover_agent_profiles,
+)
 from ...agents.memory.agent_md_manager import AgentMdManager
 from ..multi_agent_manager import MultiAgentManager
 from ...constant import WORKING_DIR
@@ -78,6 +83,12 @@ def _get_multi_agent_manager(request: Request) -> MultiAgentManager:
     return request.app.state.multi_agent_manager
 
 
+def _load_config_with_agent_recovery(agent_id: str | None = None):
+    """Load config after recovering orphaned workspaces when present."""
+    recover_agent_profiles(agent_id=agent_id)
+    return load_config()
+
+
 @router.get(
     "",
     response_model=AgentListResponse,
@@ -86,7 +97,7 @@ def _get_multi_agent_manager(request: Request) -> MultiAgentManager:
 )
 async def list_agents() -> AgentListResponse:
     """List all configured agents."""
-    config = load_config()
+    config = _load_config_with_agent_recovery()
 
     agents = []
     for agent_id, agent_ref in config.agents.profiles.items():
@@ -126,6 +137,7 @@ async def list_agents() -> AgentListResponse:
 async def get_agent(agentId: str = PathParam(...)) -> AgentProfileConfig:
     """Get agent configuration."""
     try:
+        _load_config_with_agent_recovery(agentId)
         agent_config = load_agent_config(agentId)
         return agent_config
     except ValueError as e:
@@ -167,6 +179,7 @@ async def create_agent(
         request.workspace_dir or f"{WORKING_DIR}/workspaces/{new_id}",
     ).expanduser()
     workspace_dir.mkdir(parents=True, exist_ok=True)
+    clear_agent_workspace_deleted(workspace_dir)
 
     # Build complete agent config with generated ID
     from ...config.config import (
@@ -221,7 +234,7 @@ async def update_agent(
     request: Request = None,
 ) -> AgentProfileConfig:
     """Update agent configuration."""
-    config = load_config()
+    config = _load_config_with_agent_recovery(agentId)
 
     if agentId not in config.agents.profiles:
         raise HTTPException(
@@ -270,7 +283,7 @@ async def delete_agent(
     request: Request = None,
 ) -> dict:
     """Delete an agent."""
-    config = load_config()
+    config = _load_config_with_agent_recovery(agentId)
 
     if agentId not in config.agents.profiles:
         raise HTTPException(
@@ -284,6 +297,8 @@ async def delete_agent(
             detail="Cannot delete the default agent",
         )
 
+    workspace_dir = Path(config.agents.profiles[agentId].workspace_dir)
+
     # Stop agent instance if running
     manager = _get_multi_agent_manager(request)
     await manager.stop_agent(agentId)
@@ -291,6 +306,7 @@ async def delete_agent(
     # Remove from config
     del config.agents.profiles[agentId]
     save_config(config)
+    mark_agent_workspace_deleted(workspace_dir)
 
     # Note: We don't delete the workspace directory for safety
     # Users can manually delete it if needed

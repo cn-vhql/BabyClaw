@@ -8,7 +8,16 @@
 }
 
 .loadingText {
-  color: #999;
+  color: var(--app-text-muted);
+}
+
+.modalLoading {
+  min-height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--app-text-muted);
+  font-size: 14px;
 }
 
 /* ---- Sections ---- */
@@ -29,7 +38,7 @@
 
 .sectionDesc {
   margin: 0 0 24px;
-  color: #999;
+  color: var(--app-text-muted);
   font-size: 14px;
 }
 
@@ -47,9 +56,13 @@
 
 .agentDefaultModelCard {
   border-radius: 16px;
-  border: 2px solid #615ced;
-  box-shadow: rgba(97, 92, 237, 0.15) 0px 8px 24px;
-  background: linear-gradient(135deg, #f8f9ff 0%, #fff 100%);
+  border: 2px solid var(--app-primary);
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--app-primary-shadow) 65%, transparent);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--app-primary) 8%, var(--app-surface-strong)) 0%,
+    var(--app-surface) 100%
+  );
 
   :global(.ant-card-body) {
     padding: 20px 24px;
@@ -73,12 +86,12 @@
   margin: 0;
   font-size: 18px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--app-text);
 }
 
 .agentNameBadge {
   padding: 4px 12px;
-  background: #615ced;
+  background: var(--app-primary);
   color: #fff;
   font-size: 12px;
   font-weight: 500;
@@ -88,7 +101,7 @@
 .cardDescription {
   margin: 0 0 16px;
   font-size: 14px;
-  color: #666;
+  color: var(--app-text-secondary);
   line-height: 1.6;
 }
 
@@ -108,29 +121,6 @@
   width: 100%;
 }
 
-/* Dark mode for Agent Default Model Card */
-:global(.dark-mode) {
-  .agentDefaultModelCard {
-    background: linear-gradient(135deg, rgba(97, 92, 237, 0.1) 0%, #2a2a2a 100%);
-    border-color: #615ced;
-    box-shadow: rgba(97, 92, 237, 0.25) 0px 8px 24px;
-  }
-
-  .cardTitle {
-    color: rgba(255, 255, 255, 0.85);
-  }
-
-  .cardDescription {
-    color: rgba(255, 255, 255, 0.55);
-  }
-
-  .savingWrapper {
-    background: rgba(82, 196, 26, 0.15);
-    border-color: rgba(82, 196, 26, 0.3);
-    color: #52c41a;
-  }
-}
-
 /* ---- Provider Groups ---- */
 
 .providerGroup {
@@ -144,7 +134,7 @@
 .providerGroupTitle {
   font-size: 14px;
   font-weight: 600;
-  color: #666;
+  color: var(--app-text-secondary);
   margin: 0 0 12px;
   letter-spacing: 0.02em;
 }
@@ -167,23 +157,23 @@
   cursor: pointer;
   position: relative;
   overflow: visible;
-  background: #fff;
+  background: color-mix(in srgb, var(--app-surface) 92%, transparent);
   display: flex;
   flex-direction: column;
 
   &.enabledCard {
-    border: 2px solid #615ced !important;
-    box-shadow: rgba(97, 92, 237, 0.2) 0px 8px 24px !important;
+    border: 2px solid var(--app-primary) !important;
+    box-shadow: 0 12px 32px color-mix(in srgb, var(--app-primary-shadow) 72%, transparent) !important;
   }
 
   &.hover {
-    border: 1px solid #615ced;
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--app-border-strong);
+    box-shadow: var(--app-elevated-shadow);
   }
 
   &.normal {
-    border: 1px solid rgba(0, 0, 0, 0.04);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    border: 1px solid var(--app-border);
+    box-shadow: var(--app-shadow);
   }
 
   :global(.ant-card-body) {
@@ -212,7 +202,7 @@
     }
 
     &.disabled {
-      color: #999;
+      color: var(--app-text-muted);
     }
   }
 }
@@ -241,7 +231,7 @@
 .cardName {
   font-size: 18px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--app-text);
 }
 
 .cardInfo {
@@ -257,18 +247,18 @@
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: #666;
+  color: var(--app-text-secondary);
 }
 
 .infoLabel {
-  color: #999;
+  color: var(--app-text-muted);
   min-width: 70px;
   flex-shrink: 0;
   font-weight: 500;
 }
 
 .infoValue {
-  color: #333;
+  color: var(--app-text);
   font-family: "SF Mono", "Menlo", monospace;
   font-size: 12px;
   overflow: hidden;
@@ -281,7 +271,7 @@
 }
 
 .infoEmpty {
-  color: #ccc;
+  color: var(--app-text-muted);
   font-style: italic;
 }
 
@@ -291,7 +281,7 @@
   justify-content: flex-end;
   gap: 8px;
   padding-top: 14px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--app-border);
 }
 
 .configBtn {
@@ -300,12 +290,16 @@
   justify-content: center;
   gap: 6px;
   padding: 6px 14px;
-  color: #555;
+  color: var(--app-text-secondary);
   font-size: 13px;
   cursor: pointer;
   transition: all 0.2s;
   line-height: 1;
   white-space: nowrap;
+
+  &:hover {
+    color: var(--app-primary);
+  }
 }
 
 /* ---- Modal Footer ---- */
@@ -330,7 +324,7 @@
 
 .advancedConfigSection {
   margin-top: 4px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--app-border);
   padding-top: 16px;
 }
 
@@ -343,7 +337,7 @@
   background: transparent;
   padding: 0 0 12px;
   cursor: pointer;
-  color: #333;
+  color: var(--app-text);
 }
 
 .advancedConfigToggleLabel {
@@ -356,17 +350,17 @@
 
 .jsonEditorContainer {
   position: relative;
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--app-border);
   border-radius: 8px;
   overflow: hidden;
-  background: #fafbfc;
+  background: color-mix(in srgb, var(--app-surface-secondary) 88%, transparent);
   transition:
     border-color 0.2s ease,
     box-shadow 0.2s ease;
 
   &:focus-within {
-    border-color: #615ced;
-    box-shadow: 0 0 0 2px rgba(97, 92, 237, 0.12);
+    border-color: var(--app-primary);
+    box-shadow: 0 0 0 2px var(--app-primary-soft);
   }
 }
 
@@ -384,7 +378,7 @@
 }
 
 .jsonEditorHighlight {
-  color: #6b7280;
+  color: var(--app-text-muted);
   pointer-events: none;
   overflow: auto;
 }
@@ -398,7 +392,7 @@
   outline: 0;
   background: transparent;
   color: transparent;
-  caret-color: #1f2328;
+  caret-color: var(--app-text);
   overflow: auto;
   -webkit-text-fill-color: transparent;
 
@@ -436,15 +430,15 @@
 
 .slotSection {
   padding: 24px;
-  background: #ffffff;
+  background: color-mix(in srgb, var(--app-surface) 94%, transparent);
   border-radius: 16px;
-  border: 1px solid #e8e8e8;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--app-border);
+  box-shadow: var(--app-shadow);
   transition: all 0.2s ease-in-out;
 
   &:hover {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-    border-color: #d9d9d9;
+    box-shadow: var(--app-elevated-shadow);
+    border-color: var(--app-border-strong);
   }
 }
 
@@ -454,13 +448,13 @@
   align-items: center;
   margin-bottom: 20px;
   padding-bottom: 16px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--app-border);
 }
 
 .slotTitle {
   font-size: 18px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--app-text);
 }
 
 .slotCurrent {
@@ -501,7 +495,7 @@
 
 .slotLabel {
   font-size: 14px;
-  color: #666;
+  color: var(--app-text-secondary);
   font-weight: 500;
   display: flex;
   align-items: center;
@@ -513,7 +507,7 @@
   justify-content: flex-end;
   margin-top: 24px;
   padding-top: 20px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--app-border);
 }
 
 /* ---- Section Header Row (title + button) ---- */
@@ -541,7 +535,7 @@
 .modelList {
   max-height: 360px;
   overflow-y: auto;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--app-border);
   border-radius: 8px;
   margin-top: 8px;
 }
@@ -549,7 +543,7 @@
 .modelListEmpty {
   padding: 24px;
   text-align: center;
-  color: #999;
+  color: var(--app-text-muted);
   font-size: 13px;
 }
 
@@ -558,7 +552,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 16px;
-  border-bottom: 1px solid #f5f5f5;
+  border-bottom: 1px solid var(--app-border);
   transition: background 0.15s;
 
   &:last-child {
@@ -566,7 +560,7 @@
   }
 
   &:hover {
-    background: #fafafa;
+    background: var(--app-surface-secondary);
   }
 }
 
@@ -581,12 +575,12 @@
 .modelListItemName {
   font-size: 14px;
   font-weight: 500;
-  color: #1a1a1a;
+  color: var(--app-text);
 }
 
 .modelListItemId {
   font-size: 12px;
-  color: #999;
+  color: var(--app-text-muted);
   font-family: "SF Mono", "Menlo", monospace;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -604,160 +598,7 @@
 .modelAddForm {
   margin-top: 12px;
   padding: 16px;
-  background: #fafafa;
+  background: color-mix(in srgb, var(--app-surface-secondary) 82%, transparent);
   border-radius: 8px;
-  border: 1px dashed #d9d9d9;
-}
-
-/* ─── Dark mode ─────────────────────────────────────────────────────────────── */
-:global(.dark-mode) {
-  .loadingText {
-    color: rgba(255, 255, 255, 0.35);
-  }
-
-  .sectionDesc {
-    color: rgba(255, 255, 255, 0.35);
-  }
-
-  .providerGroupTitle {
-    color: rgba(255, 255, 255, 0.4);
-  }
-
-  /* Provider card */
-  .providerCard {
-    background: #2a2a2a;
-
-    &.normal {
-      border-color: rgba(255, 255, 255, 0.08) !important;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
-    }
-
-    &.hover {
-      border-color: #615ced !important;
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4) !important;
-    }
-  }
-
-  .cardName {
-    color: rgba(255, 255, 255, 0.85);
-  }
-
-  .infoRow {
-    color: rgba(255, 255, 255, 0.5);
-  }
-
-  .infoLabel {
-    color: rgba(255, 255, 255, 0.3);
-  }
-
-  .infoValue {
-    color: rgba(255, 255, 255, 0.65);
-  }
-
-  .infoEmpty {
-    color: rgba(255, 255, 255, 0.2);
-  }
-
-  .cardActions {
-    border-top-color: rgba(255, 255, 255, 0.08);
-  }
-
-  .configBtn {
-    color: rgba(255, 255, 255, 0.55);
-  }
-
-  .statusContainer .statusText.disabled {
-    color: rgba(255, 255, 255, 0.3);
-  }
-
-  /* Slot section (LLM 顶部选择区) */
-  .slotSection {
-    background: #2a2a2a;
-    border-color: rgba(255, 255, 255, 0.08);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-
-    &:hover {
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-      border-color: rgba(255, 255, 255, 0.15);
-    }
-  }
-
-  .slotHeader {
-    border-bottom-color: rgba(255, 255, 255, 0.08);
-  }
-
-  .slotTitle {
-    color: rgba(255, 255, 255, 0.85);
-  }
-
-  .slotCurrent {
-    color: #52c41a;
-    background: rgba(82, 196, 26, 0.1);
-    border-color: rgba(82, 196, 26, 0.3);
-  }
-
-  .slotLabel {
-    color: rgba(255, 255, 255, 0.5);
-  }
-
-  .slotActions {
-    border-top-color: rgba(255, 255, 255, 0.08);
-  }
-
-  /* Advanced config */
-  .advancedConfigSection {
-    border-top-color: rgba(255, 255, 255, 0.08);
-  }
-
-  .advancedConfigToggle {
-    color: rgba(255, 255, 255, 0.65);
-  }
-
-  /* JSON editor */
-  .jsonEditorContainer {
-    border-color: rgba(255, 255, 255, 0.15);
-    background: #1a1a1a;
-
-    &:focus-within {
-      border-color: #615ced;
-    }
-  }
-
-  .jsonEditorHighlight {
-    color: rgba(255, 255, 255, 0.45);
-  }
-
-  .jsonEditorTextarea {
-    caret-color: rgba(255, 255, 255, 0.85);
-  }
-
-  /* Model list (modal) */
-  .modelList {
-    border-color: rgba(255, 255, 255, 0.08);
-  }
-
-  .modelListEmpty {
-    color: rgba(255, 255, 255, 0.3);
-  }
-
-  .modelListItem {
-    border-bottom-color: rgba(255, 255, 255, 0.06);
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.04);
-    }
-  }
-
-  .modelListItemName {
-    color: rgba(255, 255, 255, 0.85);
-  }
-
-  .modelListItemId {
-    color: rgba(255, 255, 255, 0.3);
-  }
-
-  .modelAddForm {
-    background: rgba(255, 255, 255, 0.03);
-    border-color: rgba(255, 255, 255, 0.12);
-  }
+  border: 1px dashed var(--app-border-strong);
 }

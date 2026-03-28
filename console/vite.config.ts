@@ -2,15 +2,24 @@ import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 
+function parseBooleanFlag(value: string | undefined, defaultValue: boolean) {
+  if (value === undefined) {
+    return defaultValue;
+  }
+  return ["1", "true", "yes", "on"].includes(value.toLowerCase());
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   // Empty = same-origin; frontend and backend served together, no hardcoded host.
   const apiBaseUrl = env.BASE_URL ?? "";
+  const onlineOnlyMode = parseBooleanFlag(env.COPAW_ONLINE_ONLY, true);
 
   return {
     define: {
       BASE_URL: JSON.stringify(apiBaseUrl),
       TOKEN: JSON.stringify(env.TOKEN || ""),
+      ONLINE_ONLY_MODE: JSON.stringify(onlineOnlyMode),
       MOBILE: false,
     },
     plugins: [react()],

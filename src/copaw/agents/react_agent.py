@@ -46,6 +46,10 @@ from .tools import (
     create_memory_search_tool,
     knowledge_search,
     list_knowledge_bases,
+    add_focus_tag,
+    list_focus_tags,
+    remove_focus_tag,
+    write_focus_note,
 )
 from .utils import process_file_and_media_blocks_in_message
 from ..constant import (
@@ -215,6 +219,10 @@ class CoPawAgent(ToolGuardMixin, ReActAgent):
             "get_token_usage": get_token_usage,
             "knowledge_search": knowledge_search,
             "list_knowledge_bases": list_knowledge_bases,
+            "add_focus_tag": add_focus_tag,
+            "list_focus_tags": list_focus_tags,
+            "remove_focus_tag": remove_focus_tag,
+            "write_focus_note": write_focus_note,
         }
 
         # Register only enabled tools

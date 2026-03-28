@@ -40,10 +40,28 @@ const BUILTIN_TOOLS = [
   "send_file_to_user",
 ];
 
+type ToolGuardFormValues = {
+  enabled: boolean;
+  guarded_tools?: string[];
+  denied_tools?: string[];
+};
+
+type RuleFormValues = {
+  id: string;
+  tools: string[];
+  params: string[];
+  category: string;
+  severity: string;
+  patterns: string;
+  exclude_patterns: string;
+  description: string;
+  remediation: string;
+};
+
 function SecurityPage() {
   const { t } = useTranslation();
-  const [form] = Form.useForm();
-  const [editForm] = Form.useForm();
+  const [form] = Form.useForm<ToolGuardFormValues>();
+  const [editForm] = Form.useForm<RuleFormValues>();
   const [saving, setSaving] = useState(false);
 
   const {
@@ -94,7 +112,7 @@ function SecurityPage() {
     } finally {
       setSaving(false);
     }
-  }, [customRules, buildSaveBody, form, t]);
+  }, [customRules, buildSaveBody, form, setEnabled, t]);
 
   const handleReset = useCallback(() => {
     form.resetFields();
@@ -299,16 +317,14 @@ function SecurityPage() {
                     </Button>
                   </div>
 
-                  <Card className={styles.tableCard}>
-                    <RuleTable
-                      rules={mergedRules}
-                      enabled={enabled}
-                      onToggleRule={toggleRule}
-                      onPreviewRule={setPreviewRule}
-                      onEditRule={openEditRule}
-                      onDeleteRule={deleteCustomRule}
-                    />
-                  </Card>
+                  <RuleTable
+                    rules={mergedRules}
+                    enabled={enabled}
+                    onToggleRule={toggleRule}
+                    onPreviewRule={setPreviewRule}
+                    onEditRule={openEditRule}
+                    onDeleteRule={deleteCustomRule}
+                  />
 
                   <div className={styles.footerButtons}>
                     <Button

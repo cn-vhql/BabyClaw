@@ -13,7 +13,7 @@ from fastapi.responses import FileResponse
 from agentscope_runtime.engine.app import AgentApp
 
 from ..config import load_config  # pylint: disable=no-name-in-module
-from ..config.utils import get_config_path
+from ..config.utils import get_config_path, recover_agent_profiles
 from ..constant import DOCS_ENABLED, LOG_LEVEL_ENV, CORS_ORIGINS, WORKING_DIR
 from ..__version__ import __version__
 from ..utils.logging import setup_logger, add_copaw_file_handler
@@ -178,6 +178,7 @@ async def lifespan(
     logger.info("Checking for legacy config migration...")
     migrate_legacy_workspace_to_default_agent()
     ensure_default_agent_exists()
+    recover_agent_profiles()
 
     # --- Multi-agent manager initialization ---
     logger.info("Initializing MultiAgentManager...")

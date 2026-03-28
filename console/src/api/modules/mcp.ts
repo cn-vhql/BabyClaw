@@ -63,7 +63,7 @@ export const mcpApi = {
       tools: Array<{
         name: string;
         description: string;
-        input_schema?: any;
+        input_schema?: unknown;
       }>;
       tool_count: number;
     }>(`/mcp/${encodeURIComponent(clientKey)}/test`, {

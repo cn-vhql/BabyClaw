@@ -19,6 +19,38 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_MCP_CONNECT_TIMEOUT = 60.0
+DEFAULT_MCP_CLOSE_TIMEOUT = 5.0
+
+
+def _load_timeout_from_env(env_name: str, default: float) -> float:
+    """Load a positive timeout from env with a safe fallback."""
+    raw = os.environ.get(env_name, "").strip()
+    if not raw:
+        return default
+
+    try:
+        value = float(raw)
+    except ValueError:
+        logger.warning(
+            "Invalid %s=%r, using default %.1fs",
+            env_name,
+            raw,
+            default,
+        )
+        return default
+
+    if value <= 0:
+        logger.warning(
+            "Non-positive %s=%r, using default %.1fs",
+            env_name,
+            raw,
+            default,
+        )
+        return default
+
+    return value
+
 
 class MCPClientManager:
     """Manages MCP clients with hot-reload support.
@@ -31,10 +63,18 @@ class MCPClientManager:
     Design pattern mirrors ChannelManager for consistency.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, close_timeout: float | None = None) -> None:
         """Initialize an empty MCP client manager."""
         self._clients: Dict[str, Any] = {}
         self._lock = asyncio.Lock()
+        self._close_timeout = (
+            close_timeout
+            if close_timeout is not None
+            else _load_timeout_from_env(
+                "COPAW_MCP_CLOSE_TIMEOUT_SECONDS",
+                DEFAULT_MCP_CLOSE_TIMEOUT,
+            )
+        )
 
     async def init_from_config(self, config: "MCPConfig") -> None:
         """Initialize clients from configuration.
@@ -79,11 +119,12 @@ class MCPClientManager:
         self,
         key: str,
         client_config: "MCPClientConfig",
-        timeout: float = 60.0,
+        timeout: float = DEFAULT_MCP_CONNECT_TIMEOUT,
     ) -> None:
         """Replace or add a client with new configuration.
 
-        Flow: connect new (outside lock) → swap + close old (inside lock).
+        Flow: connect new (outside lock) → swap (inside lock) → close old
+        (outside lock).
         This ensures minimal lock holding time.
 
         Args:
@@ -102,34 +143,31 @@ class MCPClientManager:
             logger.warning(
                 f"Timeout connecting MCP client '{key}' after {timeout}s",
             )
-            try:
-                await new_client.close()
-            except Exception:
-                pass
+            await self._close_client(
+                key,
+                new_client,
+                reason="connect timeout cleanup",
+            )
             raise
         except Exception as e:
             logger.warning(f"Failed to connect MCP client '{key}': {e}")
-            try:
-                await new_client.close()
-            except Exception:
-                pass
+            await self._close_client(
+                key,
+                new_client,
+                reason="connect failure cleanup",
+            )
             raise
 
-        # 2. Swap and close old client inside lock
+        # 2. Swap client inside lock
         async with self._lock:
             old_client = self._clients.get(key)
             self._clients[key] = new_client
 
-            if old_client is not None:
-                logger.debug(f"Closing old MCP client: {key}")
-                try:
-                    await old_client.close()
-                except Exception as e:
-                    logger.warning(
-                        f"Error closing old MCP client '{key}': {e}",
-                    )
-            else:
-                logger.debug(f"Added new MCP client: {key}")
+        if old_client is not None:
+            logger.debug(f"Closing old MCP client after swap: {key}")
+            await self._close_client(key, old_client, reason="replace")
+        else:
+            logger.debug(f"Added new MCP client: {key}")
 
     async def remove_client(self, key: str) -> None:
         """Remove and close a client.
@@ -142,10 +180,7 @@ class MCPClientManager:
 
         if old_client is not None:
             logger.debug(f"Removing MCP client: {key}")
-            try:
-                await old_client.close()
-            except Exception as e:
-                logger.warning(f"Error closing MCP client '{key}': {e}")
+            await self._close_client(key, old_client, reason="remove")
 
     async def close_all(self) -> None:
         """Close all MCP clients.
@@ -153,22 +188,19 @@ class MCPClientManager:
         Called during application shutdown.
         """
         async with self._lock:
-            clients_snapshot = list(self._clients.items())
+            # AgentScope MCP clients recommend LIFO cleanup order.
+            clients_snapshot = list(reversed(list(self._clients.items())))
             self._clients.clear()
 
         logger.debug("Closing all MCP clients")
         for key, client in clients_snapshot:
-            if client is not None:
-                try:
-                    await client.close()
-                except Exception as e:
-                    logger.warning(f"Error closing MCP client '{key}': {e}")
+            await self._close_client(key, client, reason="shutdown")
 
     async def _add_client(
         self,
         key: str,
         client_config: "MCPClientConfig",
-        timeout: float = 60.0,
+        timeout: float = DEFAULT_MCP_CONNECT_TIMEOUT,
     ) -> None:
         """Add a new client (used during initial setup).
 
@@ -179,11 +211,62 @@ class MCPClientManager:
         """
         client = self._build_client(client_config)
 
-        # Add timeout to prevent indefinite blocking
-        await asyncio.wait_for(client.connect(), timeout=timeout)
+        try:
+            # Add timeout to prevent indefinite blocking
+            await asyncio.wait_for(client.connect(), timeout=timeout)
+        except Exception:
+            await self._close_client(
+                key,
+                client,
+                reason="initialization cleanup",
+            )
+            raise
 
         async with self._lock:
             self._clients[key] = client
+
+    async def _close_client(
+        self,
+        key: str,
+        client: Any,
+        *,
+        reason: str,
+    ) -> None:
+        """Close a client with timeout protection.
+
+        Some MCP backends can hang indefinitely during shutdown. We isolate
+        that behavior here so config reloads and application shutdowns can
+        continue even when a specific server misbehaves.
+        """
+        if client is None:
+            return
+
+        try:
+            await asyncio.wait_for(
+                client.close(),
+                timeout=self._close_timeout,
+            )
+        except asyncio.TimeoutError:
+            logger.warning(
+                "Timeout closing MCP client '%s' during %s after %.2fs",
+                key,
+                reason,
+                self._close_timeout,
+            )
+        except RuntimeError as e:
+            logger.debug(
+                "Skipping MCP client '%s' close during %s: %s",
+                key,
+                reason,
+                e,
+            )
+        except Exception as e:
+            logger.warning(
+                "Error closing MCP client '%s' during %s: %s",
+                key,
+                reason,
+                e,
+            )
 
     @staticmethod
     def _build_client(client_config: "MCPClientConfig") -> Any:

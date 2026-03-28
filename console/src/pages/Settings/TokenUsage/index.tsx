@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button, Card, message, Table } from "@agentscope-ai/design";
 import type { ColumnsType } from "antd/es/table";
 import { DatePicker } from "antd";
@@ -26,7 +26,7 @@ function TokenUsagePage() {
   );
   const [endDate, setEndDate] = useState<Dayjs>(dayjs());
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -44,11 +44,11 @@ function TokenUsagePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [endDate, startDate, t]);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    void fetchData();
+  }, [fetchData]);
 
   const handleDateChange = (dates: [Dayjs | null, Dayjs | null] | null) => {
     if (dates?.[0]) setStartDate(dates[0]);
@@ -181,33 +181,29 @@ function TokenUsagePage() {
               </div>
 
               {byModelDataSource.length > 0 && (
-                <Card
-                  className={styles.tableCard}
-                  title={t("tokenUsage.byModel")}
-                  bodyStyle={{ padding: 0 }}
-                >
+                <>
+                  <h3 className={styles.tableTitle}>{t("tokenUsage.byModel")}</h3>
                   <Table<ByModelRow>
+                    className={styles.tableSection}
                     columns={byModelColumns}
                     dataSource={byModelDataSource}
                     rowKey="key"
                     pagination={false}
                   />
-                </Card>
+                </>
               )}
 
               {byDateDataSource.length > 0 && (
-                <Card
-                  className={styles.tableCard}
-                  title={t("tokenUsage.byDate")}
-                  bodyStyle={{ padding: 0 }}
-                >
+                <>
+                  <h3 className={styles.tableTitle}>{t("tokenUsage.byDate")}</h3>
                   <Table<ByDateRow>
+                    className={styles.tableSection}
                     columns={byDateColumns}
                     dataSource={byDateDataSource}
                     rowKey="key"
                     pagination={false}
                   />
-                </Card>
+                </>
               )}
             </>
           ) : (

@@ -133,6 +133,26 @@ async def get_evolution_record(
     return record.model_dump(mode="json")
 
 
+@router.get("/records/{record_id}/archive")
+async def get_evolution_archive_by_record(
+    record_id: str,
+    request: Request,
+) -> dict:
+    """Get evolution archive by evolution record ID."""
+    from ..agent_context import get_agent_for_request
+
+    workspace = await get_agent_for_request(request)
+    repo = workspace.evolution_repo
+    record = await repo.get_record(record_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Record not found")
+    archive = await repo.get_archive_by_evolution_id(record_id)
+    if not archive:
+        raise HTTPException(status_code=404, detail="Archive not found")
+    archive = await repo.enrich_archive(archive, record=record)
+    return archive.model_dump(mode="json")
+
+
 @router.get("/archives/{archive_id}")
 async def get_evolution_archive(
     archive_id: str,
@@ -145,7 +165,10 @@ async def get_evolution_archive(
     repo = workspace.evolution_repo
     archive = await repo.get_archive(archive_id)
     if not archive:
+        archive = await repo.get_archive_by_evolution_id(archive_id)
+    if not archive:
         raise HTTPException(status_code=404, detail="Archive not found")
+    archive = await repo.enrich_archive(archive)
     return archive.model_dump(mode="json")
 
 

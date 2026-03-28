@@ -1,57 +1,53 @@
-# BabyClaw Default Configuration (Slim Version - No Browser Support)
-# This version uses the slim image for smaller footprint.
-# For full version with browser support, use docker-compose.full.yml
-# For slim version explicitly, use docker-compose.slim.yml
+# CoPaw Default Docker Compose Configuration
+# Default mode builds the slim image locally.
+# Use docker-compose.full.yml when browser automation is required.
 #
 # Quick start:
-#   docker-compose up -d              # Start slim version (default)
-#   docker-compose -f docker-compose.full.yml up -d  # Start full version
-#
-# Features:
-# - Knowledge base with TF-IDF intelligent chunking (requires scikit-learn)
-# - Multi-channel support (DingTalk, Feishu, QQ, Discord, etc.)
-# - Scheduled tasks and cron jobs
-# - File operations (PDF, Office, etc.)
-#
-# Build: docker build -t babyclaw:slim .
-# Memory: ~512MB - 2GB
-# Image Size: ~800MB - 1.5GB
+#   docker compose up -d --build
+#   docker compose -f docker-compose.full.yml up -d --build
+#   COPAW_APT_MIRROR=http://mirrors.tuna.tsinghua.edu.cn docker compose up -d --build
 
 volumes:
-  babyclaw-data:
-    name: babyclaw-data
-  babyclaw-secrets:
-    name: babyclaw-secrets
+  copaw-data:
+    name: copaw-data
+  copaw-secrets:
+    name: copaw-secrets
 
 services:
-  babyclaw:
-    image: babyclaw:slim
-    container_name: babyclaw
-    restart: always
+  copaw:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+      args:
+        APT_MIRROR: ${COPAW_APT_MIRROR:-http://mirrors.tuna.tsinghua.edu.cn}
+        INCLUDE_BROWSER: "false"
+        INSTALL_OLLAMA: ${COPAW_INSTALL_OLLAMA:-false}
+        COPAW_DISABLED_CHANNELS: ${COPAW_DISABLED_CHANNELS:-imessage}
+    image: ${COPAW_IMAGE_TAG:-copaw:slim}
+    container_name: ${COPAW_CONTAINER_NAME:-copaw}
+    restart: unless-stopped
     ports:
-      - "0.0.0.0:8088:8088"
+      - "${COPAW_BIND_HOST:-0.0.0.0}:${COPAW_EXTERNAL_PORT:-8088}:8088"
     environment:
+      COPAW_WORKING_DIR: /app/working
+      COPAW_SECRET_DIR: /app/working.secret
+      COPAW_DISABLED_CHANNELS: ${COPAW_DISABLED_CHANNELS:-imessage}
+      COPAW_RUNNING_IN_CONTAINER: "1"
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+      PYTHONUNBUFFERED: "1"
+      COPAW_PORT: "8088"
       # Authentication (optional)
-      # - COPAW_AUTH_ENABLED=true
-      # - COPAW_AUTH_USERNAME=admin
-      # - COPAW_AUTH_PASSWORD=yourpassword
-
-      # Disable iMessage channel (not available in containers)
-      - COPAW_DISABLED_CHANNELS=imessage
-
-      # Resource limits
-      - PYTHONUNBUFFERED=1
+      # COPAW_AUTH_ENABLED: "true"
+      # COPAW_AUTH_USERNAME: "admin"
+      # COPAW_AUTH_PASSWORD: "yourpassword"
     volumes:
-      - babyclaw-data:/app/working
-      - babyclaw-secrets:/app/working.secret
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-        reservations:
-          memory: 512M
+      - copaw-data:/app/working
+      - copaw-secrets:/app/working.secret
+    mem_limit: ${COPAW_MEM_LIMIT:-2g}
+    mem_reservation: ${COPAW_MEM_RESERVATION:-1g}
+    shm_size: ${COPAW_SHM_SIZE:-256m}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8088/api/health"]
+      test: ["CMD", "curl", "-fsS", "http://localhost:8088/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3

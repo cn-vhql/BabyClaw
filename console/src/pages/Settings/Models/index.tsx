@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Table, Card, Tag, Modal, message } from "@agentscope-ai/design";
+import { Button, Table, Tag, Modal, message } from "@agentscope-ai/design";
 import { PlusOutlined } from "@ant-design/icons";
 import { useProviders } from "./useProviders";
 import {
@@ -264,19 +264,17 @@ function ModelsPage() {
             </div>
 
             {providers.length > 0 && (
-              <Card className={styles.tableCard} bodyStyle={{ padding: 0 }}>
-                <Table
-                  columns={columns}
-                  dataSource={providers}
-                  rowKey="id"
-                  pagination={{
-                    pageSize: 10,
-                    showSizeChanger: false,
-                    showTotal: (total) => t("models.totalItems", { count: total }),
-                  }}
-                  size="small"
-                />
-              </Card>
+              <Table
+                columns={columns}
+                dataSource={providers}
+                rowKey="id"
+                pagination={{
+                  pageSize: 10,
+                  showSizeChanger: false,
+                  showTotal: (total) => t("models.totalItems", { count: total }),
+                }}
+                size="small"
+              />
             )}
           </div>
 

@@ -1,60 +1,53 @@
-# BabyClaw Full Version - With Browser Support
-# This version includes Chromium and GUI components for browser automation.
-# Recommended for: All features including web scraping, browser automation, visible browser
-# Suitable for: Chat, knowledge base, browser automation, web interactions
+# CoPaw Full Docker Compose Configuration
+# Full includes Chromium, Xvfb, and XFCE for browser automation.
 #
-# Features:
-# - Knowledge base with TF-IDF intelligent chunking (requires scikit-learn)
-# - Browser automation with Playwright and Chromium
-# - Multi-channel support (DingTalk, Feishu, QQ, Discord, etc.)
-# - Scheduled tasks and cron jobs
-# - File operations (PDF, Office, etc.)
-#
-# Build: docker build --build-arg INCLUDE_BROWSER=true -t babyclaw:full .
-# Memory: ~2GB - 4GB recommended
-# Image Size: ~1.4GB - 2.1GB (actual)
+# Start:
+#   docker compose -f docker-compose.full.yml up -d --build
+#   COPAW_APT_MIRROR=http://mirrors.tuna.tsinghua.edu.cn docker compose -f docker-compose.full.yml up -d --build
 
 volumes:
-  babyclaw-data:
-    name: babyclaw-data
-  babyclaw-secrets:
-    name: babyclaw-secrets
+  copaw-data:
+    name: copaw-data
+  copaw-secrets:
+    name: copaw-secrets
 
 services:
-  babyclaw:
-    image: babyclaw:full
-    container_name: babyclaw
-    restart: always
+  copaw:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+      args:
+        APT_MIRROR: ${COPAW_APT_MIRROR:-http://mirrors.tuna.tsinghua.edu.cn}
+        INCLUDE_BROWSER: "true"
+        INSTALL_OLLAMA: ${COPAW_INSTALL_OLLAMA:-false}
+        COPAW_DISABLED_CHANNELS: ${COPAW_DISABLED_CHANNELS:-imessage}
+    image: ${COPAW_IMAGE_TAG:-copaw:full}
+    container_name: ${COPAW_CONTAINER_NAME:-copaw}
+    restart: unless-stopped
     ports:
-      - "0.0.0.0:8088:8088"
+      - "${COPAW_BIND_HOST:-0.0.0.0}:${COPAW_EXTERNAL_PORT:-8088}:8088"
     environment:
+      COPAW_WORKING_DIR: /app/working
+      COPAW_SECRET_DIR: /app/working.secret
+      COPAW_DISABLED_CHANNELS: ${COPAW_DISABLED_CHANNELS:-imessage}
+      COPAW_RUNNING_IN_CONTAINER: "1"
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+      PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: /usr/bin/chromium
+      PYTHONUNBUFFERED: "1"
+      COPAW_PORT: "8088"
       # Authentication (optional)
-      # - COPAW_AUTH_ENABLED=true
-      # - COPAW_AUTH_USERNAME=admin
-      # - COPAW_AUTH_PASSWORD=yourpassword
-
-      # Channel filtering
-      - COPAW_DISABLED_CHANNELS=imessage
-
-      # Resource limits
-      - PYTHONUNBUFFERED=1
-
-      # Enable browser support (automatically detected)
-      - PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
+      # COPAW_AUTH_ENABLED: "true"
+      # COPAW_AUTH_USERNAME: "admin"
+      # COPAW_AUTH_PASSWORD: "yourpassword"
     volumes:
-      - babyclaw-data:/app/working
-      - babyclaw-secrets:/app/working.secret
-    deploy:
-      resources:
-        limits:
-          memory: 4G
-        reservations:
-          memory: 2G
+      - copaw-data:/app/working
+      - copaw-secrets:/app/working.secret
+    mem_limit: ${COPAW_MEM_LIMIT:-4g}
+    mem_reservation: ${COPAW_MEM_RESERVATION:-2g}
+    shm_size: ${COPAW_SHM_SIZE:-2g}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8088/api/health"]
+      test: ["CMD", "curl", "-fsS", "http://localhost:8088/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s
-    # Additional shm size for Chromium
-    shm_size: 2gb

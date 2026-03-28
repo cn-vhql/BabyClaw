@@ -1,17 +1,17 @@
 import { Card, Button, Modal, Tooltip, Input } from "@agentscope-ai/design";
 import { DeleteOutlined } from "@ant-design/icons";
 import { Server } from "lucide-react";
-import type { MCPClientInfo } from "../../../../api/types";
+import type { MCPClientInfo, MCPClientUpdateRequest } from "../../../../api/types";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
-import { useTheme } from "../../../../contexts/ThemeContext";
+import { useTheme } from "../../../../contexts/useTheme";
 import styles from "../index.module.less";
 
 interface MCPClientCardProps {
   client: MCPClientInfo;
   onToggle: (client: MCPClientInfo, e: React.MouseEvent) => void;
-  onDelete: (client: MCPClientInfo, e: React.MouseEvent) => void;
-  onUpdate: (key: string, updates: any) => Promise<boolean>;
+  onDelete: (client: MCPClientInfo) => void;
+  onUpdate: (key: string, updates: MCPClientUpdateRequest) => Promise<boolean>;
   isHovered: boolean;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
@@ -50,7 +50,7 @@ export function MCPClientCard({
 
   const confirmDelete = () => {
     setDeleteModalOpen(false);
-    onDelete(client, null as any);
+    onDelete(client);
   };
 
   const handleCardClick = () => {
@@ -63,7 +63,8 @@ export function MCPClientCard({
   const handleSaveJson = async () => {
     try {
       const parsed = JSON.parse(editedJson);
-      const { key, ...updates } = parsed;
+      const { key, ...updates } = parsed as MCPClientInfo;
+      void key;
 
       // Send all updates directly to backend, let backend handle env masking check
       const success = await onUpdate(client.key, updates);
@@ -71,7 +72,7 @@ export function MCPClientCard({
         setJsonModalOpen(false);
         setIsEditing(false);
       }
-    } catch (error) {
+    } catch {
       alert("Invalid JSON format");
     }
   };

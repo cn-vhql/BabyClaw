@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import api from "../../../api";
 import type { ProviderInfo, ActiveModelsInfo } from "../../../api/types";
 import { useAgentStore } from "../../../stores/agentStore";
+import { filterVisibleProviders } from "../../../utils/providerVisibility";
 
 export function useProviders() {
   const [providers, setProviders] = useState<ProviderInfo[]>([]);
@@ -27,7 +28,7 @@ export function useProviders() {
           "Unexpected API response. Is BASE_URL configured correctly?",
         );
       }
-      setProviders(provData);
+      setProviders(filterVisibleProviders(provData));
       if (activeData) setActiveModels(activeData);
     } catch (err) {
       const msg =

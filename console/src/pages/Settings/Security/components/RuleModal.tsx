@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Modal, Form, Input, Select } from "@agentscope-ai/design";
+import type { FormInstance } from "antd";
 import { useTranslation } from "react-i18next";
 import type { ToolGuardRule } from "../../../../api/modules/security";
 
@@ -29,13 +30,18 @@ const BUILTIN_TOOLS = [
   "send_file_to_user",
 ];
 
+type RuleFormValues = Omit<ToolGuardRule, "patterns" | "exclude_patterns"> & {
+  patterns: string;
+  exclude_patterns: string;
+};
+
 interface RuleModalProps {
   open: boolean;
   editingRule: ToolGuardRule | null;
   existingRuleIds: string[];
   onOk: () => void;
   onCancel: () => void;
-  form: any;
+  form: FormInstance<RuleFormValues>;
 }
 
 export function RuleModal({

@@ -47,7 +47,7 @@ export function useTools() {
         setTools((prev) =>
           prev.map((t) => (t.name === result.name ? result : t)),
         );
-      } catch (error) {
+      } catch {
         // Revert optimistic update on error
         setTools((prev) =>
           prev.map((t) =>
@@ -83,7 +83,7 @@ export function useTools() {
           return result || t;
         }),
       );
-    } catch (error) {
+    } catch {
       message.error(t("tools.toggleError"));
       // Reload on error to sync with server
       await loadTools();
@@ -115,7 +115,7 @@ export function useTools() {
           return result || t;
         }),
       );
-    } catch (error) {
+    } catch {
       message.error(t("tools.toggleError"));
       // Reload on error to sync with server
       await loadTools();

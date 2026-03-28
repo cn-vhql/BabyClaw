@@ -43,6 +43,8 @@ export function ModelsSection({
   const [dirty, setDirty] = useState(false);
 
   const currentSlot = activeModels?.active_llm;
+  const activeProviderId = currentSlot?.provider_id;
+  const activeModelId = currentSlot?.model;
 
   const eligible = useMemo(
     () =>
@@ -61,11 +63,11 @@ export function ModelsSection({
 
   useEffect(() => {
     if (currentSlot) {
-      setSelectedProviderId(currentSlot.provider_id || undefined);
-      setSelectedModel(currentSlot.model || undefined);
+      setSelectedProviderId(activeProviderId || undefined);
+      setSelectedModel(activeModelId || undefined);
     }
     setDirty(false);
-  }, [currentSlot?.provider_id, currentSlot?.model]);
+  }, [activeModelId, activeProviderId, currentSlot]);
 
   const chosenProvider = providers.find((p) => p.id === selectedProviderId);
   const modelOptions = [

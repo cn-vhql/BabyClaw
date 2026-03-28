@@ -1,5 +1,4 @@
 import { Button, Tag } from "@agentscope-ai/design";
-import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import type { ColumnsType } from "antd/es/table";
 import { CHANNEL_COLORS, formatTime, type Session } from "./constants";
@@ -14,42 +13,42 @@ interface ColumnHandlers {
 const toUTCTime = (ts: string | null | undefined): number => {
   if (!ts) return 0;
   const normalized =
-    /[Z+\-]\d{2}:?\d{2}$/.test(ts) || ts.endsWith("Z") ? ts : ts + "Z";
+    /[Z+-]\d{2}:?\d{2}$/.test(ts) || ts.endsWith("Z") ? ts : ts + "Z";
   return new Date(normalized).getTime();
 };
 
 export const createColumns = (
   handlers: ColumnHandlers,
 ): ColumnsType<Session> => {
-  const { t } = useTranslation();
+  const { t } = handlers;
 
   return [
     {
-      title: "ID",
+      title: t("sessions.id"),
       dataIndex: "id",
       key: "id",
       width: 250,
     },
     {
-      title: "Name",
+      title: t("sessions.name"),
       dataIndex: "name",
       key: "name",
       width: 200,
     },
     {
-      title: "SessionID",
+      title: t("sessions.sessionId"),
       dataIndex: "session_id",
       key: "session_id",
       width: 180,
     },
     {
-      title: "UserID",
+      title: t("sessions.userId"),
       dataIndex: "user_id",
       key: "user_id",
       width: 150,
     },
     {
-      title: "Channel",
+      title: t("sessions.channel"),
       dataIndex: "channel",
       key: "channel",
       width: 120,
@@ -58,7 +57,7 @@ export const createColumns = (
       ),
     },
     {
-      title: "CreatedAt",
+      title: t("sessions.createdAt"),
       dataIndex: "created_at",
       key: "created_at",
       width: 180,
@@ -67,7 +66,7 @@ export const createColumns = (
         toUTCTime(a.created_at) - toUTCTime(b.created_at),
     },
     {
-      title: "UpdatedAt",
+      title: t("sessions.updatedAt"),
       dataIndex: "updated_at",
       key: "updated_at",
       width: 180,
@@ -77,7 +76,7 @@ export const createColumns = (
       defaultSortOrder: "descend",
     },
     {
-      title: "Action",
+      title: t("sessions.action"),
       key: "action",
       width: 180,
       fixed: "right",

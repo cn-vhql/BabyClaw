@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { Button, Card, Form, Modal, Table } from "@agentscope-ai/design";
-import dayjs from "dayjs";
+import { Button, Form, Modal, Table } from "@agentscope-ai/design";
+import dayjs, { type Dayjs } from "dayjs";
 import type { CronJobSpecOutput } from "../../../api/types";
 import { useTranslation } from "react-i18next";
 import api from "../../../api";
@@ -14,6 +14,16 @@ import { parseCron, serializeCron } from "./components/parseCron";
 import styles from "./index.module.less";
 
 type CronJob = CronJobSpecOutput;
+type CronType = "hourly" | "daily" | "weekly" | "custom";
+type CronFormValues = CronJob & {
+  cronType?: CronType;
+  cronTime?: Dayjs;
+  cronDaysOfWeek?: string[];
+  cronCustom?: string;
+  request?: CronJob["request"] & {
+    input?: string | unknown;
+  };
+};
 
 function CronJobsPage() {
   const { t } = useTranslation();
@@ -29,7 +39,7 @@ function CronJobsPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingJob, setEditingJob] = useState<CronJob | null>(null);
   const [saving, setSaving] = useState(false);
-  const [form] = Form.useForm<CronJob>();
+  const [form] = Form.useForm<Record<string, unknown>>();
   const userTimezoneRef = useRef("UTC");
 
   useEffect(() => {
@@ -60,7 +70,7 @@ function CronJobsPage() {
     // Parse cron expression to form fields
     const cronParts = parseCron(job.schedule?.cron || "0 9 * * *");
 
-    const formValues: any = {
+    const formValues: CronFormValues = {
       ...job,
       request: {
         ...job.request,
@@ -68,7 +78,7 @@ function CronJobsPage() {
           ? JSON.stringify(job.request.input, null, 2)
           : "",
       },
-      cronType: cronParts.type,
+      cronType: cronParts.type as CronType,
     };
 
     // Set time picker value
@@ -88,7 +98,9 @@ function CronJobsPage() {
       formValues.cronCustom = cronParts.rawCron;
     }
 
-    form.setFieldsValue(formValues);
+    form.setFieldsValue(
+      formValues as unknown as Parameters<typeof form.setFieldsValue>[0],
+    );
     setDrawerOpen(true);
   };
 
@@ -127,9 +139,16 @@ function CronJobsPage() {
     setEditingJob(null);
   };
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (rawValues: Record<string, unknown>) => {
+    const values = rawValues as unknown as CronFormValues;
     // Serialize cron from form fields
-    const cronParts: any = {
+    const cronParts: {
+      type: CronType;
+      hour?: number;
+      minute?: number;
+      daysOfWeek?: string[];
+      rawCron?: string;
+    } = {
       type: values.cronType || "daily",
     };
 
@@ -150,10 +169,17 @@ function CronJobsPage() {
 
     const cronExpression = serializeCron(cronParts);
 
-    let processedValues = {
-      ...values,
+    const restValues = { ...values };
+    delete restValues.cronType;
+    delete restValues.cronTime;
+    delete restValues.cronDaysOfWeek;
+    delete restValues.cronCustom;
+
+    let processedValues: CronJob = {
+      ...restValues,
       schedule: {
         ...values.schedule,
+        type: "cron",
         cron: cronExpression,
       },
     };
@@ -165,7 +191,7 @@ function CronJobsPage() {
           ...processedValues,
           request: {
             ...values.request,
-            input: JSON.parse(values.request.input as any),
+            input: JSON.parse(values.request.input),
           },
         };
       } catch (error) {
@@ -209,20 +235,18 @@ function CronJobsPage() {
         </Button>
       </div>
 
-      <Card className={styles.tableCard} bodyStyle={{ padding: 0 }}>
-        <Table
-          columns={columns}
-          dataSource={jobs}
-          loading={loading}
-          rowKey="id"
-          scroll={{ x: 2840 }}
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: false,
-            showTotal: (total) => t("cronJobs.totalItems", { count: total }),
-          }}
-        />
-      </Card>
+      <Table
+        columns={columns}
+        dataSource={jobs}
+        loading={loading}
+        rowKey="id"
+        scroll={{ x: 2840 }}
+        pagination={{
+          pageSize: 10,
+          showSizeChanger: false,
+          showTotal: (total) => t("cronJobs.totalItems", { count: total }),
+        }}
+      />
 
       <JobDrawer
         open={drawerOpen}

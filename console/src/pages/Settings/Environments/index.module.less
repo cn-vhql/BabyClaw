@@ -1,26 +1,24 @@
 .environmentsPage {
   padding: 24px;
+  color: var(--app-text);
 }
-
-/* ---- Section (matches Models page) ---- */
 
 .section {
   margin-bottom: 24px;
 }
 
 .sectionTitle {
-  margin-bottom: 4px;
+  margin: 0 0 4px;
+  color: var(--app-text);
   font-size: 24px;
   font-weight: 600;
 }
 
 .sectionDesc {
   margin: 0;
-  color: #999;
+  color: var(--app-text-secondary);
   font-size: 14px;
 }
-
-/* ---- Loading / Error ---- */
 
 .centerState {
   display: flex;
@@ -31,46 +29,44 @@
 }
 
 .stateText {
+  color: var(--app-text-secondary);
   font-size: 14px;
-  color: #999;
 }
 
 .stateTextError {
-  font-size: 14px;
-  color: #ff4d4f;
   margin-bottom: 4px;
+  color: var(--copaw-table-action-danger-text);
+  font-size: 14px;
 }
-
-/* ---- Table card ---- */
 
 .tableCard {
-  background: #fff;
-  border: 1px solid #e8e8e8;
-  border-radius: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   overflow: hidden;
+  border: 1px solid var(--copaw-table-border);
+  border-radius: 20px;
+  background: var(--copaw-table-surface);
+  box-shadow: var(--copaw-table-shadow);
 }
-
-/* ---- Toolbar ---- */
 
 .toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 24px;
-  background: #fafafa;
-  border-bottom: 1px solid #f0f0f0;
+  gap: 16px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--copaw-table-border);
+  background: var(--copaw-table-header-bg);
 }
 
 .toolbarLeft {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
 }
 
 .toolbarCount {
+  color: var(--copaw-table-text-soft);
   font-size: 13px;
-  color: #999;
   user-select: none;
 }
 
@@ -78,40 +74,53 @@
   display: flex;
   align-items: center;
   gap: 8px;
-}
+  flex-wrap: wrap;
 
-/* ---- Row list ---- */
+  :global(.ant-btn),
+  :global(.copaw-btn) {
+    border-radius: 10px;
+  }
+}
 
 .rowList {
   display: flex;
   flex-direction: column;
+  background: var(--copaw-table-surface);
 }
-
-/* ---- Env row ---- */
 
 .envRow {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 12px 24px;
-  border-bottom: 1px solid #f5f5f5;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--copaw-table-border-soft);
+  background: transparent;
   flex-wrap: wrap;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease;
 
   &:last-child {
     border-bottom: none;
   }
+
+  &:hover {
+    background: var(--copaw-table-row-hover);
+  }
 }
 
 .envRowSelected {
-  background: #e6f4ff;
-  border-left: 3px solid #1677ff;
+  background: var(--copaw-table-row-selected);
+  box-shadow: inset 3px 0 0 var(--copaw-table-accent);
+
+  &:hover {
+    background: var(--copaw-table-row-selected);
+  }
 }
 
 .rowCheckbox {
   flex-shrink: 0;
 }
-
-/* Key + Value inputs side-by-side */
 
 .fieldsWrap {
   display: flex;
@@ -125,25 +134,30 @@
   align-items: center;
   flex: 1 1 0;
   min-width: 180px;
-  height: 42px;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  background: #fff;
+  min-height: 44px;
   overflow: hidden;
+  border: 1px solid var(--copaw-table-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--app-surface-strong) 88%, var(--copaw-table-surface));
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease;
 
   &:focus-within {
-    border-color: #615ced;
-    box-shadow: 0 0 0 2px rgba(97, 92, 237, 0.2);
+    border-color: var(--copaw-table-action-border-hover);
+    background: var(--app-surface-strong);
+    box-shadow: 0 0 0 3px var(--app-primary-soft);
   }
 }
 
 .inputGroupError {
-  border-color: #ff4d4f;
+  border-color: var(--copaw-table-action-danger-text);
   animation: shake 0.3s ease-in-out;
 
   &:focus-within {
-    border-color: #ff4d4f;
-    box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.2);
+    border-color: var(--copaw-table-action-danger-text);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--copaw-table-action-danger-text) 18%, transparent);
   }
 }
 
@@ -164,81 +178,96 @@
 
 .inputLabel {
   flex-shrink: 0;
+  min-width: 64px;
   padding: 0 14px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #666;
-  white-space: nowrap;
-  user-select: none;
+  border-right: 1px solid var(--copaw-table-border);
+  background: color-mix(in srgb, var(--copaw-table-header-bg) 72%, var(--copaw-table-surface));
+  color: var(--copaw-table-text-soft);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   line-height: 42px;
-  border-right: 1px solid #f0f0f0;
-  background: #fafafa;
-  min-width: 60px;
   text-align: center;
+  text-transform: uppercase;
+  user-select: none;
+  white-space: nowrap;
 
   .inputGroup:focus-within & {
-    color: #615ced;
-    background: #f0f0ff;
+    color: var(--copaw-table-accent);
+    background: color-mix(in srgb, var(--copaw-table-accent) 12%, var(--copaw-table-surface));
   }
 }
 
 .inputField {
   flex: 1;
   min-width: 0;
-  height: 40px !important;
-  border: none !important;
-  box-shadow: none !important;
+  height: 42px !important;
+  padding-left: 12px;
   outline: none !important;
+  border: none !important;
+  background: transparent;
+  box-shadow: none !important;
+  color: var(--copaw-table-text);
   font-family: "SF Mono", "Menlo", "Consolas", monospace;
   font-size: 14px;
-  background: transparent;
-  padding-left: 12px;
 
   &::placeholder {
-    color: #bfbfbf;
+    color: var(--app-text-muted);
   }
-}
 
-.inputField {
-  :global(.ant-input) {
-    height: 40px !important;
+  :global(.ant-input),
+  :global(.copaw-input) {
+    height: 42px !important;
+    padding-left: 12px;
+    outline: none !important;
     border: none !important;
+    background: transparent !important;
     box-shadow: none !important;
+    color: var(--copaw-table-text) !important;
     font-family: "SF Mono", "Menlo", "Consolas", monospace;
     font-size: 14px;
-    padding-left: 12px;
 
     &::placeholder {
-      color: #bfbfbf;
+      color: var(--app-text-muted) !important;
     }
+  }
+
+  :global(.ant-input[disabled]),
+  :global(.copaw-input[disabled]) {
+    color: var(--copaw-table-text-soft) !important;
+    background: transparent !important;
+    -webkit-text-fill-color: var(--copaw-table-text-soft) !important;
+    cursor: default;
+    opacity: 1;
   }
 }
 
-/* Password toggle button */
 .passwordToggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 32px;
   height: 32px;
+  margin-right: 6px;
   border: none;
+  border-radius: 8px;
   background: transparent;
+  color: var(--copaw-table-text-soft);
   cursor: pointer;
-  color: #999;
-  border-radius: 4px;
+  transition:
+    color 0.18s ease,
+    background 0.18s ease;
 
   &:hover {
-    color: #615ced;
-    background: #f0f0ff;
+    background: var(--copaw-table-action-bg-hover);
+    color: var(--copaw-table-accent);
   }
 }
-
-/* ---- Row action buttons ---- */
 
 .rowActions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex-shrink: 0;
 }
 
@@ -248,62 +277,70 @@
   justify-content: center;
   width: 36px;
   height: 36px;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
+  border: 1px solid var(--copaw-table-action-border);
+  border-radius: 10px;
+  background: var(--copaw-table-action-bg);
+  color: var(--copaw-table-action-text);
   cursor: pointer;
   font-size: 16px;
-  color: #c0c0c0;
+  transition:
+    color 0.18s ease,
+    background 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease;
 
   &:hover {
-    color: #615ced;
-    background: #f0f0ff;
+    border-color: var(--copaw-table-action-border-hover);
+    background: var(--copaw-table-action-bg-hover);
+    color: var(--copaw-table-accent);
+    transform: translateY(-1px);
   }
 }
 
 .rowIconBtnDanger {
   &:hover {
-    color: #ff4d4f;
-    background: #fff1f0;
+    border-color: var(--copaw-table-action-danger-border);
+    background: var(--copaw-table-action-danger-bg-hover);
+    color: var(--copaw-table-action-danger-text);
   }
 }
 
-/* ---- Row error ---- */
-
 .rowError {
   flex-basis: 100%;
-  font-size: 12px;
-  color: #ff4d4f;
-  padding-left: 36px;
-  /* align with fields after checkbox */
   margin-top: -2px;
+  padding-left: 36px;
+  color: var(--copaw-table-action-danger-text);
+  font-size: 12px;
 }
-
-/* ---- Add bar ---- */
 
 .addBar {
   display: flex;
-  padding: 16px 24px;
-  border-top: 1px solid #f0f0f0;
-  background: #fafafa;
+  padding: 16px 20px;
+  border-top: 1px solid var(--copaw-table-border-soft);
+  background: color-mix(in srgb, var(--copaw-table-header-bg) 70%, var(--copaw-table-surface));
 }
 
 .addBtn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 20px;
-  border: 1px dashed #d9d9d9;
-  border-radius: 8px;
+  padding: 9px 20px;
+  border: 1px dashed var(--copaw-table-action-border);
+  border-radius: 12px;
   background: transparent;
+  color: var(--copaw-table-text-soft);
   cursor: pointer;
   font-size: 14px;
-  color: #999;
+  font-weight: 500;
+  transition:
+    color 0.18s ease,
+    background 0.18s ease,
+    border-color 0.18s ease;
 
   &:hover {
-    color: #615ced;
-    border-color: #615ced;
-    background: #f0f0ff;
+    border-color: var(--copaw-table-action-border-hover);
+    background: var(--copaw-table-action-bg-hover);
+    color: var(--copaw-table-accent);
   }
 
   svg {
@@ -311,148 +348,34 @@
   }
 }
 
-/* ---- Empty state ---- */
-
 .emptyState {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 48px 24px;
-  color: #bbb;
+  padding: 56px 24px;
+  background: var(--copaw-table-surface);
+  color: var(--copaw-table-text-soft);
   font-size: 14px;
 }
 
 .emptyIcon {
   font-size: 32px;
-  opacity: 0.6;
+  opacity: 0.72;
 }
 
-/* ─── Dark mode ─────────────────────────────────────────────────────────────── */
-:global(.dark-mode) {
-  .sectionDesc {
-    color: rgba(255, 255, 255, 0.35);
-  }
-
-  .stateText {
-    color: rgba(255, 255, 255, 0.35);
-  }
-
-  /* Main card */
-  .tableCard {
-    background: #1f1f1f;
-    border-color: rgba(255, 255, 255, 0.1);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  }
-
-  /* Toolbar */
+@media (max-width: 960px) {
   .toolbar {
-    background: rgba(255, 255, 255, 0.03);
-    border-bottom-color: rgba(255, 255, 255, 0.08);
+    align-items: flex-start;
+    flex-direction: column;
   }
 
-  .toolbarCount {
-    color: rgba(255, 255, 255, 0.35);
+  .toolbarRight {
+    width: 100%;
   }
 
-  /* Env row */
-  .envRow {
-    border-bottom-color: rgba(255, 255, 255, 0.06);
-  }
-
-  .envRowSelected {
-    background: rgba(22, 119, 255, 0.12);
-    border-left-color: #4096ff;
-  }
-
-  /* Input group (Key / Value 外框) */
-  .inputGroup {
-    border-color: rgba(255, 255, 255, 0.12);
-    background: #2a2a2a;
-
-    &:focus-within {
-      border-color: #615ced;
-      box-shadow: 0 0 0 2px rgba(97, 92, 237, 0.2);
-    }
-  }
-
-  /* Key / Value 标签 */
-  .inputLabel {
-    color: rgba(255, 255, 255, 0.4);
-    border-right-color: rgba(255, 255, 255, 0.08);
-    background: rgba(255, 255, 255, 0.04);
-
-    .inputGroup:focus-within & {
-      color: #8b87f0;
-      background: rgba(97, 92, 237, 0.1);
-    }
-  }
-
-  /* Input field inside group */
-  .inputField {
-    color: rgba(255, 255, 255, 0.85);
-
-    &::placeholder {
-      color: rgba(255, 255, 255, 0.2);
-    }
-
-    :global(.ant-input),
-    :global(.copaw-input) {
-      color: rgba(255, 255, 255, 0.85) !important;
-      background: transparent !important;
-
-      &::placeholder {
-        color: rgba(255, 255, 255, 0.2) !important;
-      }
-    }
-  }
-
-  /* Password toggle */
-  .passwordToggle {
-    color: rgba(255, 255, 255, 0.3);
-
-    &:hover {
-      color: #8b87f0;
-      background: rgba(97, 92, 237, 0.12);
-    }
-  }
-
-  /* Row action icons */
-  .rowIconBtn {
-    color: rgba(255, 255, 255, 0.2);
-
-    &:hover {
-      color: #8b87f0;
-      background: rgba(97, 92, 237, 0.12);
-    }
-  }
-
-  .rowIconBtnDanger {
-    &:hover {
-      color: #ff7875;
-      background: rgba(255, 77, 79, 0.12);
-    }
-  }
-
-  /* Add bar */
-  .addBar {
-    background: rgba(255, 255, 255, 0.02);
-    border-top-color: rgba(255, 255, 255, 0.08);
-  }
-
-  .addBtn {
-    border-color: rgba(255, 255, 255, 0.15);
-    color: rgba(255, 255, 255, 0.35);
-
-    &:hover {
-      color: #8b87f0;
-      border-color: #615ced;
-      background: rgba(97, 92, 237, 0.1);
-    }
-  }
-
-  /* Empty state */
-  .emptyState {
-    color: rgba(255, 255, 255, 0.2);
+  .fieldsWrap {
+    flex-direction: column;
   }
 }

@@ -21,7 +21,7 @@ export default function Header({ selectedKey }: HeaderProps) {
       <span className={styles.headerTitle}>
         {t(KEY_TO_LABEL[selectedKey] || "nav.chat")}
       </span>
-      <Space size="middle">
+      <Space size="middle" className={styles.headerActions}>
         <AgentSelector />
         <a
           href="https://github.com/cn-vhql/BabyClaw"
@@ -32,7 +32,7 @@ export default function Header({ selectedKey }: HeaderProps) {
           <Button
             type="text"
             icon={<Github size={18} />}
-            className={styles.githubButton}
+            className={`${styles.headerActionButton} ${styles.githubButton}`}
           >
             GitHub
           </Button>

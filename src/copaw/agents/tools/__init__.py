@@ -28,6 +28,12 @@ from .knowledge import (
     list_knowledge_bases,
     knowledge_write,
 )
+from .focus import (
+    add_focus_tag,
+    list_focus_tags,
+    remove_focus_tag,
+    write_focus_note,
+)
 
 __all__ = [
     "execute_python_code",
@@ -51,4 +57,8 @@ __all__ = [
     "knowledge_search",
     "list_knowledge_bases",
     "knowledge_write",
+    "add_focus_tag",
+    "list_focus_tags",
+    "remove_focus_tag",
+    "write_focus_note",
 ]

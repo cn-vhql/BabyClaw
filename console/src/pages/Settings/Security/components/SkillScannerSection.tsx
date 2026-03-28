@@ -22,7 +22,6 @@ import type {
   SkillScannerMode,
 } from "../../../../api/modules/security";
 import { skillApi } from "../../../../api/modules/skill";
-import { useTheme } from "../../../../contexts/ThemeContext";
 import styles from "../index.module.less";
 
 function FindingsModal({
@@ -83,8 +82,6 @@ function FindingsModal({
 
 export function SkillScannerSection() {
   const { t } = useTranslation();
-  const { isDark } = useTheme();
-  const darkBtnStyle = isDark ? { color: "rgba(255,255,255,0.75)" } : undefined;
   const {
     config,
     blockedHistory,
@@ -225,7 +222,6 @@ export function SkillScannerSection() {
             <Button
               type="text"
               size="middle"
-              style={darkBtnStyle}
               onClick={() =>
                 setFindingsModal({
                   open: true,
@@ -241,7 +237,6 @@ export function SkillScannerSection() {
             <Button
               type="text"
               size="middle"
-              style={darkBtnStyle}
               onClick={() => handleAllowSkill(record, index)}
             >
               <ShieldCheck size={14} />
@@ -386,27 +381,25 @@ export function SkillScannerSection() {
                     </Button>
                   </div>
                 )}
-                <Card className={styles.tableCard}>
-                  {blockedHistory.length === 0 ? (
-                    <div className={styles.emptyState}>
-                      <Empty
-                        description={
-                          <span className={styles.emptyText}>
-                            {t("security.skillScanner.scanAlerts.empty")}
-                          </span>
-                        }
-                      />
-                    </div>
-                  ) : (
-                    <Table
-                      dataSource={blockedHistory}
-                      columns={blockedColumns}
-                      rowKey={(_, idx) => String(idx)}
-                      pagination={false}
-                      size="small"
+                {blockedHistory.length === 0 ? (
+                  <div className={styles.emptyTableState}>
+                    <Empty
+                      description={
+                        <span className={styles.emptyText}>
+                          {t("security.skillScanner.scanAlerts.empty")}
+                        </span>
+                      }
                     />
-                  )}
-                </Card>
+                  </div>
+                ) : (
+                  <Table
+                    dataSource={blockedHistory}
+                    columns={blockedColumns}
+                    rowKey={(_, idx) => String(idx)}
+                    pagination={false}
+                    size="small"
+                  />
+                )}
               </div>
             ),
           },
@@ -422,27 +415,25 @@ export function SkillScannerSection() {
             ),
             children: (
               <div className={styles.tabPanelContent}>
-                <Card className={styles.tableCard}>
-                  {whitelist.length === 0 ? (
-                    <div className={styles.emptyState}>
-                      <Empty
-                        description={
-                          <span className={styles.emptyText}>
-                            {t("security.skillScanner.whitelist.empty")}
-                          </span>
-                        }
-                      />
-                    </div>
-                  ) : (
-                    <Table
-                      dataSource={whitelist}
-                      columns={whitelistColumns}
-                      rowKey="skill_name"
-                      pagination={false}
-                      size="small"
+                {whitelist.length === 0 ? (
+                  <div className={styles.emptyTableState}>
+                    <Empty
+                      description={
+                        <span className={styles.emptyText}>
+                          {t("security.skillScanner.whitelist.empty")}
+                        </span>
+                      }
                     />
-                  )}
-                </Card>
+                  </div>
+                ) : (
+                  <Table
+                    dataSource={whitelist}
+                    columns={whitelistColumns}
+                    rowKey="skill_name"
+                    pagination={false}
+                    size="small"
+                  />
+                )}
               </div>
             ),
           },

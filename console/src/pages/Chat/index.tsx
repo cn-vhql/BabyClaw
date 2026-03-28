@@ -1,13 +1,34 @@
 import {
   AgentScopeRuntimeWebUI,
+  ChatInput,
   IAgentScopeRuntimeWebUIOptions,
+  type IAgentScopeRuntimeWebUISession,
   type IAgentScopeRuntimeWebUIMessage,
   type IAgentScopeRuntimeWebUIRef,
   Stream,
 } from "@agentscope-ai/chat";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, Modal, Result, message } from "antd";
-import { ExclamationCircleOutlined, SettingOutlined } from "@ant-design/icons";
+import {
+  useCallback,
+  createContext,
+  useEffect,
+  useContext,
+  memo,
+  useMemo,
+  useRef,
+  startTransition,
+  useState,
+  type CSSProperties,
+} from "react";
+import { Button, Input, Modal, Result, message } from "antd";
+import {
+  CloseOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  ExclamationCircleOutlined,
+  PlusOutlined,
+  SaveOutlined,
+  SettingOutlined,
+} from "@ant-design/icons";
 import { SparkCopyLine } from "@agentscope-ai/icons";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -18,15 +39,24 @@ import { getApiToken, getApiUrl } from "../../api/config";
 import { providerApi } from "../../api/modules/provider";
 import api from "../../api";
 import ModelSelector from "./ModelSelector";
-import { useTheme } from "../../contexts/ThemeContext";
+import { useTheme } from "../../contexts/useTheme";
 import { useAgentStore } from "../../stores/agentStore";
 import AgentScopeRuntimeResponseBuilder from "@agentscope-ai/chat/lib/AgentScopeRuntimeWebUI/core/AgentScopeRuntime/Response/Builder.js";
-import { AgentScopeRuntimeRunStatus } from "@agentscope-ai/chat/lib/AgentScopeRuntimeWebUI/core/AgentScopeRuntime/types.js";
+import {
+  AgentScopeRuntimeMessageType,
+  AgentScopeRuntimeRunStatus,
+} from "@agentscope-ai/chat/lib/AgentScopeRuntimeWebUI/core/AgentScopeRuntime/types.js";
 import { useChatAnywhereInput } from "@agentscope-ai/chat/lib/AgentScopeRuntimeWebUI/core/Context/ChatAnywhereInputContext.js";
-import "./index.module.less";
-import { Tooltip } from "antd";
-import { IconButton } from "@agentscope-ai/design";
+import { IconButton, Modal as SparkModal } from "@agentscope-ai/design";
 import { SparkAttachmentLine } from "@agentscope-ai/icons";
+import ChatThemeSelector from "./ThemeSelector";
+import {
+  getChatTheme,
+  getStoredChatTheme,
+  persistChatTheme,
+  type ChatThemeKey,
+} from "./chatThemes";
+import styles from "./index.module.less";
 
 type CopyableContent = {
   type?: string;
@@ -60,9 +90,63 @@ type StreamResponseData = {
   }>;
 };
 
+type ChatFetchSession = {
+  session_id?: string;
+  user_id?: string;
+  channel?: string;
+};
+
+type ChatInputPart = Record<string, unknown> & {
+  type?: string;
+  image_url?: string;
+  file_url?: string;
+  audio_url?: string;
+  video_url?: string;
+};
+
+type ChatInputMessage = Record<string, unknown> & {
+  content?: ChatInputPart[];
+  session?: ChatFetchSession;
+};
+
+type ChatFetchPayload = {
+  input?: ChatInputMessage[];
+  biz_params?: Record<string, unknown>;
+  signal?: AbortSignal;
+  reconnect?: boolean;
+  session_id?: string;
+  user_id?: string;
+  channel?: string;
+};
+
+type SseChunk = Record<string, string>;
+
+type RuntimeStreamEvent = {
+  object?: string;
+  id?: string;
+  msg_id?: string;
+  role?: string;
+  type?: string;
+  status?: string;
+  content?: unknown[];
+};
+
+type PendingAssistantMessage = {
+  chunk: SseChunk;
+  data: RuntimeStreamEvent & {
+    id: string;
+  };
+};
+
 type RuntimeLoadingBridgeApi = {
   getLoading?: () => boolean | string;
   setLoading?: (loading: boolean | string) => void;
+};
+
+type ChatThemeContextValue = {
+  chatThemeKey: ChatThemeKey;
+  setChatThemeKey: (theme: ChatThemeKey) => void;
+  isDark: boolean;
 };
 
 interface CustomWindow extends Window {
@@ -72,6 +156,83 @@ interface CustomWindow extends Window {
 }
 
 declare const window: CustomWindow;
+
+const sseEncoder = new TextEncoder();
+const ChatThemeContext = createContext<ChatThemeContextValue | null>(null);
+
+function useChatThemeContext() {
+  const context = useContext(ChatThemeContext);
+  if (!context) {
+    throw new Error("ChatThemeContext is not available");
+  }
+  return context;
+}
+const EMPTY_ASSISTANT_PLACEHOLDER = "\u200b";
+const QUICK_PROMPTS_STORAGE_KEY = "copaw.chat.quick-prompts.v1";
+const DEFAULT_QUICK_PROMPTS = ["保存为新技能", "更新自我认知"];
+const MAX_QUICK_PROMPTS = 6;
+const RUNTIME_CHAT_THEME = {
+  colorPrimary: "#1f5e78",
+  colorBgBase: "#f4f9fb",
+  colorTextBase: "#173344",
+  darkMode: false,
+  background: "transparent",
+} as const;
+
+function normalizeQuickPrompts(prompts: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  prompts.forEach((prompt) => {
+    const trimmed = prompt.trim();
+    if (!trimmed || seen.has(trimmed)) {
+      return;
+    }
+    seen.add(trimmed);
+    result.push(trimmed);
+  });
+
+  return result.slice(0, MAX_QUICK_PROMPTS);
+}
+
+function loadQuickPrompts(): string[] {
+  if (typeof window === "undefined") {
+    return DEFAULT_QUICK_PROMPTS;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(QUICK_PROMPTS_STORAGE_KEY);
+    if (raw === null) {
+      return DEFAULT_QUICK_PROMPTS;
+    }
+
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return DEFAULT_QUICK_PROMPTS;
+    }
+
+    return normalizeQuickPrompts(
+      parsed.filter((item): item is string => typeof item === "string"),
+    );
+  } catch {
+    return DEFAULT_QUICK_PROMPTS;
+  }
+}
+
+function persistQuickPrompts(prompts: string[]): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(
+      QUICK_PROMPTS_STORAGE_KEY,
+      JSON.stringify(normalizeQuickPrompts(prompts)),
+    );
+  } catch {
+    // Ignore local persistence failures.
+  }
+}
 
 function extractCopyableText(response: CopyableResponse): string {
   const collectText = (assistantOnly: boolean) => {
@@ -185,6 +346,182 @@ function getResponseCardData(
   return cloneValue(responseCard.data as StreamResponseData);
 }
 
+function encodeSseChunk(chunk: SseChunk): Uint8Array {
+  const lines: string[] = [];
+
+  if (typeof chunk.event === "string") {
+    lines.push(`event: ${chunk.event}`);
+  }
+
+  Object.entries(chunk).forEach(([key, value]) => {
+    if (key === "event" || typeof value !== "string") {
+      return;
+    }
+    lines.push(`${key}: ${value}`);
+  });
+
+  return sseEncoder.encode(`${lines.join("\n")}\n\n`);
+}
+
+function hasMessageContent(data: RuntimeStreamEvent): boolean {
+  return Array.isArray(data.content) && data.content.length > 0;
+}
+
+function isEmptyAssistantPlaceholder(
+  data: RuntimeStreamEvent,
+): data is RuntimeStreamEvent & { id: string } {
+  return (
+    data.object === "message" &&
+    data.role === "assistant" &&
+    data.type === AgentScopeRuntimeMessageType.MESSAGE &&
+    typeof data.id === "string" &&
+    !hasMessageContent(data)
+  );
+}
+
+function buildSyntheticAssistantMessage(
+  pendingMessage: PendingAssistantMessage,
+  status?: string,
+): RuntimeStreamEvent {
+  const nextStatus =
+    status ?? pendingMessage.data.status ?? AgentScopeRuntimeRunStatus.Created;
+
+  return {
+    ...pendingMessage.data,
+    status: nextStatus,
+    content: [
+      {
+        type: "text",
+        text: EMPTY_ASSISTANT_PLACEHOLDER,
+        status: nextStatus,
+      },
+    ],
+  };
+}
+
+function createRenderableUiStream(
+  readableStream: ReadableStream<Uint8Array>,
+  onStreamEnd?: () => void,
+): ReadableStream<Uint8Array> {
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      let pendingAssistantMessage: PendingAssistantMessage | null = null;
+      let hasRenderableOutput = false;
+
+      const emitChunk = (chunk: SseChunk) => {
+        controller.enqueue(encodeSseChunk(chunk));
+      };
+
+      const emitData = (data: RuntimeStreamEvent, event?: string) => {
+        const chunk: SseChunk = {
+          data: JSON.stringify(data),
+        };
+
+        if (event) {
+          chunk.event = event;
+        }
+
+        emitChunk(chunk);
+      };
+
+      void (async () => {
+        try {
+          for await (const chunk of Stream({ readableStream })) {
+            const sseChunk = chunk as SseChunk;
+
+            let chunkData: RuntimeStreamEvent;
+            try {
+              chunkData = JSON.parse(sseChunk.data) as RuntimeStreamEvent;
+            } catch {
+              emitChunk(sseChunk);
+              continue;
+            }
+
+            if (isEmptyAssistantPlaceholder(chunkData)) {
+              pendingAssistantMessage = {
+                chunk: sseChunk,
+                data: chunkData,
+              };
+              continue;
+            }
+
+            if (
+              pendingAssistantMessage &&
+              chunkData.object === "content" &&
+              chunkData.msg_id === pendingAssistantMessage.data.id
+            ) {
+              emitChunk(pendingAssistantMessage.chunk);
+              pendingAssistantMessage = null;
+              emitChunk(sseChunk);
+              hasRenderableOutput = true;
+              continue;
+            }
+
+            if (
+              pendingAssistantMessage &&
+              chunkData.object === "message" &&
+              chunkData.id === pendingAssistantMessage.data.id
+            ) {
+              if (isEmptyAssistantPlaceholder(chunkData)) {
+                pendingAssistantMessage = {
+                  chunk: sseChunk,
+                  data: chunkData,
+                };
+                continue;
+              }
+
+              emitChunk(sseChunk);
+              pendingAssistantMessage = null;
+              hasRenderableOutput =
+                hasRenderableOutput || hasMessageContent(chunkData);
+              continue;
+            }
+
+            if (
+              chunkData.object === "response" &&
+              isFinalResponseStatus(chunkData.status)
+            ) {
+              if (pendingAssistantMessage && !hasRenderableOutput) {
+                emitData(
+                  buildSyntheticAssistantMessage(
+                    pendingAssistantMessage,
+                    chunkData.status,
+                  ),
+                  pendingAssistantMessage.chunk.event,
+                );
+                hasRenderableOutput = true;
+              }
+
+              pendingAssistantMessage = null;
+              emitChunk(sseChunk);
+              continue;
+            }
+
+            hasRenderableOutput =
+              hasRenderableOutput ||
+              hasMessageContent(chunkData) ||
+              chunkData.object === "content";
+            emitChunk(sseChunk);
+          }
+
+          if (pendingAssistantMessage && !hasRenderableOutput) {
+            emitData(
+              buildSyntheticAssistantMessage(pendingAssistantMessage),
+              pendingAssistantMessage.chunk.event,
+            );
+          }
+
+          controller.close();
+        } catch (error) {
+          controller.error(error);
+        } finally {
+          onStreamEnd?.();
+        }
+      })();
+    },
+  });
+}
+
 function getStreamingAssistantMessageId(
   messages: RuntimeUiMessage[],
 ): string | null {
@@ -237,6 +574,206 @@ function RuntimeLoadingBridge({
   return null;
 }
 
+function QuickPromptBar({
+  chatRef,
+}: {
+  chatRef: { current: IAgentScopeRuntimeWebUIRef | null };
+}) {
+  const { t } = useTranslation();
+  const { loading, disabled } = useChatAnywhereInput((value) => ({
+    loading: Boolean(value.loading),
+    disabled: Boolean(value.disabled),
+  }));
+  const [prompts, setPrompts] = useState<string[]>(() => loadQuickPrompts());
+  const [editing, setEditing] = useState(false);
+  const [drafts, setDrafts] = useState<string[]>(() => loadQuickPrompts());
+
+  const startEditing = () => {
+    setDrafts(prompts);
+    setEditing(true);
+  };
+
+  const cancelEditing = () => {
+    setDrafts(prompts);
+    setEditing(false);
+  };
+
+  const saveEditing = () => {
+    const nextPrompts = normalizeQuickPrompts(drafts);
+    setPrompts(nextPrompts);
+    persistQuickPrompts(nextPrompts);
+    setEditing(false);
+  };
+
+  const updateDraft = (index: number, value: string) => {
+    setDrafts((current) =>
+      current.map((item, itemIndex) => (itemIndex === index ? value : item)),
+    );
+  };
+
+  const addDraft = () => {
+    setDrafts((current) =>
+      current.length >= MAX_QUICK_PROMPTS ? current : [...current, ""],
+    );
+  };
+
+  const removeDraft = (index: number) => {
+    setDrafts((current) => current.filter((_, itemIndex) => itemIndex !== index));
+  };
+
+  const submitPrompt = (prompt: string) => {
+    const query = prompt.trim();
+    if (!query || Boolean(loading) || Boolean(disabled)) {
+      return;
+    }
+    chatRef.current?.input.submit({ query });
+  };
+
+  return (
+    <>
+      <ChatInput.BeforeUIContainer>
+        <div className={styles.quickPromptPanel}>
+          {prompts.length > 0 ? (
+            <div className={styles.quickPromptList}>
+              {prompts.map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  className={styles.quickPromptChip}
+                  onClick={() => submitPrompt(prompt)}
+                  disabled={Boolean(loading) || Boolean(disabled)}
+                >
+                  {prompt}
+                </button>
+              ))}
+              <button
+                type="button"
+                className={`${styles.quickPromptChip} ${styles.quickPromptActionChip}`}
+                onClick={startEditing}
+                aria-label={t("common.edit")}
+              >
+                <EditOutlined />
+              </button>
+            </div>
+          ) : (
+            <div className={styles.quickPromptEmptyState}>
+              <span>{t("chat.quickPrompts.empty")}</span>
+              <button
+                type="button"
+                className={`${styles.quickPromptChip} ${styles.quickPromptActionChip}`}
+                onClick={startEditing}
+              >
+                {t("chat.quickPrompts.add")}
+              </button>
+            </div>
+          )}
+        </div>
+      </ChatInput.BeforeUIContainer>
+
+      <SparkModal
+        open={editing}
+        title={t("chat.quickPrompts.label")}
+        width={520}
+        destroyOnHidden
+        onCancel={cancelEditing}
+        onOk={saveEditing}
+        okText={t("common.save")}
+        cancelText={t("common.cancel")}
+        okButtonProps={{
+          icon: <SaveOutlined />,
+          className: styles.quickPromptSaveButton,
+        }}
+        cancelButtonProps={{ icon: <CloseOutlined /> }}
+      >
+        <div className={`${styles.quickPromptEditor} ${styles.quickPromptModalBody}`}>
+          <div className={styles.quickPromptModalToolbar}>
+            <div className={styles.quickPromptModalMeta}>
+              <span className={styles.quickPromptModalCounter}>
+                {drafts.length}/{MAX_QUICK_PROMPTS}
+              </span>
+            </div>
+            <Button
+              size="small"
+              onClick={addDraft}
+              disabled={drafts.length >= MAX_QUICK_PROMPTS}
+              icon={<PlusOutlined />}
+              className={styles.quickPromptAddButton}
+            >
+              {t("chat.quickPrompts.add")}
+            </Button>
+          </div>
+          <div className={styles.quickPromptEditorList}>
+            {drafts.map((prompt, index) => (
+              <div key={index} className={styles.quickPromptEditorRow}>
+                <span className={styles.quickPromptRowIndex}>{index + 1}</span>
+                <Input
+                  value={prompt}
+                  maxLength={60}
+                  placeholder={t("chat.quickPrompts.placeholder")}
+                  className={styles.quickPromptInput}
+                  onChange={(event) => updateDraft(index, event.target.value)}
+                />
+                <Button
+                  danger
+                  size="small"
+                  type="text"
+                  icon={<DeleteOutlined />}
+                  onClick={() => removeDraft(index)}
+                  aria-label={t("common.delete")}
+                  className={styles.quickPromptDeleteButton}
+                />
+              </div>
+            ))}
+            {drafts.length === 0 && (
+              <div className={styles.quickPromptEmpty}>
+                {t("chat.quickPrompts.empty")}
+              </div>
+            )}
+          </div>
+        </div>
+      </SparkModal>
+    </>
+  );
+}
+
+function ChatHeaderControls({
+  bridgeRef,
+}: {
+  bridgeRef: { current: RuntimeLoadingBridgeApi | null };
+}) {
+  const { chatThemeKey, setChatThemeKey, isDark } = useChatThemeContext();
+
+  return (
+    <div className={styles.headerControls}>
+      <RuntimeLoadingBridge bridgeRef={bridgeRef} />
+      <ModelSelector />
+      <ChatThemeSelector
+        value={chatThemeKey}
+        isDark={isDark}
+        onChange={setChatThemeKey}
+      />
+    </div>
+  );
+}
+
+const RuntimeChat = memo(function RuntimeChat({
+  chatRef,
+  refreshKey,
+  options,
+}: {
+  chatRef: { current: IAgentScopeRuntimeWebUIRef | null };
+  refreshKey: number;
+  options: IAgentScopeRuntimeWebUIOptions;
+}) {
+  return (
+    <AgentScopeRuntimeWebUI
+      ref={chatRef}
+      key={refreshKey}
+      options={options}
+    />
+  );
+});
+
 export default function ChatPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -249,11 +786,95 @@ export default function ChatPage() {
   const [showModelPrompt, setShowModelPrompt] = useState(false);
   const { selectedAgent } = useAgentStore();
   const [refreshKey, setRefreshKey] = useState(0);
+  const [chatThemeKey, setChatThemeKey] =
+    useState<ChatThemeKey>(getStoredChatTheme);
   const [chatStatus, setChatStatus] = useState<"idle" | "running">("idle");
   const [, setReconnectStreaming] = useState(false);
   const reconnectTriggeredForRef = useRef<string | null>(null);
   const prevChatIdRef = useRef<string | undefined>(undefined);
   const runtimeLoadingBridgeRef = useRef<RuntimeLoadingBridgeApi | null>(null);
+  const chatTheme = useMemo(
+    () => getChatTheme(chatThemeKey, isDark),
+    [chatThemeKey, isDark],
+  );
+  const handleChatThemeChange = useCallback((theme: ChatThemeKey) => {
+    startTransition(() => {
+      setChatThemeKey(theme);
+    });
+  }, []);
+  const chatThemeStyle = useMemo(
+    () =>
+      ({
+        "--theme-picker-accent": chatTheme.palette.themePickerAccent,
+        "--chat-color-bg-base": chatTheme.palette.colorBgBase,
+        "--chat-color-text-base": chatTheme.palette.colorTextBase,
+        "--chat-shell-background": chatTheme.palette.shellBackground,
+        "--chat-layout-background": chatTheme.palette.background,
+        "--chat-panel-background": chatTheme.palette.panelBackground,
+        "--chat-header-background": chatTheme.palette.headerBackground,
+        "--chat-header-border": chatTheme.palette.headerBorder,
+        "--chat-border-color": chatTheme.palette.borderColor,
+        "--chat-border-soft-color": chatTheme.palette.borderSoftColor,
+        "--chat-shadow-color": chatTheme.palette.shadowColor,
+        "--chat-assistant-bubble": chatTheme.palette.assistantBubble,
+        "--chat-sender-background": chatTheme.palette.senderBackground,
+        "--chat-prompt-background": chatTheme.palette.promptBackground,
+        "--chat-prompt-hover-background":
+          chatTheme.palette.promptHoverBackground,
+        "--chat-conversation-hover": chatTheme.palette.conversationHover,
+        "--chat-conversation-active": chatTheme.palette.conversationActive,
+        "--chat-scroll-thumb": chatTheme.palette.scrollThumb,
+        "--chat-primary-color": chatTheme.palette.colorPrimary,
+        "--assistant-text": chatTheme.palette.assistantText,
+        "--assistant-heading": chatTheme.palette.assistantHeading,
+        "--assistant-link": chatTheme.palette.assistantLink,
+        "--assistant-surface": chatTheme.palette.assistantSurface,
+        "--assistant-border": chatTheme.palette.assistantBorder,
+        "--assistant-shadow": chatTheme.palette.assistantShadow,
+        "--assistant-radius": chatTheme.palette.assistantRadius,
+        "--assistant-padding": chatTheme.palette.assistantPadding,
+        "--assistant-backdrop-filter": chatTheme.palette.assistantBackdropFilter,
+        "--assistant-font-family": chatTheme.palette.assistantFontFamily,
+        "--assistant-h1-border": chatTheme.palette.assistantH1Border,
+        "--assistant-h2-bg": chatTheme.palette.assistantH2Bg,
+        "--assistant-h2-text": chatTheme.palette.assistantH2Text,
+        "--assistant-h2-border": chatTheme.palette.assistantH2Border,
+        "--assistant-h2-shadow": chatTheme.palette.assistantH2Shadow,
+        "--assistant-h3-accent": chatTheme.palette.assistantH3Accent,
+        "--assistant-h3-glow": chatTheme.palette.assistantH3Glow,
+        "--assistant-h4-text": chatTheme.palette.assistantH4Text,
+        "--assistant-strong-bg": chatTheme.palette.assistantStrongBg,
+        "--assistant-strong-text": chatTheme.palette.assistantStrongText,
+        "--assistant-emphasis": chatTheme.palette.assistantEmphasis,
+        "--assistant-marker": chatTheme.palette.assistantMarker,
+        "--assistant-mark-bg": chatTheme.palette.assistantMarkBg,
+        "--assistant-mark-text": chatTheme.palette.assistantMarkText,
+        "--assistant-blockquote-bg": chatTheme.palette.assistantBlockquoteBg,
+        "--assistant-quote-border": chatTheme.palette.assistantQuoteBorder,
+        "--assistant-inline-code-bg": chatTheme.palette.assistantInlineCodeBg,
+        "--assistant-inline-code-border":
+          chatTheme.palette.assistantInlineCodeBorder,
+        "--assistant-code-bg": chatTheme.palette.assistantCodeBg,
+        "--assistant-code-header": chatTheme.palette.assistantCodeHeader,
+        "--assistant-code-text": chatTheme.palette.assistantCodeText,
+        "--assistant-table-bg": chatTheme.palette.assistantTableBg,
+        "--assistant-table-head-bg": chatTheme.palette.assistantTableHeadBg,
+        "--assistant-table-head-text":
+          chatTheme.palette.assistantTableHeadText,
+        "--assistant-table-border": chatTheme.palette.assistantTableBorder,
+        "--assistant-hr": chatTheme.palette.assistantHr,
+        "--assistant-image-shadow": chatTheme.palette.assistantImageShadow,
+      }) as CSSProperties,
+    [chatTheme],
+  );
+  const chatThemeContextValue = useMemo(
+    () => ({
+      chatThemeKey,
+      setChatThemeKey: handleChatThemeChange,
+      isDark,
+    }),
+    [chatThemeKey, handleChatThemeChange, isDark],
+  );
 
   const isComposingRef = useRef(false);
   const isChatActiveRef = useRef(false);
@@ -273,6 +894,10 @@ export default function ChatPage() {
   }, []);
 
   useEffect(() => {
+    persistChatTheme(chatThemeKey);
+  }, [chatThemeKey]);
+
+  useEffect(() => {
     const handleCompositionStart = () => {
       if (!isChatActiveRef.current) return;
       isComposingRef.current = true;
@@ -289,7 +914,7 @@ export default function ChatPage() {
       if (!isChatActiveRef.current) return;
       const target = e.target as HTMLElement;
       if (target?.tagName === "TEXTAREA" && e.key === "Enter" && !e.shiftKey) {
-        if (isComposingRef.current || (e as any).isComposing) {
+        if (isComposingRef.current || e.isComposing) {
           e.stopPropagation();
           e.stopImmediatePropagation();
           return false;
@@ -416,7 +1041,7 @@ export default function ChatPage() {
     return sessionApi.getSession(sessionId);
   }, []);
 
-  const createSessionWrapped = useCallback(async (session: any) => {
+  const createSessionWrapped = useCallback(async (session: Partial<IAgentScopeRuntimeWebUISession>) => {
     const result = await sessionApi.createSession(session);
     const newSessionId = session?.id || result[0]?.id;
     if (isChatActiveRef.current && newSessionId) {
@@ -434,7 +1059,7 @@ export default function ChatPage() {
       updateSession: sessionApi.updateSession.bind(sessionApi),
       removeSession: sessionApi.removeSession.bind(sessionApi),
     }),
-    [],
+    [createSessionWrapped, getSessionListWrapped, getSessionWrapped],
   );
 
   const copyResponse = useCallback(
@@ -569,11 +1194,9 @@ export default function ChatPage() {
         } catch (error) {
           console.error("Failed to persist background chat stream:", error);
         } finally {
-          if (!hasStreamActivity || didReleaseLoading) {
-            return;
+          if (hasStreamActivity && !didReleaseLoading) {
+            releaseStaleLoadingState(sessionId);
           }
-
-          releaseStaleLoadingState(sessionId);
         }
       })();
     },
@@ -581,15 +1204,7 @@ export default function ChatPage() {
   );
 
   const customFetch = useCallback(
-    async (data: {
-      input?: any[];
-      biz_params?: any;
-      signal?: AbortSignal;
-      reconnect?: boolean;
-      session_id?: string;
-      user_id?: string;
-      channel?: string;
-    }): Promise<Response> => {
+    async (data: ChatFetchPayload): Promise<Response> => {
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
       };
@@ -628,24 +1243,7 @@ export default function ChatPage() {
           setChatStatus("idle");
           setReconnectStreaming(false);
         };
-        const stream = res.body;
-        const transformed = new ReadableStream({
-          start(controller) {
-            const reader = stream.getReader();
-            function pump() {
-              reader.read().then(({ done, value }) => {
-                if (done) {
-                  controller.close();
-                  onStreamEnd();
-                  return;
-                }
-                controller.enqueue(value);
-                return pump();
-              });
-            }
-            pump();
-          },
-        });
+        const transformed = createRenderableUiStream(res.body, onStreamEnd);
         return new Response(transformed, {
           headers: res.headers,
           status: res.status,
@@ -675,8 +1273,8 @@ export default function ChatPage() {
           ? [
               {
                 ...lastMsg,
-                content: lastMsg.content.map((part: any) => {
-                  const p = { ...part };
+                content: lastMsg.content.map((part: ChatInputPart) => {
+                  const p: ChatInputPart = { ...part };
                   const toStoredName = (v: string) => {
                     const m1 = v.match(/\/console\/files\/[^/]+\/(.+)$/);
                     if (m1) return m1[1];
@@ -722,7 +1320,7 @@ export default function ChatPage() {
       const [uiStream, cacheStream] = response.body.tee();
       persistStreamSession(requestBody.session_id, cacheStream);
 
-      return new Response(uiStream, {
+      return new Response(createRenderableUiStream(uiStream), {
         status: response.status,
         statusText: response.statusText,
         headers: response.headers,
@@ -743,34 +1341,34 @@ export default function ChatPage() {
       ...i18nConfig,
       theme: {
         ...defaultConfig.theme,
-        darkMode: isDark,
+        colorPrimary: RUNTIME_CHAT_THEME.colorPrimary,
+        colorBgBase: RUNTIME_CHAT_THEME.colorBgBase,
+        colorTextBase: RUNTIME_CHAT_THEME.colorTextBase,
+        darkMode: RUNTIME_CHAT_THEME.darkMode,
+        background: RUNTIME_CHAT_THEME.background,
         leftHeader: {
           ...defaultConfig.theme.leftHeader,
         },
-        rightHeader: (
-          <>
-            <RuntimeLoadingBridge bridgeRef={runtimeLoadingBridgeRef} />
-            <ModelSelector />
-          </>
-        ),
+        rightHeader: <ChatHeaderControls bridgeRef={runtimeLoadingBridgeRef} />,
       },
       welcome: {
         ...i18nConfig.welcome,
         avatar: `${import.meta.env.BASE_URL}babyclaw.png`,
       },
       sender: {
-        ...(i18nConfig as any)?.sender,
+        ...((i18nConfig as { sender?: Record<string, unknown> }).sender ?? {}),
+        disclaimer: "",
         beforeSubmit: handleBeforeSubmit,
+        beforeUI: <QuickPromptBar chatRef={chatRef} />,
         attachments: {
-          trigger: function (props: any) {
+          trigger: function (props: { disabled?: boolean }) {
             return (
-              <Tooltip title={t("chat.attachments.tooltip")}>
-                <IconButton
-                  disabled={props?.disabled}
-                  icon={<SparkAttachmentLine />}
-                  bordered={false}
-                />
-              </Tooltip>
+              <IconButton
+                disabled={props?.disabled}
+                icon={<SparkAttachmentLine />}
+                bordered={false}
+                aria-label={t("chat.attachments.tooltip")}
+              />
             );
           },
           accept: "*/*",
@@ -807,7 +1405,8 @@ export default function ChatPage() {
         fetch: customFetch,
         cancel(data: { session_id: string }) {
           const chatIdForStop = data?.session_id
-            ? sessionApi.getRealIdForSession(data.session_id) ?? data.session_id
+            ? (sessionApi.getRealIdForSession(data.session_id) ??
+              data.session_id)
             : "";
           if (chatIdForStop) {
             chatApi.stopConsoleChat(chatIdForStop).then(
@@ -822,11 +1421,7 @@ export default function ChatPage() {
       actions: {
         list: [
           {
-            icon: (
-              <span title={t("common.copy")}>
-                <SparkCopyLine />
-              </span>
-            ),
+            icon: <SparkCopyLine />,
             onClick: ({ data }: { data: CopyableResponse }) => {
               void copyResponse(data);
             },
@@ -835,70 +1430,57 @@ export default function ChatPage() {
         replace: true,
       },
     } as unknown as IAgentScopeRuntimeWebUIOptions;
-  }, [wrappedSessionApi, customFetch, copyResponse, t, isDark]);
+  }, [
+    wrappedSessionApi,
+    customFetch,
+    copyResponse,
+    t,
+  ]);
 
   return (
-    <div
-      style={{
-        height: "100%",
-        width: "100%",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      <div style={{ flex: 1, minHeight: 0 }}>
-        <AgentScopeRuntimeWebUI
-          ref={chatRef}
-          key={refreshKey}
-          options={options}
-        />
-      </div>
-
-      <Modal
-        open={showModelPrompt}
-        closable={false}
-        footer={null}
-        width={480}
-        styles={{
-          content: isDark
-            ? { background: "#1f1f1f", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }
-            : undefined,
-        }}
+    <ChatThemeContext.Provider value={chatThemeContextValue}>
+      <div
+        className={styles.chatPage}
+        style={chatThemeStyle}
+        data-content-theme={chatThemeKey}
       >
-        <Result
-          icon={<ExclamationCircleOutlined style={{ color: "#faad14" }} />}
-          title={
-            <span
-              style={{ color: isDark ? "rgba(255,255,255,0.88)" : undefined }}
-            >
-              {t("modelConfig.promptTitle")}
-            </span>
-          }
-          subTitle={
-            <span
-              style={{ color: isDark ? "rgba(255,255,255,0.55)" : undefined }}
-            >
-              {t("modelConfig.promptMessage")}
-            </span>
-          }
-          extra={[
-            <Button key="skip" onClick={() => setShowModelPrompt(false)}>
-              {t("modelConfig.skipButton")}
-            </Button>,
-            <Button
-              key="configure"
-              type="primary"
-              icon={<SettingOutlined />}
-              onClick={() => {
-                setShowModelPrompt(false);
-                navigate("/models");
-              }}
-            >
-              {t("modelConfig.configureButton")}
-            </Button>,
-          ]}
-        />
-      </Modal>
-    </div>
+        <div className={styles.chatViewport}>
+          <RuntimeChat
+            chatRef={chatRef}
+            refreshKey={refreshKey}
+            options={options}
+          />
+        </div>
+
+        <Modal
+          open={showModelPrompt}
+          closable={false}
+          footer={null}
+          width={480}
+        >
+          <Result
+            icon={<ExclamationCircleOutlined style={{ color: "#faad14" }} />}
+            title={t("modelConfig.promptTitle")}
+            subTitle={t("modelConfig.promptMessage")}
+            extra={[
+              <Button key="skip" onClick={() => setShowModelPrompt(false)}>
+                {t("modelConfig.skipButton")}
+              </Button>,
+              <Button
+                key="configure"
+                type="primary"
+                icon={<SettingOutlined />}
+                onClick={() => {
+                  setShowModelPrompt(false);
+                  navigate("/models");
+                }}
+              >
+                {t("modelConfig.configureButton")}
+              </Button>,
+            ]}
+          />
+        </Modal>
+      </div>
+    </ChatThemeContext.Provider>
   );
 }

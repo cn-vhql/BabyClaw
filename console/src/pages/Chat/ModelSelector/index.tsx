@@ -10,6 +10,7 @@ import { useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { providerApi } from "../../../api/modules/provider";
 import type { ProviderInfo, ActiveModelsInfo } from "../../../api/types";
+import { filterVisibleProviders } from "../../../utils/providerVisibility";
 import styles from "./index.module.less";
 
 interface EligibleProvider {
@@ -30,25 +31,31 @@ export default function ModelSelector() {
   const savingRef = useRef(false);
   const location = useLocation();
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+  const fetchProviders = useCallback(async () => {
     try {
-      const [provData, activeData] = await Promise.all([
-        providerApi.listProviders(),
-        providerApi.getActiveModels(),
-      ]);
-      if (Array.isArray(provData)) setProviders(provData);
-      if (activeData) setActiveModels(activeData);
+      const provData = await providerApi.listProviders();
+      if (Array.isArray(provData)) {
+        setProviders(filterVisibleProviders(provData));
+      }
     } catch (err) {
-      console.error("ModelSelector: failed to load data", err);
-    } finally {
-      setLoading(false);
+      console.error("ModelSelector: failed to load providers", err);
+    }
+  }, []);
+
+  const fetchActiveModel = useCallback(async () => {
+    try {
+      const activeData = await providerApi.getActiveModels();
+      if (activeData) {
+        setActiveModels(activeData);
+      }
+    } catch (err) {
+      console.error("ModelSelector: failed to load active model", err);
     }
   }, []);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchActiveModel();
+  }, [fetchActiveModel]);
 
   // Re-sync active model whenever the route switches back to /chat
   const prevPathRef = useRef(location.pathname);
@@ -58,14 +65,9 @@ export default function ModelSelector() {
     prevPathRef.current = curr;
     const comingToChat = curr.startsWith("/chat") && !prev.startsWith("/chat");
     if (comingToChat) {
-      providerApi
-        .getActiveModels()
-        .then((activeData) => {
-          if (activeData) setActiveModels(activeData);
-        })
-        .catch(() => {});
+      fetchActiveModel().catch(() => {});
     }
-  }, [location.pathname]);
+  }, [fetchActiveModel, location.pathname]);
 
   // Eligible providers: configured + has models
   const eligibleProviders: EligibleProvider[] = providers
@@ -104,15 +106,14 @@ export default function ModelSelector() {
   const handleOpenChange = useCallback(async (next: boolean) => {
     setOpen(next);
     if (next) {
-      // Re-fetch active model every time the dropdown opens
+      setLoading(true);
       try {
-        const activeData = await providerApi.getActiveModels();
-        if (activeData) setActiveModels(activeData);
-      } catch {
-        // ignore
+        await Promise.all([fetchProviders(), fetchActiveModel()]);
+      } finally {
+        setLoading(false);
       }
     }
-  }, []);
+  }, [fetchActiveModel, fetchProviders]);
 
   const handleSelect = async (providerId: string, modelId: string) => {
     if (savingRef.current) return;
@@ -210,9 +211,7 @@ export default function ModelSelector() {
       <div
         className={[styles.trigger, open ? styles.triggerActive : ""].join(" ")}
       >
-        {saving && (
-          <LoadingOutlined style={{ fontSize: 11, color: "#615ced" }} />
-        )}
+        {saving && <LoadingOutlined className={styles.loadingIcon} />}
         <span className={styles.triggerName}>{activeModelName}</span>
         <DownOutlined
           className={[

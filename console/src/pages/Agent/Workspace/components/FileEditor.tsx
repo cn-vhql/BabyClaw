@@ -2,8 +2,8 @@ import React, { useState, useMemo } from "react";
 import { Button, Card, Input, Switch, message } from "@agentscope-ai/design";
 import { CopyOutlined, UndoOutlined, SaveOutlined } from "@ant-design/icons";
 import type { MarkdownFile } from "../../../../api/types";
-import { XMarkdown } from "@ant-design/x-markdown";
 import { useTranslation } from "react-i18next";
+import { LazyMarkdown } from "../../../../components/LazyMarkdown";
 import { stripFrontmatter } from "../../../../utils/markdown";
 import styles from "../index.module.less";
 
@@ -116,7 +116,7 @@ export const FileEditor: React.FC<FileEditorProps> = ({
                 )}
               </div>
               {showMarkdown && isMarkdownFile ? (
-                <XMarkdown
+                <LazyMarkdown
                   content={markdownContent}
                   className={styles.markdownViewer}
                 />

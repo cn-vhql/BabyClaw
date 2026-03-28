@@ -240,18 +240,21 @@ BabyClaw is developed from the CoPaw project, retaining CoPaw's core capabilitie
 git clone https://github.com/cn-vhql/BabyClaw.git
 cd BabyClaw/CoPaw
 
-# Install dependencies
-pip install -e .
+# Install dependencies with the same Python interpreter
+python -m pip install -e .
 
 # Initialize configuration
-copaw init --defaults
+python -m copaw init --defaults
 ```
 
 ### Start
 
 ```bash
 # Start service
-copaw app --host 0.0.0.0
+python -m copaw app --host 0.0.0.0
+
+# If you use the repo-local virtualenv, this also works
+./.venv/bin/python -m copaw app --host 0.0.0.0
 
 # Access console
 # Open browser at http://localhost:8088

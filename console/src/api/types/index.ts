@@ -5,6 +5,7 @@ export * from "./heartbeat";
 export * from "./chat";
 export * from "./cronjob";
 export * from "./env";
+export * from "./focus";
 export * from "./mcp";
 export * from "./provider";
 export * from "./skill";

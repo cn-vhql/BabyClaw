@@ -6,7 +6,6 @@ import {
   Form,
   message,
   Table,
-  Card,
   Tag,
   Switch,
   Button,
@@ -20,6 +19,13 @@ import {
 import styles from "./index.module.less";
 
 type FilterType = "all" | "builtin" | "custom";
+type ChannelConfig = Record<string, unknown>;
+type ChannelTableRow = {
+  key: ChannelKey;
+  config: ChannelConfig;
+  label: string;
+  isBuiltin: boolean;
+};
 
 function ChannelsPage() {
   const { t } = useTranslation();
@@ -29,17 +35,11 @@ function ChannelsPage() {
   const [saving, setSaving] = useState(false);
   const [activeKey, setActiveKey] = useState<ChannelKey | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [form] = Form.useForm<any>();
+  const [form] = Form.useForm<ChannelConfig>();
 
   // Convert cards to table data
   const tableData = useMemo(() => {
-    const data: {
-      key: ChannelKey;
-      config: Record<string, unknown>;
-      label: string;
-      isBuiltin: boolean;
-    }[] = [];
+    const data: ChannelTableRow[] = [];
 
     orderedKeys.forEach((key) => {
       const config = channels[key] || { enabled: false, bot_prefix: "" };
@@ -153,7 +153,7 @@ function ChannelsPage() {
       dataIndex: "config",
       key: "status",
       width: 100,
-      render: (config: Record<string, unknown>, record: any) => (
+      render: (config: ChannelConfig, record: ChannelTableRow) => (
         <Switch
           size="small"
           checked={config.enabled as boolean}
@@ -176,7 +176,7 @@ function ChannelsPage() {
       title: t("channels.actions"),
       key: "actions",
       width: 150,
-      render: (_: unknown, record: any) => (
+      render: (_: unknown, record: ChannelTableRow) => (
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <Button
             type="link"
@@ -218,20 +218,18 @@ function ChannelsPage() {
         </div>
       </div>
 
-      <Card className={styles.tableCard} bodyStyle={{ padding: 0 }}>
-        <Table
-          columns={columns}
-          dataSource={tableData}
-          loading={loading}
-          rowKey="key"
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: false,
-            showTotal: (total: number) => t("channels.totalItems", { count: total }),
-          }}
-          size="small"
-        />
-      </Card>
+      <Table
+        columns={columns}
+        dataSource={tableData}
+        loading={loading}
+        rowKey="key"
+        pagination={{
+          pageSize: 10,
+          showSizeChanger: false,
+          showTotal: (total: number) => t("channels.totalItems", { count: total }),
+        }}
+        size="small"
+      />
 
       <ChannelDrawer
         open={drawerOpen}

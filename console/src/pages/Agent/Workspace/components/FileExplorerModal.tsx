@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Modal, Button, message, Input, Empty } from "@agentscope-ai/design";
 import { Tree, Spin, Typography } from "antd";
+import type { DataNode, EventDataNode } from "antd/es/tree";
 import {
   FileOutlined,
   FolderOutlined,
@@ -52,14 +53,20 @@ export const FileExplorerModal: React.FC<FileExplorerModalProps> = ({
   const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Load file tree when modal opens
-  useEffect(() => {
-    if (open) {
-      loadFileTree();
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "message" in error &&
+      typeof error.message === "string"
+    ) {
+      return error.message;
     }
-  }, [open]);
+    return fallback;
+  };
 
-  const loadFileTree = async () => {
+  // Load file tree when modal opens
+  const loadFileTree = useCallback(async () => {
     setLoading(true);
     try {
       const tree = await workspaceApi.getFileTree();
@@ -74,7 +81,13 @@ export const FileExplorerModal: React.FC<FileExplorerModalProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
+
+  useEffect(() => {
+    if (open) {
+      void loadFileTree();
+    }
+  }, [loadFileTree, open]);
 
   const loadFileContent = async (path: string) => {
     setContentLoading(true);
@@ -89,7 +102,10 @@ export const FileExplorerModal: React.FC<FileExplorerModalProps> = ({
     }
   };
 
-  const handleSelect = (selectedKeys: React.Key[], info: any) => {
+  const handleSelect = (
+    selectedKeys: React.Key[],
+    info: { node: EventDataNode<DataNode> },
+  ) => {
     if (selectedKeys.length > 0) {
       const path = selectedKeys[0] as string;
       setSelectedPath(path);
@@ -130,9 +146,14 @@ export const FileExplorerModal: React.FC<FileExplorerModalProps> = ({
           loadFileTree();
           setFileContent(null);
           setSelectedPath("");
-        } catch (error: any) {
+        } catch (error) {
           console.error("Failed to delete file:", error);
-          message.error(error.message || (t("workspace.deleteFailed") || "Delete failed"));
+          message.error(
+            getErrorMessage(
+              error,
+              t("workspace.deleteFailed") || "Delete failed",
+            ),
+          );
         }
       },
     });
@@ -178,9 +199,11 @@ export const FileExplorerModal: React.FC<FileExplorerModalProps> = ({
         (t("workspace.uploadSuccess") || "Uploaded successfully") + `: ${result.filename}`
       );
       loadFileTree();
-    } catch (error: any) {
+    } catch (error) {
       console.error("Upload failed:", error);
-      message.error(error.message || (t("workspace.uploadFailed") || "Upload failed"));
+      message.error(
+        getErrorMessage(error, t("workspace.uploadFailed") || "Upload failed"),
+      );
     } finally {
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
@@ -189,7 +212,7 @@ export const FileExplorerModal: React.FC<FileExplorerModalProps> = ({
   };
 
   // Convert tree data to Ant Design Tree format
-  const convertToTreeData = (node: FileTreeNode): any => {
+  const convertToTreeData = (node: FileTreeNode): DataNode => {
     const isLeaf = node.type === "file";
     const isPreset = PRESET_FILES.includes(node.name);
 

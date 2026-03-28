@@ -20,10 +20,10 @@ type CronJob = CronJobSpecOutput;
 interface JobDrawerProps {
   open: boolean;
   editingJob: CronJob | null;
-  form: FormInstance<CronJob>;
+  form: FormInstance<Record<string, unknown>>;
   saving: boolean;
   onClose: () => void;
-  onSubmit: (values: CronJob) => void;
+  onSubmit: (values: Record<string, unknown>) => void;
 }
 
 export function JobDrawer({

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Table, Card, Button, Switch, Empty } from "@agentscope-ai/design";
+import { Table, Button, Switch, Empty } from "@agentscope-ai/design";
 import { useTools } from "./useTools";
 import { useTranslation } from "react-i18next";
 import type { ToolInfo } from "../../../api/modules/tools";
@@ -101,19 +101,17 @@ export default function ToolsPage() {
       ) : tools.length === 0 ? (
         <Empty description={t("tools.emptyState")} />
       ) : (
-        <Card className={styles.tableCard} bodyStyle={{ padding: 0 }}>
-          <Table
-            columns={columns}
-            dataSource={tools}
-            rowKey="name"
-            pagination={{
-              pageSize: 10,
-              showSizeChanger: false,
-              showTotal: (total) => t("tools.totalItems", { count: total }),
-            }}
-            size="small"
-          />
-        </Card>
+        <Table
+          columns={columns}
+          dataSource={tools}
+          rowKey="name"
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: false,
+            showTotal: (total) => t("tools.totalItems", { count: total }),
+          }}
+          size="small"
+        />
       )}
     </div>
   );

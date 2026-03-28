@@ -2,7 +2,6 @@ import { useState } from "react";
 import {
   Button,
   Table,
-  Card,
   Tag,
   Switch,
   Modal,
@@ -22,6 +21,36 @@ import styles from "./index.module.less";
 const { Text, Paragraph } = Typography;
 
 type MCPTransport = "stdio" | "streamable_http" | "sse";
+type MCPTestResult = Awaited<ReturnType<typeof mcpApi.testMCPClient>>;
+type MCPTestTool = MCPTestResult["tools"][number];
+type RawMCPClientConfig = Record<string, unknown> & {
+  name?: string;
+  description?: string;
+  enabled?: boolean;
+  isActive?: boolean;
+  transport?: unknown;
+  type?: unknown;
+  url?: unknown;
+  baseUrl?: unknown;
+  command?: unknown;
+  headers?: unknown;
+  args?: unknown;
+  env?: unknown;
+  cwd?: unknown;
+};
+
+function toStringMap(value: unknown): Record<string, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  return Object.entries(value).reduce<Record<string, string>>((acc, [key, val]) => {
+    if (typeof val === "string") {
+      acc[key] = val;
+    }
+    return acc;
+  }, {});
+}
 
 function normalizeTransport(raw?: unknown): MCPTransport | undefined {
   if (typeof raw !== "string") return undefined;
@@ -41,7 +70,7 @@ function normalizeTransport(raw?: unknown): MCPTransport | undefined {
   }
 }
 
-function normalizeClientData(key: string, rawData: any) {
+function normalizeClientData(key: string, rawData: RawMCPClientConfig) {
   const transport =
     normalizeTransport(rawData.transport ?? rawData.type) ??
     (rawData.url || rawData.baseUrl || !rawData.command
@@ -57,10 +86,12 @@ function normalizeClientData(key: string, rawData: any) {
     enabled: rawData.enabled ?? rawData.isActive ?? true,
     transport,
     url: (rawData.url || rawData.baseUrl || "").toString(),
-    headers: rawData.headers || {},
+    headers: toStringMap(rawData.headers),
     command,
-    args: Array.isArray(rawData.args) ? rawData.args : [],
-    env: rawData.env || {},
+    args: Array.isArray(rawData.args)
+      ? rawData.args.filter((arg): arg is string => typeof arg === "string")
+      : [],
+    env: toStringMap(rawData.env),
     cwd: (rawData.cwd || "").toString(),
   };
 }
@@ -96,7 +127,7 @@ function MCPPage() {
   // Test connection states
   const [testModalOpen, setTestModalOpen] = useState(false);
   const [testingClient, setTestingClient] = useState<MCPClientInfo | null>(null);
-  const [testResult, setTestResult] = useState<any>(null);
+  const [testResult, setTestResult] = useState<MCPTestResult | null>(null);
   const [testing, setTesting] = useState(false);
 
   const handleToggleEnabled = async (client: MCPClientInfo) => {
@@ -128,14 +159,15 @@ function MCPPage() {
     if (!selectedClient) return;
     try {
       const parsed = JSON.parse(editedJson);
-      const { key, ...updates } = parsed;
+      const { key, ...updates } = parsed as MCPClientInfo;
+      void key;
       const success = await updateClient(selectedClient.key, updates);
       if (success) {
         setJsonModalOpen(false);
         setIsEditing(false);
         setSelectedClient(null);
       }
-    } catch (error) {
+    } catch {
       alert("Invalid JSON format");
     }
   };
@@ -149,16 +181,21 @@ function MCPPage() {
       // Format 2: { "key": { "command": "...", ... } }
       // Format 3: { "key": "...", "name": "...", "command": "...", ... } (direct)
 
-      const clientsToCreate: Array<{ key: string; data: any }> = [];
+      const clientsToCreate: Array<{
+        key: string;
+        data: ReturnType<typeof normalizeClientData>;
+      }> = [];
 
       if (parsed.mcpServers) {
         // Format 1: nested mcpServers
-        Object.entries(parsed.mcpServers).forEach(
-          ([key, data]: [string, any]) => {
-            clientsToCreate.push({
-              key,
-              data: normalizeClientData(key, data),
-            });
+        Object.entries(parsed.mcpServers as Record<string, unknown>).forEach(
+          ([key, data]) => {
+            if (data && typeof data === "object" && !Array.isArray(data)) {
+              clientsToCreate.push({
+                key,
+                data: normalizeClientData(key, data as RawMCPClientConfig),
+              });
+            }
           },
         );
       } else if (
@@ -166,22 +203,24 @@ function MCPPage() {
         (parsed.command || parsed.url || parsed.baseUrl)
       ) {
         // Format 3: direct format with key field
-        const { key, ...clientData } = parsed;
+        const { key, ...clientData } = parsed as RawMCPClientConfig & {
+          key: string;
+        };
         clientsToCreate.push({
           key,
           data: normalizeClientData(key, clientData),
         });
       } else {
         // Format 2: direct client objects with keys
-        Object.entries(parsed).forEach(([key, data]: [string, any]) => {
-          if (
-            typeof data === "object" &&
-            (data.command || data.url || data.baseUrl)
-          ) {
-            clientsToCreate.push({
-              key,
-              data: normalizeClientData(key, data),
-            });
+        Object.entries(parsed as Record<string, unknown>).forEach(([key, data]) => {
+          if (typeof data === "object" && data !== null && !Array.isArray(data)) {
+            const clientData = data as RawMCPClientConfig;
+            if (clientData.command || clientData.url || clientData.baseUrl) {
+              clientsToCreate.push({
+                key,
+                data: normalizeClientData(key, clientData),
+              });
+            }
           }
         });
       }
@@ -207,7 +246,7 @@ function MCPPage() {
   }
 }`);
       }
-    } catch (error) {
+    } catch {
       alert("Invalid JSON format");
     }
   };
@@ -227,9 +266,11 @@ function MCPPage() {
       } else {
         message.error(`连接失败: ${result.error || "未知错误"}`);
       }
-    } catch (error: any) {
-      const errorMsg = error?.message || "测试失败";
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : "测试失败";
       setTestResult({
+        client_key: client.key,
+        client_name: client.name,
         connected: false,
         error: errorMsg,
         tools: [],
@@ -336,19 +377,17 @@ function MCPPage() {
       ) : clients.length === 0 ? (
         <Empty description={t("mcp.emptyState")} />
       ) : (
-        <Card className={styles.tableCard} bodyStyle={{ padding: 0 }}>
-          <Table
-            columns={columns}
-            dataSource={clients}
-            rowKey="key"
-            pagination={{
-              pageSize: 10,
-              showSizeChanger: false,
-              showTotal: (total) => t("mcp.totalItems", { count: total }),
-            }}
-            size="small"
-          />
-        </Card>
+        <Table
+          columns={columns}
+          dataSource={clients}
+          rowKey="key"
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: false,
+            showTotal: (total) => t("mcp.totalItems", { count: total }),
+          }}
+          size="small"
+        />
       )}
 
       {/* Create Modal */}
@@ -565,7 +604,7 @@ function MCPPage() {
                   <List
                     bordered
                     dataSource={testResult.tools}
-                    renderItem={(tool: any, index: number) => (
+                    renderItem={(tool: MCPTestTool, index: number) => (
                       <List.Item>
                         <div style={{ width: "100%" }}>
                           <div
@@ -592,10 +631,10 @@ function MCPPage() {
                                 fontSize: 13,
                               }}
                             >
-                              {tool.description}
+                              {String(tool.description)}
                             </Paragraph>
                           )}
-                          {tool.input_schema && (
+                          {Boolean(tool.input_schema) && (
                             <div
                               style={{
                                 marginLeft: 42,

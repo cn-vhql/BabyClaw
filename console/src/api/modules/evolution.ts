@@ -22,6 +22,9 @@ export const evolutionApi = {
   getRecord: (recordId: string) =>
     request<EvolutionRecord>(`/evolution/records/${recordId}`),
 
+  getArchiveByRecord: (recordId: string) =>
+    request<EvolutionArchive>(`/evolution/records/${recordId}/archive`),
+
   getArchive: (archiveId: string) =>
     request<EvolutionArchive>(`/evolution/archives/${archiveId}`),
 

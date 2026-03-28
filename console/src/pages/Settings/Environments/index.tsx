@@ -155,7 +155,7 @@ function EnvironmentsPage() {
         },
       });
     },
-    [workingRows, ensureLocal, envVars.length, fetchAll],
+    [workingRows, ensureLocal, envVars.length, fetchAll, t],
   );
 
   const removeSelected = useCallback(() => {
@@ -209,7 +209,7 @@ function EnvironmentsPage() {
         }
       },
     });
-  }, [selected, workingRows, ensureLocal, envVars.length, fetchAll]);
+  }, [selected, workingRows, ensureLocal, envVars.length, fetchAll, t]);
 
   /* ---- validate & save ---- */
 
@@ -229,7 +229,7 @@ function EnvironmentsPage() {
     }
     setKeyErrors(errors);
     return Object.keys(errors).length === 0;
-  }, [workingRows]);
+  }, [t, workingRows]);
 
   const handleSave = useCallback(async () => {
     if (!validate()) return;
@@ -252,7 +252,7 @@ function EnvironmentsPage() {
     } finally {
       setSaving(false);
     }
-  }, [validate, workingRows, fetchAll]);
+  }, [validate, workingRows, fetchAll, t]);
 
   const handleReset = useCallback(() => {
     setRows(null);

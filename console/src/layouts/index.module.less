@@ -1,26 +1,59 @@
-// ─── MainLayout ───────────────────────────────────────────────────────────────
 .mainLayout {
   height: 100vh;
+  background: var(--app-bg);
 }
 
 .pageContainer {
-  // inherits from .page-container global class; add local overrides here if needed
+  min-width: 0;
 }
 
-// ─── Header ───────────────────────────────────────────────────────────────────
+.chatPageContent {
+  padding-bottom: 0 !important;
+  overflow: hidden;
+}
+
+.routeLoading {
+  min-height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--app-text-muted);
+  font-size: 14px;
+}
+
 .header {
   height: 64px;
   padding: 0 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #fff;
-  border-bottom: 1px solid #f0f0f0;
+  background: var(--app-header-bg);
+  border-bottom: 1px solid var(--app-border);
+  backdrop-filter: blur(18px);
 }
 
 .headerTitle {
   font-size: 18px;
   font-weight: 500;
+  color: var(--app-text);
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.headerActionButton {
+  color: var(--app-text) !important;
+  border-radius: 10px !important;
+
+  &:hover,
+  &:focus {
+    color: var(--app-primary) !important;
+    background: var(--app-primary-soft) !important;
+  }
 }
 
 .githubLink {
@@ -30,58 +63,23 @@
 }
 
 .githubButton {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
   font-weight: 500;
-  transition: all 0.2s ease;
 }
 
-.githubButton:hover {
-  background: rgba(0, 0, 0, 0.04) !important;
-}
-
-// ─── Sidebar ──────────────────────────────────────────────────────────────────
 .sider {
-  background: #fff !important;
-  border-right: 1px solid #f0f0f0;
+  background: var(--app-sider-bg) !important;
+  border-right: 1px solid var(--app-border);
   overflow: auto;
   height: 100vh;
+  backdrop-filter: blur(18px);
 
   :global {
-    .copaw-menu {
+    .copaw-menu,
+    .ant-menu {
       border-inline-end: 0 !important;
-    }
-  }
-}
-
-.siderDark {
-  background: #1a1a1a !important;
-  border-right-color: rgba(255, 255, 255, 0.08) !important;
-
-  :global {
-    .copaw-menu {
-      background: #1a1a1a !important;
-      border-inline-end: 0 !important;
-    }
-    /* Group title (sub-menu label) */
-    .copaw-menu-submenu-title {
-      color: rgba(255, 255, 255, 0.45) !important;
-    }
-    /* Regular menu item */
-    .copaw-menu-item {
-      color: rgba(255, 255, 255, 0.75) !important;
-    }
-    /* Hover state */
-    .copaw-menu-item:hover,
-    .copaw-menu-submenu-title:hover {
-      background: rgba(255, 255, 255, 0.06) !important;
-      color: rgba(255, 255, 255, 0.9) !important;
-    }
-    /* Selected item */
-    .copaw-menu-item-selected {
-      background: rgba(97, 92, 237, 0.2) !important;
-      color: #8b87f0 !important;
     }
   }
 }
@@ -97,23 +95,34 @@
 .logoWrapper {
   display: flex;
   align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.logoImage {
+  height: 32px;
+  width: auto;
+  flex-shrink: 0;
 }
 
 .logoText {
+  margin: 0;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 1px;
   font-size: 24px;
   font-weight: 700;
-  margin: 0;
-  display: inline;
+  color: var(--app-text);
+  letter-spacing: 0.5px;
+  line-height: 1;
 }
 
 .logoTextBaby {
-  color: #1e40af;
-  display: inline;
+  color: var(--app-primary);
 }
 
 .logoTextClaw {
-  color: #f97316;
-  display: inline;
+  color: color-mix(in srgb, var(--app-primary) 72%, #f97316);
 }
 
 .logoImg {
@@ -123,7 +132,7 @@
 
 .versionBadge {
   font-size: 10px;
-  color: #615ced;
+  color: var(--app-primary);
   font-weight: 600;
   line-height: 1;
   position: relative;
@@ -139,13 +148,44 @@
 }
 
 .collapseBtn {
-  margin: auto;
-  color: #615ced;
+  margin-left: auto;
+  color: var(--app-text-secondary) !important;
+
+  &:hover,
+  &:focus {
+    color: var(--app-primary) !important;
+    background: var(--app-primary-soft) !important;
+  }
 }
 
-// ─── Update Modal ─────────────────────────────────────────────────────────────
+.logoutPanel {
+  margin-top: auto;
+  padding: 12px 16px;
+  border-top: 1px solid var(--app-border);
+  background: var(--app-surface-strong);
+}
+
+.logoutButton {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-start;
+  color: var(--app-text-secondary) !important;
+  border-radius: 12px !important;
+
+  &:hover,
+  &:focus {
+    color: var(--app-primary) !important;
+    background: var(--app-primary-soft) !important;
+  }
+}
+
+.logoutButtonCollapsed {
+  justify-content: center;
+}
+
 .updateModalTitle {
-  color: #615ced;
+  color: var(--app-primary);
 }
 
 .updateModalBody {
@@ -163,16 +203,15 @@
 }
 
 .updateModalPrimaryBtn {
-  background: #615ced;
-  border-color: #615ced;
+  background: var(--app-primary);
+  border-color: var(--app-primary);
 }
 
-// ─── Code block inside update modal ──────────────────────────────────────────
 .codeBlock {
   position: relative;
-  background: #f5f5f5;
-  border: 1px solid #e8e8e8;
-  border-radius: 6px;
+  background: var(--app-surface-secondary);
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
   padding: 12px 40px 12px 16px;
   overflow-x: auto;
   margin: 8px 0;
@@ -181,17 +220,18 @@
 .codeBlockInner {
   font-family: monospace;
   font-size: 13px;
+  color: var(--app-text);
 }
 
 .codeInline {
-  background: #f5f5f5;
-  border-radius: 3px;
+  background: var(--app-surface-secondary);
+  border-radius: 5px;
   padding: 1px 5px;
   font-family: monospace;
   font-size: 13px;
+  color: var(--app-text);
 }
 
-// ─── CopyButton ───────────────────────────────────────────────────────────────
 .copyBtn {
   position: absolute;
   top: 8px;
@@ -204,74 +244,5 @@
 }
 
 .copyBtnDefault {
-  color: #999;
-}
-
-/* ─── Dark mode overrides ─────────────────────────────────────────────────── */
-:global(.dark-mode) {
-  .header {
-    background: #1f1f1f !important;
-    border-bottom-color: rgba(255, 255, 255, 0.08) !important;
-    color: rgba(255, 255, 255, 0.85);
-
-    /* Text buttons (Docs / FAQ / GitHub / Changelog) */
-    :global(.copaw-btn-text),
-    :global(.ant-btn-text) {
-      color: rgba(255, 255, 255, 0.75) !important;
-
-      &:hover {
-        color: #fff !important;
-        background: rgba(255, 255, 255, 0.08) !important;
-      }
-
-      .anticon,
-      svg {
-        color: inherit !important;
-      }
-    }
-
-    /* Fallback: any icon or text directly inside header */
-    :global(.anticon) {
-      color: rgba(255, 255, 255, 0.75);
-    }
-  }
-
-  .headerTitle {
-    color: rgba(255, 255, 255, 0.85);
-  }
-
-  .githubButton:hover {
-    background: rgba(255, 255, 255, 0.08) !important;
-  }
-
-  .sider {
-    background: #1a1a1a !important;
-    border-right-color: rgba(255, 255, 255, 0.08) !important;
-  }
-
-  .siderTop {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  }
-
-  .versionBadge {
-    color: #8b87f0;
-  }
-
-  .collapseBtn {
-    color: #8b87f0;
-  }
-
-  .codeBlock {
-    background: #2a2a2a;
-    border-color: rgba(255, 255, 255, 0.1);
-  }
-
-  .codeInline {
-    background: #2a2a2a;
-    color: rgba(255, 255, 255, 0.85);
-  }
-
-  .copyBtnDefault {
-    color: rgba(255, 255, 255, 0.3);
-  }
+  color: var(--app-text-muted);
 }

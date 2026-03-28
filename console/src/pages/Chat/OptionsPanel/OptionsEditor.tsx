@@ -1,10 +1,16 @@
 import React from "react";
 import { Form, Input, ColorPicker, Flex, Divider, InputNumber } from "antd";
 import { createStyles } from "antd-style";
+import type { FormListOperation } from "antd/es/form";
 import { Button, IconButton, Switch } from "@agentscope-ai/design";
 import { SparkDeleteLine, SparkPlusLine } from "@agentscope-ai/icons";
 import FormItem from "./FormItem";
 import defaultConfig from "./defaultConfig";
+
+type PromptField = {
+  key: number;
+  name: number;
+};
 
 const useStyles = createStyles(({ token }) => ({
   container: {
@@ -65,7 +71,9 @@ const OptionsEditor: React.FC<OptionsEditorProps> = ({ value, onChange }) => {
         <FormItem
           name={["theme", "colorPrimary"]}
           label="colorPrimary"
-          normalize={(value) => value.toHexString()}
+          normalize={(value) =>
+            (value as { toHexString: () => string }).toHexString()
+          }
         >
           <ColorPicker />
         </FormItem>
@@ -73,7 +81,9 @@ const OptionsEditor: React.FC<OptionsEditorProps> = ({ value, onChange }) => {
         <FormItem
           name={["theme", "colorBgBase"]}
           label="colorBgBase"
-          normalize={(value) => value.toHexString()}
+          normalize={(value) =>
+            (value as { toHexString: () => string }).toHexString()
+          }
         >
           <ColorPicker />
         </FormItem>
@@ -81,7 +91,9 @@ const OptionsEditor: React.FC<OptionsEditorProps> = ({ value, onChange }) => {
         <FormItem
           name={["theme", "colorTextBase"]}
           label="colorTextBase"
-          normalize={(value) => value.toHexString()}
+          normalize={(value) =>
+            (value as { toHexString: () => string }).toHexString()
+          }
         >
           <ColorPicker />
         </FormItem>
@@ -130,11 +142,11 @@ const OptionsEditor: React.FC<OptionsEditorProps> = ({ value, onChange }) => {
 
         <FormItem name={["welcome", "prompts"]} isList label="prompts">
           {(
-            fields: { key: string; name: string }[],
+            fields: PromptField[],
             {
               add,
               remove,
-            }: { add: (item: any) => void; remove: (name: string) => void },
+            }: { add: FormListOperation["add"]; remove: FormListOperation["remove"] },
           ) => {
             return (
               <div>

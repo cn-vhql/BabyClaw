@@ -1,0 +1,280 @@
+.focusPage {
+  padding: 24px;
+  height: calc(100vh - 96px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.headerInfo {
+  min-width: 0;
+}
+
+.title {
+  margin: 0 0 4px;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.description {
+  margin: 0;
+  color: var(--app-text-muted);
+  font-size: 14px;
+  line-height: 1.6;
+  max-width: 760px;
+}
+
+.headerActions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.headerButton {
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.layout {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.timelineColumn {
+  min-height: 0;
+  display: flex;
+  flex: 1;
+
+  > * {
+    flex: 1;
+  }
+}
+
+.card {
+  height: 100%;
+  overflow: hidden;
+}
+
+.cardContent {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.searchBox {
+  flex: 1 1 320px;
+  max-width: 420px;
+}
+
+.metric {
+  color: var(--app-text-muted);
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.timeline {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.timelineItem {
+  position: relative;
+  display: flex;
+  gap: 14px;
+  padding-bottom: 18px;
+
+  &:not(:last-child)::before {
+    content: "";
+    position: absolute;
+    left: 7px;
+    top: 20px;
+    bottom: 0;
+    width: 1px;
+    background: var(--app-border);
+  }
+}
+
+.timelineDot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fb923c, #f97316);
+  box-shadow: 0 0 0 4px color-mix(in srgb, #fb923c 18%, transparent);
+  flex-shrink: 0;
+  margin-top: 12px;
+}
+
+.noteCard {
+  flex: 1;
+  border: 1px solid var(--app-border);
+  border-radius: 16px;
+  padding: 16px;
+  background:
+    radial-gradient(circle at top right, rgba(249, 115, 22, 0.08), transparent 45%),
+    color-mix(in srgb, var(--app-surface) 94%, transparent);
+}
+
+.noteTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.noteTitle {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.noteMeta {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  color: var(--app-text-muted);
+  font-size: 12px;
+}
+
+.noteContent {
+  margin: 14px 0 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.7;
+  font-size: 14px;
+}
+
+.noteTags {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.state,
+.emptyWrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.paginationBar {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--app-border);
+}
+
+.muted {
+  color: var(--app-text-muted);
+  font-size: 13px;
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.everyField {
+  :global(.ant-form-item-control-input-content) {
+    display: block;
+  }
+}
+
+.everyRow {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.everyNumber {
+  width: 120px;
+}
+
+.everyUnit {
+  min-width: 120px;
+}
+
+.timeRange {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.drawerHint {
+  margin-top: 8px;
+}
+
+.hintTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+@media (max-width: 1100px) {
+  .timeline {
+    height: auto;
+    max-height: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .focusPage {
+    padding: 16px;
+    height: auto;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .headerActions {
+    width: 100%;
+  }
+
+  .headerActions :global(.copaw-btn) {
+    flex: 1;
+  }
+
+  .toolbar {
+    align-items: stretch;
+  }
+
+  .searchBox {
+    max-width: none;
+  }
+
+  .paginationBar {
+    justify-content: center;
+  }
+
+  .timeRange {
+    grid-template-columns: 1fr;
+  }
+}

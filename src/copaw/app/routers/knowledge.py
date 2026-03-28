@@ -418,6 +418,69 @@ async def _index_documentInBackground(
             pass
 
 
+@router.post("/{kb_id}/documents/{doc_id}/reindex")
+async def reindex_document(request: Request, kb_id: str, doc_id: str, background_tasks: BackgroundTasks) -> dict:
+    """Reindex a document (re-chunk and regenerate embeddings)."""
+    try:
+        logger.info(f"Reindex request for kb_id: {kb_id}, doc_id: {doc_id}")
+
+        workspace = await get_agent_for_request(request)
+        kb_dir = workspace.workspace_dir / "knowledge" / kb_id
+        doc_dir = kb_dir / "documents" / doc_id
+
+        if not doc_dir.exists():
+            raise HTTPException(status_code=404, detail="Document not found")
+
+        # Load KB metadata
+        meta_file = kb_dir / "meta.json"
+        with open(meta_file, "r", encoding="utf-8") as f:
+            kb_meta = json.load(f)
+
+        chunk_config = kb_meta.get("chunk_config", {})
+
+        # Find content file
+        content_files = [f for f in doc_dir.glob("*.*") if f.name != "meta.json"]
+        if not content_files:
+            raise HTTPException(status_code=400, detail="No content file found")
+
+        content_file = content_files[0]
+        file_type = content_file.suffix.lower()
+
+        # Update metadata status to processing
+        doc_meta_file = doc_dir / "meta.json"
+        with open(doc_meta_file, "r", encoding="utf-8") as f:
+            doc_meta = json.load(f)
+
+        doc_meta["indexing_status"] = "processing"
+        with open(doc_meta_file, "w", encoding="utf-8") as f:
+            json.dump(doc_meta, f, ensure_ascii=False, indent=2)
+
+        # Start background reindexing task
+        embedding_config = workspace.config.running.embedding_config
+        background_tasks.add_task(
+            _reindex_documentInBackground,
+            workspace_dir=str(workspace.workspace_dir),
+            kb_id=kb_id,
+            doc_id=doc_id,
+            file_path=str(content_file),
+            file_type=file_type,
+            chunk_config=chunk_config,
+            embedding_config=embedding_config,
+        )
+
+        logger.info(f"Document reindexing started: {doc_id}")
+        return {
+            "doc_id": doc_id,
+            "filename": doc_meta.get("filename", ""),
+            "indexing_status": "processing"
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error(f"Reindex failed: {exc}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
 @router.delete("/{kb_id}/documents/{doc_id}")
 async def delete_document(request: Request, kb_id: str, doc_id: str) -> dict:
     """Delete a document from knowledge base."""
@@ -874,3 +937,83 @@ def _keyword_search(query: str, chunks: list[dict], top_k: int) -> list[dict]:
     # Sort by score and return top_k
     results.sort(key=lambda x: x["score"], reverse=True)
     return results[:top_k]
+
+
+async def _reindex_documentInBackground(
+    workspace_dir: str,
+    kb_id: str,
+    doc_id: str,
+    file_path: str,
+    file_type: str,
+    chunk_config: dict,
+    embedding_config: dict,
+) -> None:
+    """Background task to reindex a document."""
+    try:
+        logger.info(f"[Background Reindex] Starting for document: {doc_id}")
+
+        doc_dir = Path(workspace_dir) / "knowledge" / kb_id / "documents" / doc_id
+        doc_meta_file = doc_dir / "meta.json"
+
+        # Read content
+        if file_type in [".txt", ".md", ".json", ".csv"]:
+            with open(file_path, "r", encoding="utf-8") as f:
+                file_content = f.read()
+
+            logger.info(f"[Background Reindex] File content length: {len(file_content)} chars")
+
+            # Chunk content
+            from ...agents.knowledge.chunk_strategies import chunk_text
+
+            chunks = chunk_text(
+                text=file_content,
+                doc_id=doc_id,
+                chunk_type=chunk_config["chunk_type"],
+                max_length=chunk_config["max_length"],
+                overlap=chunk_config["overlap"],
+                separators=chunk_config["separators"],
+            )
+
+            logger.info(f"[Background Reindex] Created {len(chunks)} chunks")
+
+            # Generate embeddings
+            if embedding_config and embedding_config.get("api_key") and len(chunks) > 0:
+                logger.info(f"[Background Reindex] Generating embeddings for {len(chunks)} chunks")
+                try:
+                    chunks = await _generate_embeddings(chunks, embedding_config)
+                    logger.info(f"[Background Reindex] Embeddings generated successfully")
+                except Exception as e:
+                    logger.warning(f"[Background Reindex] Embedding generation failed: {e}")
+            else:
+                logger.info(f"[Background Reindex] No embedding config, skipping embeddings")
+
+            # Update metadata
+            with open(doc_meta_file, "r", encoding="utf-8") as f:
+                doc_meta = json.load(f)
+
+            doc_meta["chunk_count"] = len(chunks)
+            doc_meta["chunks"] = chunks
+            doc_meta["indexing_status"] = "completed"
+            doc_meta["indexing_error"] = None
+
+            with open(doc_meta_file, "w", encoding="utf-8") as f:
+                json.dump(doc_meta, f, ensure_ascii=False, indent=2)
+
+            logger.info(f"[Background Reindex] Document reindexing completed: {doc_id}")
+        else:
+            logger.info(f"[Background Reindex] File type {file_type} not supported for chunking")
+
+    except Exception as e:
+        logger.error(f"[Background Reindex] Error processing document {doc_id}: {e}", exc_info=True)
+
+        try:
+            with open(doc_meta_file, "r", encoding="utf-8") as f:
+                doc_meta = json.load(f)
+
+            doc_meta["indexing_status"] = "failed"
+            doc_meta["indexing_error"] = str(e)
+
+            with open(doc_meta_file, "w", encoding="utf-8") as f:
+                json.dump(doc_meta, f, ensure_ascii=False, indent=2)
+        except Exception:
+            pass

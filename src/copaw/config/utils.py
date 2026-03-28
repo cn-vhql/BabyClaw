@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import plistlib
 import subprocess
@@ -18,14 +19,22 @@ from ..constant import (
     RUNNING_IN_CONTAINER,
     WORKING_DIR,
 )
+from .flags import is_online_only_mode
 from .config import (
+    AgentProfileRef,
     Config,
+    FocusConfig,
     HeartbeatConfig,
     LastApiConfig,
     LastDispatchConfig,
     load_agent_config,
     save_agent_config,
 )
+
+
+logger = logging.getLogger(__name__)
+
+_DELETED_AGENT_MARKER_FILE = ".copaw_deleted"
 
 
 def _normalize_working_dir_bound_paths(data: object) -> object:
@@ -385,6 +394,26 @@ def get_heartbeat_query_path() -> Path:
     return get_config_path().parent.joinpath(HEARTBEAT_FILE)
 
 
+def get_agent_deletion_marker_path(workspace_dir: Path) -> Path:
+    """Return the deletion marker path for an agent workspace."""
+    return workspace_dir.expanduser().joinpath(_DELETED_AGENT_MARKER_FILE)
+
+
+def mark_agent_workspace_deleted(workspace_dir: Path) -> None:
+    """Mark a workspace as deleted so orphan recovery ignores it."""
+    marker_path = get_agent_deletion_marker_path(workspace_dir)
+    marker_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(marker_path, "w", encoding="utf-8") as file:
+        file.write("deleted\n")
+
+
+def clear_agent_workspace_deleted(workspace_dir: Path) -> None:
+    """Remove the deleted marker for a workspace if it exists."""
+    marker_path = get_agent_deletion_marker_path(workspace_dir)
+    if marker_path.exists():
+        marker_path.unlink()
+
+
 def _remove_nested_key(data: dict, path: list) -> bool:
     """Remove a nested key from *data* given a path list.
 
@@ -473,6 +502,94 @@ def save_config(config: Config, config_path: Optional[Path] = None) -> None:
         )
 
 
+def recover_agent_profiles(
+    config_path: Optional[Path] = None,
+    agent_id: Optional[str] = None,
+) -> list[AgentProfileRef]:
+    """Recover agent refs from existing workspaces with agent.json files.
+
+    This repairs cases where a workspace still exists on disk but its root
+    config registration was removed. Workspaces marked as deleted are ignored
+    so API-level deletions do not get silently restored.
+    """
+    if config_path is None:
+        config_path = get_config_path()
+
+    config = load_config(config_path)
+    workspaces_root = WORKING_DIR.joinpath("workspaces")
+    if not workspaces_root.is_dir():
+        return []
+
+    target_ids = None
+    if agent_id:
+        target_ids = {agent_id}
+
+    configured_ids = set(config.agents.profiles.keys())
+    configured_workspace_dirs = {
+        str(Path(ref.workspace_dir).expanduser().resolve())
+        for ref in config.agents.profiles.values()
+    }
+    recovered: list[AgentProfileRef] = []
+
+    for workspace_dir in sorted(workspaces_root.iterdir()):
+        if not workspace_dir.is_dir():
+            continue
+        if get_agent_deletion_marker_path(workspace_dir).exists():
+            continue
+
+        agent_config_path = workspace_dir / "agent.json"
+        if not agent_config_path.is_file():
+            continue
+
+        try:
+            with open(agent_config_path, "r", encoding="utf-8") as file:
+                data = json.load(file)
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            logger.warning(
+                "Skipping unreadable agent config at %s: %s",
+                agent_config_path,
+                exc,
+            )
+            continue
+
+        discovered_id = str(data.get("id") or workspace_dir.name).strip()
+        if not discovered_id:
+            discovered_id = workspace_dir.name
+
+        if target_ids and discovered_id not in target_ids:
+            continue
+
+        resolved_workspace_dir = str(workspace_dir.expanduser().resolve())
+        if discovered_id in configured_ids:
+            continue
+        if resolved_workspace_dir in configured_workspace_dirs:
+            logger.warning(
+                "Skipping orphan recovery for %s because workspace %s is "
+                "already registered under a different agent ID",
+                discovered_id,
+                resolved_workspace_dir,
+            )
+            continue
+
+        agent_ref = AgentProfileRef(
+            id=discovered_id,
+            workspace_dir=str(workspace_dir),
+        )
+        config.agents.profiles[discovered_id] = agent_ref
+        configured_ids.add(discovered_id)
+        configured_workspace_dirs.add(resolved_workspace_dir)
+        recovered.append(agent_ref)
+
+    if recovered:
+        save_config(config, config_path)
+        logger.info(
+            "Recovered orphan agent profiles: %s",
+            ", ".join(ref.id for ref in recovered),
+        )
+
+    return recovered
+
+
 def get_heartbeat_config(agent_id: Optional[str] = None) -> HeartbeatConfig:
     """Return effective heartbeat config (from agent config or default).
 
@@ -497,6 +614,23 @@ def get_heartbeat_config(agent_id: Optional[str] = None) -> HeartbeatConfig:
         return HeartbeatConfig()
     hb = config.agents.defaults.heartbeat
     return hb if hb is not None else HeartbeatConfig()
+
+
+def get_focus_config(agent_id: Optional[str] = None) -> FocusConfig:
+    """Return effective focus config (from agent config or default)."""
+    if agent_id is not None:
+        try:
+            agent_config = load_agent_config(agent_id)
+            focus = agent_config.focus
+            return focus if focus is not None else FocusConfig()
+        except Exception:
+            return FocusConfig()
+
+    config = load_config()
+    if config.agents.defaults is None:
+        return FocusConfig()
+    focus = config.agents.defaults.focus
+    return focus if focus is not None else FocusConfig()
 
 
 def update_last_dispatch(

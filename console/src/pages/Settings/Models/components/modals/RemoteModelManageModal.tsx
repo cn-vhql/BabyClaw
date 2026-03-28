@@ -16,7 +16,7 @@ import {
 import type { ProviderInfo } from "../../../../../api/types";
 import api from "../../../../../api";
 import { useTranslation } from "react-i18next";
-import { useTheme } from "../../../../../contexts/ThemeContext";
+import { useTheme } from "../../../../../contexts/useTheme";
 import styles from "../../index.module.less";
 
 interface RemoteModelManageModalProps {

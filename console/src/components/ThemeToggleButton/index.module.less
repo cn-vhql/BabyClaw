@@ -1,36 +1,26 @@
-/* ---- Theme toggle button ---- */
 .toggleBtn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 32px;
+  height: 34px;
+  padding: 0 12px;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   background: transparent;
   cursor: pointer;
   transition:
-    background 0.15s ease,
-    color 0.15s ease;
-  color: #555;
-  padding: 0;
+    background 0.18s ease,
+    color 0.18s ease;
+  color: var(--app-text);
   flex-shrink: 0;
 
-  &:hover {
-    background: rgba(97, 92, 237, 0.08);
-    color: #615ced;
+  &:hover,
+  &:focus {
+    background: var(--app-primary-soft);
+    color: var(--app-primary);
   }
 }
 
 .icon {
   font-size: 16px;
-}
-
-/* Dark mode overrides */
-:global(.dark-mode) .toggleBtn {
-  color: #ccc;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: #fff;
-  }
 }

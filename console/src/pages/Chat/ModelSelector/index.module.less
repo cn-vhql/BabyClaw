@@ -1,57 +1,80 @@
-/* ---- Trigger button ---- */
 .trigger {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
-  border-radius: 8px;
+  gap: 6px;
+  max-width: 280px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--chat-border-soft-color, var(--app-border));
+  border-radius: 10px;
+  background: color-mix(
+    in srgb,
+    var(--chat-panel-background, var(--app-surface-strong)) 78%,
+    transparent
+  );
   cursor: pointer;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
-  color: #333;
-  //   border: 1px solid rgba(0, 0, 0, 0.08);
-  //   background: #fff;
-  transition: all 0.15s ease;
+  color: var(--assistant-text, var(--app-text));
+  transition:
+    border-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease;
   user-select: none;
-  max-width: 260px;
 
   &:hover,
   &.triggerActive {
-    border-color: #615ced;
-    color: #615ced;
-    box-shadow: 0 2px 8px rgba(97, 92, 237, 0.12);
+    border-color: var(--chat-border-color, var(--app-border-strong));
+    color: var(--chat-primary-color, var(--app-primary));
+    background: color-mix(
+      in srgb,
+      var(--chat-panel-background, var(--app-surface-strong)) 90%,
+      transparent
+    );
+    box-shadow: 0 10px 24px
+      color-mix(in srgb, var(--chat-shadow-color, var(--app-primary-shadow)) 58%, transparent);
   }
+}
+
+.loadingIcon {
+  font-size: 11px;
+  color: var(--chat-primary-color, var(--app-primary));
 }
 
 .triggerName {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 180px;
+  max-width: 190px;
 }
 
 .triggerArrow {
   flex-shrink: 0;
-  font-size: 16px;
-  color: #999;
+  font-size: 14px;
+  color: var(--app-text-muted);
   transition:
-    transform 0.2s,
-    color 0.15s;
+    transform 0.2s ease,
+    color 0.18s ease;
 
   &.triggerArrowOpen {
     transform: rotate(180deg);
-    color: #615ced;
+    color: var(--chat-primary-color, var(--app-primary));
   }
 }
 
-/* ---- Level-1 panel ---- */
 .panel {
-  min-width: 180px;
-  border-radius: 12px;
-  background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-  padding: 4px 0;
+  min-width: 200px;
+  padding: 6px;
+  border-radius: 14px;
+  border: 1px solid var(--chat-border-color, var(--app-border));
+  background: color-mix(
+    in srgb,
+    var(--chat-panel-background, var(--app-surface)) 92%,
+    transparent
+  );
+  box-shadow: var(--app-elevated-shadow);
+  backdrop-filter: blur(18px);
   overflow: visible;
 }
 
@@ -60,28 +83,25 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 7px 12px;
+  padding: 8px 12px;
+  border-radius: 10px;
   cursor: pointer;
-  font-size: 16px;
-  color: #333;
-  transition: background 0.12s;
+  font-size: 14px;
+  color: var(--assistant-text, var(--app-text));
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
   gap: 8px;
 
   &:hover {
-    background: rgba(97, 92, 237, 0.06);
-    color: #615ced;
+    background: var(--chat-conversation-hover, var(--app-primary-softer));
+    color: var(--chat-primary-color, var(--app-primary));
+    transform: translateX(1px);
   }
 
   &:hover :global(.modelSubmenu) {
     display: block;
-  }
-
-  &:first-child {
-    border-radius: 8px 8px 0 0;
-  }
-
-  &:last-child {
-    border-radius: 0 0 8px 8px;
   }
 
   &.providerItemActive {
@@ -98,25 +118,28 @@
 
 .providerArrow {
   flex-shrink: 0;
-  font-size: 16px;
-  color: #bbb;
+  font-size: 14px;
+  color: var(--app-text-muted);
 }
 
-/* ---- Level-2 submenu ---- */
 .submenu {
   display: none;
   position: absolute;
   top: -4px;
-  left: 100%;
-  margin-left: 2px;
-  min-width: 200px;
+  left: calc(100% + 4px);
+  min-width: 220px;
   max-height: 360px;
   overflow-y: auto;
-  border-radius: 12px;
-  background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-  padding: 4px 0;
+  padding: 6px;
+  border-radius: 14px;
+  border: 1px solid var(--chat-border-color, var(--app-border));
+  background: color-mix(
+    in srgb,
+    var(--chat-panel-background, var(--app-surface)) 94%,
+    transparent
+  );
+  box-shadow: var(--app-elevated-shadow);
+  backdrop-filter: blur(18px);
   z-index: 1100;
 }
 
@@ -124,31 +147,28 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 7px 12px;
+  padding: 8px 12px;
+  border-radius: 10px;
   cursor: pointer;
-  font-size: 16px;
-  color: #333;
-  transition: background 0.12s;
+  font-size: 14px;
+  color: var(--assistant-text, var(--app-text));
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
   gap: 8px;
   white-space: nowrap;
 
   &:hover {
-    background: rgba(97, 92, 237, 0.06);
-    color: #615ced;
-  }
-
-  &:first-child {
-    border-radius: 8px 8px 0 0;
-  }
-
-  &:last-child {
-    border-radius: 0 0 8px 8px;
+    background: var(--chat-conversation-hover, var(--app-primary-softer));
+    color: var(--chat-primary-color, var(--app-primary));
+    transform: translateX(1px);
   }
 
   &.modelItemActive {
-    background: rgba(97, 92, 237, 0.08);
-    color: #615ced;
-    font-weight: 500;
+    background: var(--chat-conversation-active, var(--app-primary-soft));
+    color: var(--chat-primary-color, var(--app-primary));
+    font-weight: 600;
   }
 }
 
@@ -160,14 +180,14 @@
 
 .checkIcon {
   flex-shrink: 0;
-  font-size: 16px;
-  color: #615ced;
+  font-size: 14px;
+  color: var(--chat-primary-color, var(--app-primary));
 }
 
 .emptyTip {
   padding: 10px 14px;
-  font-size: 16px;
-  color: #bbb;
+  font-size: 14px;
+  color: var(--app-text-muted);
 }
 
 .spinWrapper {
@@ -175,70 +195,28 @@
   text-align: center;
 }
 
-/* ─── Dark mode overrides ─────────────────────────────────────────────────── */
 :global(.dark-mode) {
   .trigger {
-    color: rgba(255, 255, 255, 0.85);
+    background: var(--chat-panel-background, var(--app-surface-strong));
 
     &:hover,
     &.triggerActive {
-      color: #8b87f0;
-      box-shadow: 0 2px 8px rgba(97, 92, 237, 0.2);
+      background: var(--chat-header-background, var(--app-surface-secondary));
     }
   }
 
-  .triggerArrow {
-    color: rgba(255, 255, 255, 0.3);
-
-    &.triggerArrowOpen {
-      color: #8b87f0;
-    }
-  }
-
-  .panel {
-    background: #1f1f1f;
-    border-color: rgba(255, 255, 255, 0.08);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-  }
-
-  .providerItem {
-    color: rgba(255, 255, 255, 0.85);
-
-    &:hover {
-      background: rgba(97, 92, 237, 0.15);
-      color: #8b87f0;
-    }
-  }
-
-  .providerArrow {
-    color: rgba(255, 255, 255, 0.2);
-  }
-
+  .panel,
   .submenu {
-    background: #1f1f1f;
-    border-color: rgba(255, 255, 255, 0.08);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    background: var(--chat-panel-background, var(--app-surface-strong));
+    backdrop-filter: none;
   }
 
-  .modelItem {
-    color: rgba(255, 255, 255, 0.85);
-
-    &:hover {
-      background: rgba(97, 92, 237, 0.15);
-      color: #8b87f0;
-    }
-
-    &.modelItemActive {
-      background: rgba(97, 92, 237, 0.18);
-      color: #8b87f0;
-    }
+  .providerItem:hover,
+  .modelItem:hover {
+    background: var(--chat-conversation-hover, var(--app-primary-softer));
   }
 
-  .checkIcon {
-    color: #8b87f0;
-  }
-
-  .emptyTip {
-    color: rgba(255, 255, 255, 0.25);
+  .modelItem.modelItemActive {
+    background: var(--chat-conversation-active, var(--app-primary-soft));
   }
 }

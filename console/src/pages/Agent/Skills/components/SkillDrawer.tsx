@@ -167,9 +167,9 @@ export function SkillDrawer({
         i18n.language, // Pass current language to API
       );
       message.success(t("skills.optimizeSuccess"));
-    } catch (error: any) {
-      if (error.name !== "AbortError") {
-        message.error(error.message || t("skills.optimizeFailed"));
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError")) {
+        message.error(error instanceof Error ? error.message : t("skills.optimizeFailed"));
       }
     } finally {
       setOptimizing(false);

@@ -9,7 +9,7 @@ import logging
 from typing import Dict, Set
 
 from .workspace import Workspace
-from ..config.utils import load_config
+from ..config.utils import load_config, recover_agent_profiles
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +54,9 @@ class MultiAgentManager:
 
             # Load configuration to get agent reference
             config = load_config()
+            if agent_id not in config.agents.profiles:
+                recover_agent_profiles(agent_id=agent_id)
+                config = load_config()
 
             if agent_id not in config.agents.profiles:
                 raise ValueError(
@@ -237,6 +240,9 @@ class MultiAgentManager:
 
         # Step 2: Load configuration (outside lock)
         config = load_config()
+        if agent_id not in config.agents.profiles:
+            recover_agent_profiles(agent_id=agent_id)
+            config = load_config()
         if agent_id not in config.agents.profiles:
             logger.error(
                 f"Agent '{agent_id}' not found in configuration "

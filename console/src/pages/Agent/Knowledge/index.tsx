@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Button,
-  Card,
   Table,
   Modal,
   Input,
@@ -10,7 +9,7 @@ import {
   Tag,
 } from "@agentscope-ai/design";
 import { PlusOutlined, DeleteOutlined, SearchOutlined, EditOutlined } from "@ant-design/icons";
-import { knowledgeApi, type KnowledgeBase } from "../../../api/modules/knowledge";
+import { knowledgeApi, type KnowledgeBase, type KnowledgeBaseDetail, type SearchResult } from "../../../api/modules/knowledge";
 import { useTranslation } from "react-i18next";
 import { KnowledgeDetailDrawer } from "./components/KnowledgeDetailDrawer";
 import styles from "./index.module.less";
@@ -28,26 +27,26 @@ export default function KnowledgePage() {
   const [editKbDesc, setEditKbDesc] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedKbId, setSelectedKbId] = useState<string | null>(null);
-  const [selectedKb, setSelectedKb] = useState<any>(null);
+  const [selectedKb, setSelectedKb] = useState<KnowledgeBaseDetail | null>(null);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
 
-  const loadKnowledgeBases = async () => {
+  const loadKnowledgeBases = useCallback(async () => {
     setLoading(true);
     try {
       const res = await knowledgeApi.list();
       setKnowledgeBases(res.knowledge_bases);
-    } catch (error) {
+    } catch {
       message.error(t("knowledge.loadFailed"));
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
 
   useEffect(() => {
-    loadKnowledgeBases();
+    void loadKnowledgeBases();
 
     // Listen for agent switch events
     const handleAgentSwitch = () => {
@@ -55,14 +54,14 @@ export default function KnowledgePage() {
       setSelectedKbId(null);
       setSelectedKb(null);
       setDrawerOpen(false);
-      loadKnowledgeBases();
+      void loadKnowledgeBases();
     };
 
     window.addEventListener("agent-switched", handleAgentSwitch);
     return () => {
       window.removeEventListener("agent-switched", handleAgentSwitch);
     };
-  }, []);
+  }, [loadKnowledgeBases]);
 
   const handleCreateKb = async () => {
     if (!newKbName.trim()) {
@@ -81,7 +80,7 @@ export default function KnowledgePage() {
       setNewKbName("");
       setNewKbDesc("");
       loadKnowledgeBases();
-    } catch (error) {
+    } catch {
       message.error(t("knowledge.createFailed"));
     }
   };
@@ -96,7 +95,7 @@ export default function KnowledgePage() {
         setDrawerOpen(false);
       }
       loadKnowledgeBases();
-    } catch (error) {
+    } catch {
       message.error(t("knowledge.deleteFailed"));
     }
   };
@@ -121,7 +120,7 @@ export default function KnowledgePage() {
       setEditModalOpen(false);
       setEditingKb(null);
       loadKnowledgeBases();
-    } catch (error) {
+    } catch {
       message.error("更新失败");
     }
   };
@@ -133,7 +132,7 @@ export default function KnowledgePage() {
       const kb = await knowledgeApi.getDetail(kbId);
       setSelectedKb(kb);
       setDrawerOpen(true);
-    } catch (error) {
+    } catch {
       message.error("加载详情失败");
     } finally {
       setLoading(false);
@@ -151,7 +150,7 @@ export default function KnowledgePage() {
       const res = await knowledgeApi.search(kbId, searchQuery, 10);
       setSearchResults(res.results || []);
       setSearchModalOpen(true);
-    } catch (error) {
+    } catch {
       message.error("检索失败");
     } finally {
       setSearching(false);
@@ -315,15 +314,13 @@ export default function KnowledgePage() {
         </Button>
       </div>
 
-      <Card>
-        <Table
-          columns={columns}
-          dataSource={knowledgeBases}
-          loading={loading}
-          rowKey="id"
-          pagination={{ pageSize: 10 }}
-        />
-      </Card>
+      <Table
+        columns={columns}
+        dataSource={knowledgeBases}
+        loading={loading}
+        rowKey="id"
+        pagination={{ pageSize: 10 }}
+      />
 
       {/* Create Modal */}
       <Modal

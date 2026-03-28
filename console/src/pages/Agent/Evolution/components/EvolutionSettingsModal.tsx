@@ -1,6 +1,6 @@
 import { Modal, InputNumber, message } from "@agentscope-ai/design";
 import { Form, Switch } from "antd";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { evolutionApi } from "../../../../api/modules/evolution";
 import type { EvolutionConfig } from "../../../../api/types/evolution";
 
@@ -18,20 +18,20 @@ export function EvolutionSettingsModal({
   const [form] = Form.useForm<EvolutionConfig>();
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (open) {
-      loadConfig();
-    }
-  }, [open]);
-
-  const loadConfig = async () => {
+  const loadConfig = useCallback(async () => {
     try {
       const config = await evolutionApi.getConfig();
       form.setFieldsValue(config);
-    } catch (error) {
+    } catch {
       message.error("加载配置失败");
     }
-  };
+  }, [form]);
+
+  useEffect(() => {
+    if (open) {
+      void loadConfig();
+    }
+  }, [loadConfig, open]);
 
   const handleOk = async () => {
     try {
@@ -41,7 +41,7 @@ export function EvolutionSettingsModal({
       message.success("配置已保存");
       onConfigSaved?.();
       onClose();
-    } catch (error) {
+    } catch {
       message.error("保存配置失败");
     } finally {
       setLoading(false);

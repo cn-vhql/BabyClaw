@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { Button, message, Switch, Input } from "@agentscope-ai/design";
 import { CopyOutlined } from "@ant-design/icons";
-import { XMarkdown } from "@ant-design/x-markdown";
 import { useTranslation } from "react-i18next";
 import type { CSSProperties } from "react";
+import { LazyMarkdown } from "../LazyMarkdown";
 import { stripFrontmatter } from "../../utils/markdown";
 import styles from "./index.module.less";
 
@@ -173,9 +173,10 @@ export function MarkdownCopy({
 
       {localShowMarkdown ? (
         <div className={styles.markdownViewer}>
-          <XMarkdown
+          <LazyMarkdown
             content={markdownContent}
-            {...defaultMarkdownViewerProps}
+            className={defaultMarkdownViewerProps.className}
+            style={defaultMarkdownViewerProps.style}
           />
         </div>
       ) : (

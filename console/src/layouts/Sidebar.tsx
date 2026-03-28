@@ -31,13 +31,13 @@ import {
   BarChart3,
   Mic,
   Bot,
+  Eye,
   LogOut,
   Info,
 } from "lucide-react";
 import { clearAuthToken } from "../api/config";
 import { authApi } from "../api/modules/auth";
 import styles from "./index.module.less";
-import { useTheme } from "../contexts/ThemeContext";
 import { DEFAULT_OPEN_KEYS, KEY_TO_PATH } from "./constants";
 
 // ── Layout ────────────────────────────────────────────────────────────────
@@ -55,7 +55,6 @@ interface SidebarProps {
 export default function Sidebar({ selectedKey }: SidebarProps) {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { isDark } = useTheme();
   const [collapsed, setCollapsed] = useState(false);
   const [openKeys, setOpenKeys] = useState<string[]>(DEFAULT_OPEN_KEYS);
   const [authEnabled, setAuthEnabled] = useState(false);
@@ -90,6 +89,11 @@ export default function Sidebar({ selectedKey }: SidebarProps) {
           key: "evolution",
           label: t("nav.evolution"),
           icon: <Sparkles size={16} />,
+        },
+        {
+          key: "focus",
+          label: t("nav.focus"),
+          icon: <Eye size={16} />,
         },
       ],
     },
@@ -180,12 +184,16 @@ export default function Sidebar({ selectedKey }: SidebarProps) {
       collapsed={collapsed}
       onCollapse={setCollapsed}
       width={275}
-      className={`${styles.sider}${isDark ? ` ${styles.siderDark}` : ""}`}
+      className={styles.sider}
     >
       <div className={styles.siderTop}>
         {!collapsed && (
           <div className={styles.logoWrapper}>
-            <img src="/babyclaw.png" alt="BabyClaw" style={{ height: 32, width: 'auto', marginRight: 8 }} />
+            <img
+              src="/babyclaw.png"
+              alt="BabyClaw"
+              className={styles.logoImage}
+            />
             <h1 className={styles.logoText}>
               <span className={styles.logoTextBaby}>Baby</span>
               <span className={styles.logoTextClaw}>Claw</span>
@@ -216,11 +224,10 @@ export default function Sidebar({ selectedKey }: SidebarProps) {
           if (path) navigate(path);
         }}
         items={menuItems}
-        theme={isDark ? "dark" : "light"}
       />
 
       {authEnabled && (
-        <div style={{ padding: "12px 16px", borderTop: "1px solid #f0f0f0" }}>
+        <div className={styles.logoutPanel}>
           <Button
             type="text"
             icon={<LogOut size={16} />}
@@ -229,12 +236,9 @@ export default function Sidebar({ selectedKey }: SidebarProps) {
               window.location.href = "/login";
             }}
             block
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              justifyContent: collapsed ? "center" : "flex-start",
-            }}
+            className={`${styles.logoutButton} ${
+              collapsed ? styles.logoutButtonCollapsed : ""
+            }`}
           >
             {!collapsed && t("login.logout")}
           </Button>

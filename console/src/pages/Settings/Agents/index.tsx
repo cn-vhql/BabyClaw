@@ -1,12 +1,17 @@
 import { useState } from "react";
-import { Card, Button, Form, message } from "antd";
+import { Button, Form, message } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { agentsApi } from "../../../api/modules/agents";
-import type { AgentSummary } from "../../../api/types/agents";
+import type { AgentSummary, AgentProfileConfig } from "../../../api/types/agents";
 import { useAgents } from "./useAgents";
 import { PageHeader, AgentTable, AgentModal } from "./components";
 import styles from "./index.module.less";
+
+type AgentFormValues = Pick<
+  AgentProfileConfig,
+  "id" | "name" | "description" | "workspace_dir"
+>;
 
 export default function AgentsPage() {
   const { t } = useTranslation();
@@ -47,7 +52,7 @@ export default function AgentsPage() {
 
   const handleSubmit = async () => {
     try {
-      const values = await form.validateFields();
+      const values = (await form.validateFields()) as AgentFormValues;
 
       if (editingAgent) {
         await agentsApi.updateAgent(editingAgent.id, values);
@@ -60,9 +65,9 @@ export default function AgentsPage() {
       setModalVisible(false);
       // 刷新智能体列表
       await loadAgents();
-    } catch (error: any) {
+    } catch (error) {
       console.error("Failed to save agent:", error);
-      message.error(error.message || t("agent.saveFailed"));
+      message.error(error instanceof Error ? error.message : t("agent.saveFailed"));
     }
   };
 
@@ -78,14 +83,12 @@ export default function AgentsPage() {
         }
       />
 
-      <Card className={styles.tableCard}>
-        <AgentTable
-          agents={agents}
-          loading={loading}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
-      </Card>
+      <AgentTable
+        agents={agents}
+        loading={loading}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+      />
 
       <AgentModal
         open={modalVisible}

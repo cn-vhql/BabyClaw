@@ -13,7 +13,7 @@ const defaultConfig = {
   sender: {
     attachments: true,
     maxLength: 10000,
-    disclaimer: "Works for you, grows with you",
+    disclaimer: "",
   },
   welcome: {
     greeting: "Hello, how can I help you today?",
@@ -40,7 +40,7 @@ export function getDefaultConfig(t: TFunction) {
     ...defaultConfig,
     sender: {
       ...defaultConfig.sender,
-      disclaimer: t("chat.disclaimer"),
+      disclaimer: "",
     },
     welcome: {
       ...defaultConfig.welcome,

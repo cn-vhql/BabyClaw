@@ -1,7 +1,10 @@
 declare const BASE_URL: string;
 declare const TOKEN: string;
+declare const ONLINE_ONLY_MODE: boolean;
 
 const AUTH_TOKEN_KEY = "copaw_auth_token";
+export const isOnlineOnlyMode =
+  typeof ONLINE_ONLY_MODE !== "undefined" ? ONLINE_ONLY_MODE : false;
 
 /**
  * Get the full API URL with /api prefix

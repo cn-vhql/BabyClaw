@@ -1,7 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Button,
-  Card,
   Table,
   message,
   Tag,
@@ -14,6 +13,14 @@ import { EvolutionDetailDrawer } from "./components/EvolutionDetailDrawer";
 import { EvolutionSettingsModal } from "./components/EvolutionSettingsModal";
 import styles from "./index.module.less";
 
+type EvolutionApiError = Error & {
+  response?: {
+    data?: {
+      detail?: string;
+    };
+  };
+};
+
 function EvolutionPage() {
   const { selectedAgent } = useAgentStore();
   const [records, setRecords] = useState<EvolutionRecord[]>([]);
@@ -24,17 +31,25 @@ function EvolutionPage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    loadRecords();
-    return () => {
-      // Cleanup polling on unmount
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
-      }
-    };
-  }, [selectedAgent]);
+  const stopPolling = useCallback(() => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+    setEvolving(false);
+  }, []);
 
-  const loadRecords = async () => {
+  const loadRecordsRef = useRef<() => Promise<void>>(async () => {});
+
+  const startPolling = useCallback(() => {
+    if (pollingRef.current) return;
+    setEvolving(true);
+    pollingRef.current = setInterval(() => {
+      void loadRecordsRef.current();
+    }, 3000);
+  }, []);
+
+  const loadRecords = useCallback(async () => {
     if (!selectedAgent) return;
     setLoading(true);
     try {
@@ -48,28 +63,21 @@ function EvolutionPage() {
       } else if (!runningRecord && pollingRef.current) {
         stopPolling();
       }
-    } catch (error) {
+    } catch {
       message.error("加载进化记录失败");
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedAgent, startPolling, stopPolling]);
 
-  const startPolling = () => {
-    if (pollingRef.current) return;
-    setEvolving(true);
-    pollingRef.current = setInterval(() => {
-      loadRecords();
-    }, 3000); // Poll every 3 seconds
-  };
+  useEffect(() => {
+    loadRecordsRef.current = loadRecords;
+  }, [loadRecords]);
 
-  const stopPolling = () => {
-    if (pollingRef.current) {
-      clearInterval(pollingRef.current);
-      pollingRef.current = null;
-    }
-    setEvolving(false);
-  };
+  useEffect(() => {
+    void loadRecords();
+    return stopPolling;
+  }, [loadRecords, stopPolling]);
 
   const handleRunEvolution = async () => {
     try {
@@ -77,8 +85,8 @@ function EvolutionPage() {
       await evolutionApi.runEvolution({ trigger_type: "manual" });
       message.success("进化任务已启动");
       startPolling();
-      loadRecords();
-    } catch (error) {
+      void loadRecords();
+    } catch {
       message.error("启动进化失败");
       setEvolving(false);
     }
@@ -94,9 +102,10 @@ function EvolutionPage() {
       await evolutionApi.deleteRecord(record.id);
       message.success("记录已删除");
       loadRecords();
-    } catch (error: any) {
-      const errorMsg = error?.response?.data?.detail || "删除失败";
-      message.error(errorMsg);
+    } catch (error) {
+      const evolutionError = error as EvolutionApiError;
+      const messageText = evolutionError.response?.data?.detail || "删除失败";
+      message.error(messageText);
     }
   };
 
@@ -225,15 +234,13 @@ function EvolutionPage() {
         </div>
       </div>
 
-      <Card>
-        <Table
-          columns={columns}
-          dataSource={records}
-          loading={loading}
-          rowKey="id"
-          pagination={{ pageSize: 10 }}
-        />
-      </Card>
+      <Table
+        columns={columns}
+        dataSource={records}
+        loading={loading}
+        rowKey="id"
+        pagination={{ pageSize: 10 }}
+      />
 
       <EvolutionDetailDrawer
         open={drawerOpen}

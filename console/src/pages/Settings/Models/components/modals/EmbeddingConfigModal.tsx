@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Form,
   Input,
@@ -41,7 +41,7 @@ export function EmbeddingConfigModal({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const loadConfig = async () => {
+  const loadConfig = useCallback(async () => {
     if (!open) return;
 
     setLoading(true);
@@ -54,11 +54,11 @@ export function EmbeddingConfigModal({
     } finally {
       setLoading(false);
     }
-  };
+  }, [form, open, t]);
 
   useEffect(() => {
-    loadConfig();
-  }, [open]);
+    void loadConfig();
+  }, [loadConfig]);
 
   const handleSave = async () => {
     try {

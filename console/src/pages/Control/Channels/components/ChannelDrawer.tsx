@@ -15,7 +15,7 @@ import type { FormInstance } from "antd";
 import { useCallback, useRef } from "react";
 import { getChannelLabel, type ChannelKey } from "./constants";
 import styles from "../index.module.less";
-import { useTheme } from "../../../../contexts/ThemeContext";
+import { useTheme } from "../../../../contexts/useTheme";
 
 const WECOM_SDK_URL =
   "https://wwcdn.weixin.qq.com/node/wework/js/wecom-aibot-sdk@0.1.0.min.js";

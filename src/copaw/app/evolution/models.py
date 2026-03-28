@@ -71,6 +71,9 @@ class EvolutionArchive(BaseModel):
     # Tool execution log
     tool_execution_log: list[dict] = Field(default_factory=list)
 
+    # Structured records captured from completed message metadata/data blocks
+    structured_records: list[dict] = Field(default_factory=list)
+
     # Full output
     full_output: str = ""
 

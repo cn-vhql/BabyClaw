@@ -25,9 +25,13 @@ from copaw.providers.anthropic_provider import AnthropicProvider
 from copaw.providers.gemini_provider import GeminiProvider
 from copaw.providers.ollama_provider import OllamaProvider
 from copaw.constant import SECRET_DIR
-from copaw.local_models import create_local_chat_model
+from copaw.config.flags import is_online_only_mode
 
 logger = logging.getLogger(__name__)
+
+ONLINE_ONLY_PROVIDER_IDS = frozenset(
+    {"ollama", "lmstudio", "llamacpp", "mlx"},
+)
 
 
 # -------------------------------------------------------
@@ -113,6 +117,11 @@ KIMI_MODELS: List[ModelInfo] = [
         id="kimi-k2-thinking-turbo",
         name="Kimi K2 Thinking Turbo",
     ),
+]
+
+ZHIPU_MODELS: List[ModelInfo] = [
+    ModelInfo(id="glm-4.7-flash", name="GLM-4.7 Flash"),
+    ModelInfo(id="glm-4.6v-flash", name="GLM-4.6V Flash"),
 ]
 
 DEEPSEEK_MODELS: List[ModelInfo] = [
@@ -232,6 +241,16 @@ PROVIDER_KIMI_INTL = OpenAIProvider(
     freeze_url=True,
 )
 
+PROVIDER_ZHIPU = OpenAIProvider(
+    id="zhipu",
+    name="智谱 AI",
+    base_url="https://open.bigmodel.cn/api/paas/v4",
+    api_key_prefix="",
+    models=ZHIPU_MODELS,
+    freeze_url=True,
+    support_connection_check=False,
+)
+
 PROVIDER_DEEPSEEK = OpenAIProvider(
     id="deepseek",
     name="DeepSeek",
@@ -297,6 +316,7 @@ class ProviderManager:
         self.builtin_providers: Dict[str, Provider] = {}
         self.custom_providers: Dict[str, Provider] = {}
         self.active_model: ModelSlotConfig | None = None
+        self.online_only_mode = is_online_only_mode()
         self.root_path = SECRET_DIR / "providers"
         self.builtin_path = self.root_path / "builtin"
         self.custom_path = self.root_path / "custom"
@@ -307,7 +327,9 @@ class ProviderManager:
         except Exception as e:
             logger.warning("Failed to migrate legacy providers: %s", e)
         self._init_from_storage()
-        self.update_local_models()
+        self._ensure_active_model_available()
+        if not self.online_only_mode:
+            self.update_local_models()
 
     def _prepare_disk_storage(self):
         """Prepare directory structure"""
@@ -319,22 +341,32 @@ class ProviderManager:
                 pass
 
     def _init_builtins(self):
-        self._add_builtin(PROVIDER_MODELSCOPE)
-        self._add_builtin(PROVIDER_DASHSCOPE)
-        self._add_builtin(PROVIDER_ALIYUN_CODINGPLAN)
-        self._add_builtin(PROVIDER_OPENAI)
-        self._add_builtin(PROVIDER_AZURE_OPENAI)
-        self._add_builtin(PROVIDER_KIMI_CN)
-        self._add_builtin(PROVIDER_KIMI_INTL)
-        self._add_builtin(PROVIDER_DEEPSEEK)
-        self._add_builtin(PROVIDER_ANTHROPIC)
-        self._add_builtin(PROVIDER_GEMINI)
-        self._add_builtin(PROVIDER_MINIMAX_CN)
-        self._add_builtin(PROVIDER_MINIMAX)
-        self._add_builtin(PROVIDER_OLLAMA)
-        self._add_builtin(PROVIDER_LMSTUDIO)
-        self._add_builtin(PROVIDER_LLAMACPP)
-        self._add_builtin(PROVIDER_MLX)
+        builtins = [
+            PROVIDER_MODELSCOPE,
+            PROVIDER_DASHSCOPE,
+            PROVIDER_ALIYUN_CODINGPLAN,
+            PROVIDER_OPENAI,
+            PROVIDER_AZURE_OPENAI,
+            PROVIDER_KIMI_CN,
+            PROVIDER_KIMI_INTL,
+            PROVIDER_ZHIPU,
+            PROVIDER_DEEPSEEK,
+            PROVIDER_ANTHROPIC,
+            PROVIDER_GEMINI,
+            PROVIDER_MINIMAX_CN,
+            PROVIDER_MINIMAX,
+            PROVIDER_OLLAMA,
+            PROVIDER_LMSTUDIO,
+            PROVIDER_LLAMACPP,
+            PROVIDER_MLX,
+        ]
+        for provider in builtins:
+            if (
+                self.online_only_mode
+                and provider.id in ONLINE_ONLY_PROVIDER_IDS
+            ):
+                continue
+            self._add_builtin(provider)
 
     def _add_builtin(self, provider: Provider):
         self.builtin_providers[provider.id] = provider
@@ -579,6 +611,19 @@ class ProviderManager:
         except Exception:
             return None
 
+    def clear_active_model(self) -> None:
+        """Clear the active model when its provider is unavailable."""
+        self.active_model = None
+        active_path = self.root_path / "active_model.json"
+        try:
+            if active_path.exists():
+                active_path.unlink()
+        except OSError:
+            logger.warning(
+                "Failed to remove stale active model file: %s",
+                active_path,
+            )
+
     def _migrate_legacy_providers(self):
         """Migrate from legacy providers.json format to the new structure."""
         legacy_path = SECRET_DIR / "providers.json"
@@ -667,8 +712,23 @@ class ProviderManager:
         if active_model:
             self.active_model = active_model
 
+    def _ensure_active_model_available(self) -> None:
+        """Drop persisted active model when its provider is disabled/unavailable."""
+        if self.active_model is None:
+            return
+        if self.get_provider(self.active_model.provider_id) is not None:
+            return
+        logger.info(
+            "Clearing active model '%s/%s' because the provider is unavailable",
+            self.active_model.provider_id,
+            self.active_model.model,
+        )
+        self.clear_active_model()
+
     def update_local_models(self):
         """Update the model list of a local provider."""
+        if self.online_only_mode:
+            return
         try:
             from ..local_models.manager import list_local_models
             from ..local_models.schema import BackendType
@@ -708,6 +768,8 @@ class ProviderManager:
                 f"Active provider '{model.provider_id}' not found.",
             )
         if provider.is_local:
+            from copaw.local_models import create_local_chat_model
+
             return create_local_chat_model(
                 model_id=model.model,
                 stream=True,

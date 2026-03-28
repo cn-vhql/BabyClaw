@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button, Card, message } from "@agentscope-ai/design";
 import { Radio, Select, Space, Spin, Alert } from "antd";
 import { useTranslation } from "react-i18next";
@@ -28,7 +28,7 @@ function VoiceTranscriptionPage() {
   const [localWhisperStatus, setLocalWhisperStatus] =
     useState<LocalWhisperStatus | null>(null);
 
-  const fetchSettings = async () => {
+  const fetchSettings = useCallback(async () => {
     setLoading(true);
     try {
       const [modeRes, provTypeRes, provRes, lwStatus] = await Promise.all([
@@ -48,11 +48,11 @@ function VoiceTranscriptionPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
 
   useEffect(() => {
-    fetchSettings();
-  }, []);
+    void fetchSettings();
+  }, [fetchSettings]);
 
   const handleSave = async () => {
     setSaving(true);

@@ -122,11 +122,10 @@ export function RuleTable({
             <Button
               type="text"
               size="small"
+              icon={<Eye size={14} />}
               onClick={() => onPreviewRule(record)}
               disabled={!enabled}
-              style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
             >
-              <Eye size={14} />
               {t("security.rules.preview")}
             </Button>
           )}

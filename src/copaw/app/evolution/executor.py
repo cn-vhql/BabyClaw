@@ -5,9 +5,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import json
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from .models import EvolutionArchive, EvolutionRecord, EvolutionRunRequest
 
@@ -39,7 +40,9 @@ class EvolutionExecutor:
         self.repo = repo
         self._current_record: EvolutionRecord | None = None
         self._tool_execution_log: list[dict] = []
+        self._structured_records: list[dict] = []
         self._full_output: str = ""
+        self._processed_message_ids: set[str] = set()
 
     async def execute_with_record(
         self,
@@ -57,7 +60,9 @@ class EvolutionExecutor:
         """
         self._current_record = record
         self._tool_execution_log = []
+        self._structured_records = []
         self._full_output = ""
+        self._processed_message_ids = set()
 
         # Snapshot files before evolution
         await self._snapshot_before()
@@ -151,7 +156,9 @@ class EvolutionExecutor:
             status="running",
         )
         self._tool_execution_log = []
+        self._structured_records = []
         self._full_output = ""
+        self._processed_message_ids = set()
 
         # Snapshot files before evolution
         await self._snapshot_before()
@@ -309,125 +316,407 @@ class EvolutionExecutor:
         return None
 
     async def _process_event(self, event) -> None:
-        """Process agent output event.
+        """Process completed agent message events only.
 
-        Args:
-            event: Can be AgentResponse, Message, TextContent, ToolCallContent, etc.
+        The runtime stream emits both fine-grained deltas and completed
+        ``Message`` objects. Recording both causes duplicated text/tool logs.
+        Evolution archives therefore only consume completed messages here.
         """
         event_class = type(event).__name__
         logger.debug(f"Processing event: {event_class}")
 
-        # TextContent - direct text content (delta streaming)
-        if event_class == "TextContent":
-            text = getattr(event, "text", "")
-            if text:
-                self._full_output += text
-                if len(self._current_record.output_summary) < 500:
-                    self._current_record.output_summary += text[:200]
-                logger.debug(f"TextContent: {len(text)} chars")
+        if event_class != "Message":
             return
 
-        # Message - contains content blocks
-        if event_class == "Message":
-            content = getattr(event, "content", None)
-            if not content:
-                return
-
-            # content can be a list of blocks
-            if isinstance(content, list):
-                for block in content:
-                    # Block can be dict or object (with model_dump method)
-                    if isinstance(block, dict):
-                        self._process_block_dict(block)
-                    elif hasattr(block, "model_dump"):
-                        # Convert Pydantic model to dict
-                        block_dict = block.model_dump()
-                        if isinstance(block_dict, dict):
-                            self._process_block_dict(block_dict)
-                        else:
-                            logger.debug(f"model_dump returned non-dict: {type(block_dict)}")
-                    else:
-                        logger.debug(f"Non-dict content block: {type(block)}")
+        if getattr(event, "status", None) != "completed":
             return
 
-        # AgentResponse - contains output with messages
-        if event_class == "AgentResponse":
-            if not hasattr(event, "output") or not event.output:
-                return
-
-            for msg in event.output:
-                content = getattr(msg, "content", None)
-                if content and isinstance(content, list):
-                    for block in content:
-                        # Block can be dict or object (with model_dump method)
-                        if isinstance(block, dict):
-                            self._process_block_dict(block)
-                        elif hasattr(block, "model_dump"):
-                            # Convert Pydantic model to dict
-                            block_dict = block.model_dump()
-                            if isinstance(block_dict, dict):
-                                self._process_block_dict(block_dict)
-                            else:
-                                logger.debug(f"model_dump returned non-dict: {type(block_dict)}")
-                        else:
-                            logger.debug(f"Non-dict content block in AgentResponse: {type(block)}")
+        message_id = getattr(event, "id", None)
+        if message_id and message_id in self._processed_message_ids:
             return
 
-        logger.debug(f"Unhandled event type: {event_class}")
+        if message_id:
+            self._processed_message_ids.add(message_id)
 
-    def _process_block_dict(self, block: dict) -> None:
+        self._process_message(event)
+
+    def _process_message(self, message: Any) -> None:
+        """Process a completed runtime Message event."""
+        message_type = self._normalize_message_type(getattr(message, "type", None))
+        role = getattr(message, "role", None)
+        self._record_metadata(
+            self._serialize_value(getattr(message, "metadata", None)),
+            message_type=message_type,
+        )
+
+        content = getattr(message, "content", None)
+        if not isinstance(content, list):
+            return
+
+        for block in content:
+            block_dict = self._serialize_value(block)
+            if isinstance(block_dict, dict):
+                self._process_block_dict(
+                    block_dict,
+                    message_type=message_type,
+                    role=role,
+                )
+            else:
+                logger.debug(f"Non-dict content block: {type(block)}")
+
+    def _process_block_dict(
+        self,
+        block: dict,
+        *,
+        message_type: str | None = None,
+        role: str | None = None,
+    ) -> None:
         """Process a content block dict (from Message.content)."""
         block_type = block.get("type")
 
         # Tool use block (tool call)
         if block_type == "tool_use":
-            self._current_record.tool_calls_count += 1
             tool_name = block.get("name", "")
             tool_input = block.get("input", {})
-
-            logger.info(f"✓ Tool use: {tool_name}")
-
-            if tool_name and tool_name not in self._current_record.tools_used:
-                self._current_record.tools_used.append(tool_name)
-
-            # Record to tool log
-            self._tool_execution_log.append({
-                "tool": tool_name,
-                "args": tool_input,
-                "timestamp": datetime.now().isoformat(),
-            })
+            self._append_tool_call(
+                tool_name=tool_name,
+                tool_input=tool_input,
+                call_id=block.get("id"),
+            )
 
         # Tool result block
         elif block_type == "tool_result":
-            tool_name = block.get("name", "")
             output = block.get("output", None)
-
-            logger.debug(f"✓ Tool result: {tool_name}")
-
-            # Find the most recent tool call log for this tool and add the result
-            if tool_name and self._tool_execution_log:
-                for log in reversed(self._tool_execution_log):
-                    if log["tool"] == tool_name and "result" not in log:
-                        log["result"] = output
-                        break
+            self._attach_tool_result(
+                output=output,
+                tool_name=block.get("name"),
+                call_id=block.get("id"),
+            )
+            tool_output_text = self._stringify_output_text(
+                self._normalize_tool_output(output),
+            )
+            if tool_output_text:
+                self._append_output_text(
+                    tool_output_text,
+                    prefix=f"[工具结果:{block.get('name') or 'unknown_tool'}]",
+                )
 
         # Thinking block
         elif block_type == "thinking":
             thinking = block.get("thinking", "")
-            self._full_output += f"[思考]{thinking}\n"
+            self._append_output_text(thinking, prefix="[思考]", inline_prefix=True)
             logger.debug(f"Thinking: {len(thinking)} chars")
 
         # Text block
         elif block_type == "text":
             text = block.get("text", "")
-            self._full_output += text + "\n"
-            if len(self._current_record.output_summary) < 500:
+            if message_type == "reasoning":
+                self._append_output_text(text, prefix="[思考]", inline_prefix=True)
+            elif role != "user":
+                self._append_output_text(text)
+            if (
+                role in (None, "assistant")
+                and message_type != "reasoning"
+                and len(self._current_record.output_summary) < 500
+            ):
                 self._current_record.output_summary += text[:200]
 
             logger.debug(f"✓ Text: {len(text)} chars")
 
+        elif block_type == "data":
+            self._process_data_payload(
+                block.get("data"),
+                message_type=message_type,
+            )
+
         else:
             logger.debug(f"Unknown block type: {block_type}")
+
+    def _process_data_payload(
+        self,
+        payload: Any,
+        *,
+        message_type: str | None = None,
+    ) -> None:
+        """Process runtime DataContent payloads."""
+        payload = self._deserialize_json_like(payload)
+        if payload in (None, "", {}, []):
+            return
+
+        if isinstance(payload, dict):
+            call_id = payload.get("call_id") or payload.get("id")
+            tool_name = payload.get("name") or payload.get("tool")
+
+            if message_type in {
+                "plugin_call",
+                "function_call",
+                "mcp_call",
+            } or (tool_name and ("input" in payload or "arguments" in payload)):
+                tool_input = payload.get("input", payload.get("arguments"))
+                self._append_tool_call(
+                    tool_name=tool_name or "",
+                    tool_input=self._deserialize_json_like(tool_input),
+                    call_id=call_id,
+                )
+                return
+
+            if message_type in {
+                "plugin_call_output",
+                "function_call_output",
+                "mcp_call_output",
+            } or ("output" in payload or "result" in payload):
+                output = payload.get("output", payload.get("result"))
+                normalized_output = self._deserialize_json_like(output)
+                self._attach_tool_result(
+                    output=normalized_output,
+                    tool_name=tool_name,
+                    call_id=call_id,
+                )
+                tool_output_text = self._stringify_output_text(
+                    self._normalize_tool_output(normalized_output),
+                )
+                if tool_output_text:
+                    self._append_output_text(
+                        tool_output_text,
+                        prefix=f"[工具结果:{tool_name or 'unknown_tool'}]",
+                    )
+                return
+
+        self._append_structured_record(
+            payload,
+            record_type="data",
+            source=message_type,
+        )
+
+    def _append_tool_call(
+        self,
+        *,
+        tool_name: str,
+        tool_input: Any = None,
+        call_id: str | None = None,
+    ) -> None:
+        """Record a single tool call without duplicating completed messages."""
+        normalized_tool_name = tool_name or "unknown_tool"
+        logger.info(f"✓ Tool use: {normalized_tool_name}")
+
+        if normalized_tool_name not in self._current_record.tools_used:
+            self._current_record.tools_used.append(normalized_tool_name)
+
+        existing = self._find_tool_log(
+            call_id=call_id,
+            tool_name=normalized_tool_name,
+            require_open=False,
+        )
+        if existing is None:
+            self._current_record.tool_calls_count += 1
+            existing = {
+                "tool": normalized_tool_name,
+                "timestamp": datetime.now().isoformat(),
+            }
+            if call_id:
+                existing["call_id"] = call_id
+            self._tool_execution_log.append(existing)
+
+        if tool_input not in (None, "", {}, []):
+            existing["args"] = tool_input
+
+    def _attach_tool_result(
+        self,
+        *,
+        output: Any,
+        tool_name: str | None = None,
+        call_id: str | None = None,
+    ) -> None:
+        """Attach a tool result to the most relevant tool call record."""
+        target = self._find_tool_log(
+            call_id=call_id,
+            tool_name=tool_name,
+            require_open=True,
+        )
+
+        if target is None:
+            target = {
+                "tool": tool_name or "unknown_tool",
+                "timestamp": datetime.now().isoformat(),
+            }
+            if call_id:
+                target["call_id"] = call_id
+            self._tool_execution_log.append(target)
+
+        target["result"] = output
+
+    def _find_tool_log(
+        self,
+        *,
+        call_id: str | None = None,
+        tool_name: str | None = None,
+        require_open: bool = False,
+    ) -> dict[str, Any] | None:
+        """Find the best matching tool log entry."""
+        if call_id:
+            for log in reversed(self._tool_execution_log):
+                if require_open and "result" in log:
+                    continue
+                if log.get("call_id") == call_id:
+                    return log
+
+            if tool_name:
+                for log in reversed(self._tool_execution_log):
+                    if require_open and "result" in log:
+                        continue
+                    if log.get("tool") == tool_name and not log.get("call_id"):
+                        return log
+            return None
+
+        if tool_name:
+            for log in reversed(self._tool_execution_log):
+                if require_open and "result" in log:
+                    continue
+                if log.get("tool") == tool_name:
+                    return log
+        return None
+
+    def _record_metadata(
+        self,
+        metadata: Any,
+        *,
+        message_type: str | None = None,
+    ) -> None:
+        """Persist structured metadata emitted by the model/runtime."""
+        if metadata in (None, "", {}, []):
+            return
+
+        if isinstance(metadata, dict):
+            structured_output = metadata.get("structured_output")
+            if structured_output not in (None, "", {}, []):
+                self._append_structured_record(
+                    self._serialize_value(structured_output),
+                    record_type="structured_output",
+                    source=message_type,
+                )
+                remaining_metadata = {
+                    key: value
+                    for key, value in metadata.items()
+                    if key != "structured_output" and value not in (None, "", {}, [])
+                }
+                if remaining_metadata:
+                    self._append_structured_record(
+                        remaining_metadata,
+                        record_type="metadata",
+                        source=message_type,
+                    )
+                return
+
+        self._append_structured_record(
+            metadata,
+            record_type="metadata",
+            source=message_type,
+        )
+
+    def _append_structured_record(
+        self,
+        data: Any,
+        *,
+        record_type: str,
+        source: str | None = None,
+    ) -> None:
+        """Append one structured record for later inspection."""
+        if data in (None, "", {}, []):
+            return
+
+        record = {
+            "type": record_type,
+            "timestamp": datetime.now().isoformat(),
+            "data": data,
+        }
+        if source:
+            record["source"] = source
+        self._structured_records.append(record)
+
+    def _deserialize_json_like(self, value: Any) -> Any:
+        """Best-effort JSON parsing for string payload fields."""
+        value = self._serialize_value(value)
+        if not isinstance(value, str):
+            return value
+
+        stripped = value.strip()
+        if not stripped or stripped[0] not in "[{":
+            return value
+
+        try:
+            return json.loads(stripped)
+        except Exception:
+            return value
+
+    def _normalize_tool_output(self, output: Any) -> Any:
+        """Flatten tool outputs that only contain text blocks."""
+        output = self._deserialize_json_like(output)
+        if isinstance(output, list):
+            text_parts = [
+                block.get("text", "")
+                for block in output
+                if isinstance(block, dict) and block.get("type") == "text"
+            ]
+            if text_parts and len(text_parts) == len(output):
+                return "\n".join(part for part in text_parts if part).strip()
+        return output
+
+    def _stringify_output_text(self, value: Any) -> str:
+        """Render structured runtime output into readable text."""
+        if value in (None, ""):
+            return ""
+        if isinstance(value, str):
+            return value.strip()
+        try:
+            return json.dumps(value, ensure_ascii=False, indent=2).strip()
+        except Exception:
+            return str(value).strip()
+
+    def _append_output_text(
+        self,
+        text: Any,
+        *,
+        prefix: str | None = None,
+        inline_prefix: bool = False,
+    ) -> None:
+        """Append one output segment while avoiding consecutive duplicates."""
+        rendered = self._stringify_output_text(text)
+        if not rendered:
+            return
+
+        if prefix:
+            rendered = (
+                f"{prefix}{rendered}"
+                if inline_prefix
+                else f"{prefix}\n{rendered}"
+            )
+
+        rendered = rendered.rstrip()
+        if not rendered:
+            return
+
+        next_segment = f"{rendered}\n"
+        if self._full_output.endswith(next_segment):
+            return
+        self._full_output += next_segment
+
+    def _serialize_value(self, value: Any) -> Any:
+        """Convert pydantic/runtime models into plain Python data."""
+        if hasattr(value, "model_dump"):
+            try:
+                return value.model_dump()
+            except Exception:
+                logger.debug("model_dump failed for %s", type(value), exc_info=True)
+                return value
+        return value
+
+    def _normalize_message_type(self, message_type: Any) -> str | None:
+        """Normalize runtime enum-like message types into plain strings."""
+        if hasattr(message_type, "value"):
+            return message_type.value
+        if isinstance(message_type, str):
+            return message_type
+        return None
 
     async def _ensure_evolution_chat(self) -> None:
         """Ensure evolution chat exists in the chat list."""
@@ -481,6 +770,7 @@ class EvolutionExecutor:
             generation=self._current_record.generation,
             timestamp=datetime.now(),
             tool_execution_log=self._tool_execution_log,
+            structured_records=self._structured_records,
             full_output=self._full_output,
         )
 

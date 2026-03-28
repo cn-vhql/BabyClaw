@@ -16,6 +16,12 @@ FROM agentscope-registry.ap-southeast-1.cr.aliyuncs.com/agentscope/node:slim
 # Build argument to control browser inclusion
 # Set to "true" for full version with browser support, "false" for slim version
 ARG INCLUDE_BROWSER=false
+# Optional Debian mirror for faster builds in mainland China. Accepts either a
+# hostname or a full URL, for example http://mirrors.tuna.tsinghua.edu.cn.
+ARG APT_MIRROR=""
+# Optional provider dependencies. Keep Ollama off by default to reduce build
+# time and image size for installations that do not use a local Ollama server.
+ARG INSTALL_OLLAMA=false
 
 # ENV variables
 ENV NODE_ENV=production
@@ -32,8 +38,28 @@ ENV COPAW_ENABLED_CHANNELS=${COPAW_ENABLED_CHANNELS}
 
 ARG DEBIAN_FRONTEND=noninteractive
 
+# Rewrite Debian package sources when a custom mirror is provided.
+RUN if [ -n "$APT_MIRROR" ]; then \
+    case "$APT_MIRROR" in \
+        http://*|https://*) APT_MIRROR_BASE="${APT_MIRROR%/}" ;; \
+        *) APT_MIRROR_BASE="http://${APT_MIRROR%/}" ;; \
+    esac; \
+    for source_file in /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do \
+        [ -f "$source_file" ] || continue; \
+        sed -i \
+            -e "s|http://deb.debian.org/debian|${APT_MIRROR_BASE}/debian|g" \
+            -e "s|https://deb.debian.org/debian|${APT_MIRROR_BASE}/debian|g" \
+            -e "s|http://deb.debian.org/debian-security|${APT_MIRROR_BASE}/debian-security|g" \
+            -e "s|https://deb.debian.org/debian-security|${APT_MIRROR_BASE}/debian-security|g" \
+            -e "s|http://security.debian.org/debian-security|${APT_MIRROR_BASE}/debian-security|g" \
+            -e "s|https://security.debian.org/debian-security|${APT_MIRROR_BASE}/debian-security|g" \
+            "$source_file"; \
+    done; \
+    fi
+
 # Install base packages (always required)
-RUN apt-get update && apt-get install -y --fix-missing \
+RUN apt-get -o Acquire::Retries=3 update && apt-get install -y --no-install-recommends --fix-missing \
+    ca-certificates \
     curl  \
     python3  \
     python3-pip  \
@@ -49,7 +75,7 @@ RUN apt-get update && apt-get install -y --fix-missing \
 
 # Install browser and GUI packages (only if INCLUDE_BROWSER=true)
 RUN if [ "$INCLUDE_BROWSER" = "true" ]; then \
-    apt-get update && apt-get install -y --fix-missing \
+    apt-get -o Acquire::Retries=3 update && apt-get install -y --no-install-recommends --fix-missing \
         xfce4 \
         xfce4-terminal \
         xvfb \
@@ -96,8 +122,13 @@ COPY pyproject.toml setup.py README.md ./
 COPY src ./src
 # Inject console dist from build stage (repo does not commit dist).
 COPY --from=console-builder /app/console/dist/ ./src/copaw/console/
-# Install optional dependencies: ollama and knowledge (for TF-IDF chunking)
-RUN pip install --no-cache-dir .[ollama,knowledge]
+# Install knowledge support by default. Ollama remains opt-in because many
+# deployments use remote model providers only.
+RUN if [ "$INSTALL_OLLAMA" = "true" ]; then \
+    pip install --no-cache-dir '.[knowledge,ollama]'; \
+    else \
+    pip install --no-cache-dir '.[knowledge]'; \
+    fi
 
 # Init working dir with default config.json and HEARTBEAT.md (build time).
 RUN copaw init --defaults --accept-security

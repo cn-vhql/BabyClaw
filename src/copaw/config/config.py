@@ -211,8 +211,26 @@ class HeartbeatConfig(BaseModel):
     )
 
 
+class FocusConfig(BaseModel):
+    """Focus monitoring: wake periodically, investigate tags, write notes."""
+
+    model_config = {"populate_by_name": True}
+
+    enabled: bool = Field(default=False, description="Whether focus watch is on")
+    every: str = Field(default=HEARTBEAT_DEFAULT_EVERY)
+    notification_channel: str = Field(
+        default="last",
+        alias="notificationChannel",
+    )
+    do_not_disturb: Optional[ActiveHoursConfig] = Field(
+        default=None,
+        alias="doNotDisturb",
+    )
+
+
 class AgentsDefaultsConfig(BaseModel):
     heartbeat: Optional[HeartbeatConfig] = None
+    focus: Optional[FocusConfig] = None
 
 
 class EmbeddingConfig(BaseModel):
@@ -418,6 +436,10 @@ class AgentProfileConfig(BaseModel):
     heartbeat: Optional[HeartbeatConfig] = Field(
         default=None,
         description="Heartbeat configuration for this agent",
+    )
+    focus: Optional[FocusConfig] = Field(
+        default=None,
+        description="Focus monitoring configuration for this agent",
     )
     last_dispatch: Optional["LastDispatchConfig"] = Field(
         default=None,
@@ -726,6 +748,26 @@ def _default_builtin_tools() -> Dict[str, BuiltinToolConfig]:
             name="knowledge_write",
             enabled=True,
             description="Write text content to knowledge base for future retrieval",
+        ),
+        "add_focus_tag": BuiltinToolConfig(
+            name="add_focus_tag",
+            enabled=True,
+            description="Add a focus tag for scheduled monitoring",
+        ),
+        "list_focus_tags": BuiltinToolConfig(
+            name="list_focus_tags",
+            enabled=True,
+            description="List all configured focus tags",
+        ),
+        "remove_focus_tag": BuiltinToolConfig(
+            name="remove_focus_tag",
+            enabled=True,
+            description="Remove a focus tag from scheduled monitoring",
+        ),
+        "write_focus_note": BuiltinToolConfig(
+            name="write_focus_note",
+            enabled=True,
+            description="Write a focus note into the timeline store",
         ),
     }
 

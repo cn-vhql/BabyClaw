@@ -4,7 +4,6 @@ import { Spin } from "antd";
 import {
   CheckOutlined,
   SwapOutlined,
-  LoadingOutlined,
 } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { providerApi } from "../../../../../api/modules/provider";
@@ -116,14 +115,6 @@ export function AgentDefaultModelCard({
     } finally {
       setLoading(false);
     }
-  };
-
-  const getCurrentModelLabel = () => {
-    if (!currentValue || !modelOptions.length) {
-      return t("models.noDefaultModel");
-    }
-    const option = modelOptions.find((opt) => opt.value === currentValue);
-    return option?.label || currentValue;
   };
 
   return (

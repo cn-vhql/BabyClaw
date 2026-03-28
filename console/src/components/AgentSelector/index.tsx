@@ -1,5 +1,5 @@
 import { Select, message, Badge } from "antd";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Bot, Layers, CheckCircle } from "lucide-react";
 import { useAgentStore } from "../../stores/agentStore";
 import { agentsApi } from "../../api/modules/agents";
@@ -12,11 +12,7 @@ export default function AgentSelector() {
     useAgentStore();
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    loadAgents();
-  }, []);
-
-  const loadAgents = async () => {
+  const loadAgents = useCallback(async () => {
     try {
       setLoading(true);
       const data = await agentsApi.listAgents();
@@ -27,7 +23,11 @@ export default function AgentSelector() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [setAgents, t]);
+
+  useEffect(() => {
+    void loadAgents();
+  }, [loadAgents]);
 
   const handleChange = (value: string) => {
     setSelectedAgent(value);

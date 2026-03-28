@@ -1,7 +1,22 @@
 import { Drawer, Form, Input, Switch, Button } from "@agentscope-ai/design";
+import type { FormInstance } from "antd";
 import type { MCPClientInfo } from "../../../../api/types";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
+
+type MCPClientFormValues = {
+  key: string;
+  name: string;
+  description?: string;
+  command?: string;
+  enabled?: boolean;
+  transport?: "stdio" | "streamable_http" | "sse";
+  url?: string;
+  headers?: Record<string, string>;
+  args?: string;
+  env?: string;
+  cwd?: string;
+};
 
 interface MCPClientDrawerProps {
   open: boolean;
@@ -21,7 +36,7 @@ interface MCPClientDrawerProps {
       cwd?: string;
     },
   ) => Promise<boolean>;
-  form: any;
+  form: FormInstance<MCPClientFormValues>;
 }
 
 export function MCPClientDrawer({
@@ -42,6 +57,7 @@ export function MCPClientDrawer({
 
       const clientData = {
         name: values.name,
+        description: values.description,
         command: values.command,
         enabled: values.enabled ?? true,
         args: values.args ? values.args.split(" ").filter(Boolean) : [],

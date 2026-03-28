@@ -4,12 +4,16 @@
 from __future__ import annotations
 
 import os
+from types import SimpleNamespace
 from typing import Any, List
 
 try:
     import ollama
 except ImportError:
-    ollama = None  # type: ignore
+    ollama = SimpleNamespace(
+        AsyncClient=None,
+        ResponseError=RuntimeError,
+    )
 
 from agentscope.model import ChatModelBase
 
@@ -30,7 +34,7 @@ class OllamaProvider(Provider):
             self.base_url = self.base_url[:-3]
 
     def _client(self, timeout: float = 5):
-        if ollama is None:
+        if getattr(ollama, "AsyncClient", None) is None:
             raise ImportError(
                 "The 'ollama' Python package is required. You may have "
                 "installed Ollama via their CLI or desktop app, but you "

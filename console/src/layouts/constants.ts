@@ -18,6 +18,7 @@ export const DEFAULT_OPEN_KEYS = [
 ];
 
 export const KEY_TO_PATH: Record<string, string> = {
+  focus: "/focus",
   chat: "/chat",
   channels: "/channels",
   sessions: "/sessions",
@@ -40,6 +41,7 @@ export const KEY_TO_PATH: Record<string, string> = {
 };
 
 export const KEY_TO_LABEL: Record<string, string> = {
+  focus: "nav.focus",
   chat: "nav.chat",
   channels: "nav.channels",
   sessions: "nav.sessions",
@@ -86,7 +88,7 @@ export const compareVersions = (a: string, b: string): number => {
   const normalise = (v: string) =>
     v
       .replace(/\.post(\d+)/i, ".$1")
-      .split(/[.\-]/)
+      .split(/[.-]/)
       .map((seg) => (isNaN(Number(seg)) ? 0 : Number(seg)));
   const aN = normalise(a);
   const bN = normalise(b);

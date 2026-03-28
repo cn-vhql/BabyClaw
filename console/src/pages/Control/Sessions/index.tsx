@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import {
-  Card,
   Form,
   Modal,
   Table,
@@ -74,7 +73,9 @@ function SessionsPage() {
 
   const handleEdit = (session: Session) => {
     setEditingSession(session);
-    form.setFieldsValue(session as any);
+    form.setFieldsValue(
+      session as unknown as Parameters<typeof form.setFieldsValue>[0],
+    );
     setDrawerOpen(true);
   };
 
@@ -176,23 +177,21 @@ function SessionsPage() {
         />
       </div>
 
-      <Card className={styles.tableCard} bodyStyle={{ padding: 0 }}>
-        <Table
-          columns={columns}
-          dataSource={filteredSessions}
-          loading={loading}
-          rowKey="id"
-          rowSelection={rowSelection}
-          rowClassName={(record) =>
-            selectedRowKeys.includes(record.id) ? styles.selectedRow : ""
-          }
-          scroll={{ x: 1500 }}
-          pagination={{
-            pageSize: 10,
-            showTotal: (total) => t("sessions.totalItems", { count: total }),
-          }}
-        />
-      </Card>
+      <Table
+        columns={columns}
+        dataSource={filteredSessions}
+        loading={loading}
+        rowKey="id"
+        rowSelection={rowSelection}
+        rowClassName={(record) =>
+          selectedRowKeys.includes(record.id) ? styles.selectedRow : ""
+        }
+        scroll={{ x: 1500 }}
+        pagination={{
+          pageSize: 10,
+          showTotal: (total) => t("sessions.totalItems", { count: total }),
+        }}
+      />
 
       <SessionDrawer
         open={drawerOpen}

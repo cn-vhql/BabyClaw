@@ -46,13 +46,20 @@ export interface EvolutionArchive {
   timestamp: string;
   files: Record<string, string>;
   tool_execution_log: Array<{
-    tool: string;
-    args?: any;
-    result?: any;
-    timestamp: string;
+    tool?: string;
+    call_id?: string;
+    args?: unknown;
+    result?: unknown;
+    timestamp?: string;
+  }>;
+  structured_records: Array<{
+    type?: string;
+    source?: string;
+    timestamp?: string;
+    data?: unknown;
   }>;
   full_output: string;
-  memory_snapshot?: Record<string, any>;
+  memory_snapshot?: Record<string, unknown>;
 }
 
 export interface EvolutionRunRequest {

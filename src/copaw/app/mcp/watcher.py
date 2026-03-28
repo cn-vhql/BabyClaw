@@ -83,7 +83,11 @@ class MCPConfigWatcher:
         if self._task:
             self._task.cancel()
             try:
-                await self._task
+                await asyncio.wait_for(self._task, timeout=1.0)
+            except asyncio.TimeoutError:
+                logger.warning(
+                    "MCPConfigWatcher: poll task did not stop in time",
+                )
             except asyncio.CancelledError:
                 pass
             self._task = None
@@ -94,12 +98,19 @@ class MCPConfigWatcher:
                 "MCPConfigWatcher: waiting for reload task to complete",
             )
             try:
-                await asyncio.wait_for(self._reload_task, timeout=5.0)
+                await asyncio.wait_for(
+                    asyncio.shield(self._reload_task),
+                    timeout=5.0,
+                )
             except asyncio.TimeoutError:
                 logger.warning(
                     "MCPConfigWatcher: reload task did not finish in time",
                 )
                 self._reload_task.cancel()
+                try:
+                    await asyncio.wait_for(self._reload_task, timeout=1.0)
+                except (asyncio.TimeoutError, asyncio.CancelledError):
+                    pass
             except Exception:
                 pass
 

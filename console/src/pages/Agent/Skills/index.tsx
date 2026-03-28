@@ -5,7 +5,6 @@ import {
   Modal,
   message,
   Table,
-  Card,
   Switch,
 } from "@agentscope-ai/design";
 import {
@@ -343,20 +342,18 @@ function SkillsPage() {
         ) : null}
       </Modal>
 
-      <Card className={styles.tableCard} bodyStyle={{ padding: 0 }}>
-        <Table
-          columns={columns}
-          dataSource={skills}
-          loading={loading}
-          rowKey="name"
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: false,
-            showTotal: (total: number) => t("skills.totalItems", { count: total }),
-          }}
-          size="small"
-        />
-      </Card>
+      <Table
+        columns={columns}
+        dataSource={skills}
+        loading={loading}
+        rowKey="name"
+        pagination={{
+          pageSize: 10,
+          showSizeChanger: false,
+          showTotal: (total: number) => t("skills.totalItems", { count: total }),
+        }}
+        size="small"
+      />
 
       <SkillDrawer
         open={drawerOpen}
