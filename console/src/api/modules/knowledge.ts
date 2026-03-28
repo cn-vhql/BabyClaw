@@ -4,14 +4,14 @@ export interface KnowledgeBase {
   id: string;
   name: string;
   description: string;
-  storage_type: string;
+  storage_type: "sqlite" | string;
   created_at: string;
   document_count: number;
 }
 
 export interface KnowledgeBaseDetail extends KnowledgeBase {
   chunk_config: {
-    chunk_type: string;
+    chunk_type: "length" | "separator";
     max_length: number;
     overlap: number;
     separators: string[];
@@ -26,7 +26,7 @@ export interface Document {
   size: number;
   uploaded_at: string;
   chunk_count: number;
-  chunks: Chunk[];
+  chunks?: Chunk[];
   indexing_status?: "pending" | "processing" | "completed" | "failed";
   indexing_error?: string;
 }
@@ -52,7 +52,7 @@ export const knowledgeApi = {
   list: () =>
     request<{ knowledge_bases: KnowledgeBase[] }>("/knowledge/list"),
 
-  create: (data: { name: string; description: string; storage_type: string }) =>
+  create: (data: { name: string; description: string }) =>
     request<{ id: string; name: string }>("/knowledge/create", {
       method: "POST",
       body: JSON.stringify(data),
@@ -70,7 +70,7 @@ export const knowledgeApi = {
     kbId: string,
     file: File,
     chunkConfig?: {
-      chunk_type: string;
+      chunk_type: "length" | "separator";
       max_length: number;
       overlap: number;
       separators?: string[];
@@ -127,7 +127,7 @@ export const knowledgeApi = {
     }),
 
   saveChunks: (kbId: string, docId: string) =>
-    request<{ updated: boolean; embedding_count: number }>(
+    request<{ updated: boolean; indexed_chunk_count: number }>(
       `/knowledge/${kbId}/documents/${docId}/chunks/save`,
       {
         method: "POST",

@@ -6,7 +6,6 @@ import {
   Input,
   message,
   Popconfirm,
-  Tag,
 } from "@agentscope-ai/design";
 import { PlusOutlined, DeleteOutlined, EditOutlined } from "@ant-design/icons";
 import { knowledgeApi, type KnowledgeBase, type KnowledgeBaseDetail } from "../../../api/modules/knowledge";
@@ -69,7 +68,6 @@ export default function KnowledgePage() {
       await knowledgeApi.create({
         name: newKbName,
         description: newKbDesc,
-        storage_type: "chroma",
       });
       message.success(t("knowledge.createSuccess"));
       setCreateModalOpen(false);
@@ -177,13 +175,6 @@ export default function KnowledgePage() {
       dataIndex: "description",
       key: "description",
       ellipsis: true,
-    },
-    {
-      title: "存储类型",
-      dataIndex: "storage_type",
-      key: "storage_type",
-      width: 120,
-      render: (type: string) => <Tag>{type}</Tag>,
     },
     {
       title: "文档数量",

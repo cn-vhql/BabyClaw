@@ -24,7 +24,7 @@ function getDocumentSuffix(filename?: string, fileType?: string) {
 }
 
 export function KnowledgeDetailDrawer({ open, kbId, kb, onClose, onUpdate }: Props) {
-  const [uploadChunkType, setUploadChunkType] = useState<"length" | "separator" | "tfidf">("length");
+  const [uploadChunkType, setUploadChunkType] = useState<"length" | "separator">("length");
   const [uploadMaxLength, setUploadMaxLength] = useState(500);
   const [uploadOverlap, setUploadOverlap] = useState(50);
   const [uploadSeparators, setUploadSeparators] = useState("\\n\\n,\\n,。,.,!,?,;,，,,, ");
@@ -214,7 +214,7 @@ export function KnowledgeDetailDrawer({ open, kbId, kb, onClose, onUpdate }: Pro
     setSavingChunks(true);
     try {
       await knowledgeApi.saveChunks(kbId, currentPreviewDocId);
-      message.success("分块已保存并重新生成向量");
+      message.success("分块已保存并重建检索索引");
       setPreviewModalOpen(false);
       onUpdate();
     } catch {
@@ -400,7 +400,7 @@ export function KnowledgeDetailDrawer({ open, kbId, kb, onClose, onUpdate }: Pro
       ellipsis: true,
     },
     {
-      title: "相似度",
+      title: "相关度",
       dataIndex: "score",
       key: "score",
       width: 100,
@@ -452,12 +452,11 @@ export function KnowledgeDetailDrawer({ open, kbId, kb, onClose, onUpdate }: Pro
           <label style={{ marginRight: 8 }}>分块策略:</label>
           <Select
             value={uploadChunkType}
-            onChange={setUploadChunkType}
+            onChange={(value) => setUploadChunkType(value as "length" | "separator")}
             style={{ width: 150, marginRight: 16 }}
           >
             <Select.Option value="length">固定长度</Select.Option>
             <Select.Option value="separator">分隔符</Select.Option>
-            <Select.Option value="tfidf">智能分块</Select.Option>
           </Select>
 
           <label style={{ marginRight: 8 }}>最大长度:</label>
@@ -508,7 +507,7 @@ export function KnowledgeDetailDrawer({ open, kbId, kb, onClose, onUpdate }: Pro
             loading={uploading}
             disabled={uploadFiles.length === 0}
           >
-            上传并索引
+            上传并建立索引
           </Button>
         </div>
       </Card>
@@ -598,7 +597,7 @@ export function KnowledgeDetailDrawer({ open, kbId, kb, onClose, onUpdate }: Pro
             onClick={handleSaveChunks}
             loading={savingChunks}
           >
-            保存并重新索引
+            保存并重建索引
           </Button>,
         ]}
       >

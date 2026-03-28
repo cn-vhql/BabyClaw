@@ -27,8 +27,8 @@ class KnowledgeBaseConfig(BaseModel):
     name: str = Field(..., description="Knowledge base name")
     description: str = Field(default="", description="Knowledge base description")
     storage_type: str = Field(
-        default="chroma",
-        description="Storage type: 'chroma' or 'sqlite'",
+        default="sqlite",
+        description="Storage type: 'sqlite'",
     )
     chunk_config: ChunkConfig = Field(
         default_factory=ChunkConfig,
