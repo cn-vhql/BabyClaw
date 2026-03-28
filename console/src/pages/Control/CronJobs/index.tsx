@@ -25,6 +25,17 @@ type CronFormValues = CronJob & {
   };
 };
 
+const EVOLUTION_DISPATCH_PLACEHOLDER: CronJob["dispatch"] = {
+  type: "channel",
+  channel: "",
+  target: {
+    user_id: "",
+    session_id: "",
+  },
+  mode: "stream",
+  meta: {},
+};
+
 function CronJobsPage() {
   const { t } = useTranslation();
   const {
@@ -197,6 +208,20 @@ function CronJobsPage() {
       } catch (error) {
         console.error("❌ Failed to parse request.input JSON:", error);
       }
+    }
+
+    if (values.task_type === "evolution") {
+      processedValues = {
+        ...processedValues,
+        dispatch: EVOLUTION_DISPATCH_PLACEHOLDER,
+        evolution_config: {
+          trigger_type:
+            values.evolution_config?.trigger_type === "auto" ? "auto" : "cron",
+          timeout_seconds: values.evolution_config?.timeout_seconds ?? 300,
+        },
+      };
+      delete processedValues.request;
+      delete processedValues.text;
     }
 
     let success = false;

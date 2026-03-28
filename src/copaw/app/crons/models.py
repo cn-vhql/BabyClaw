@@ -34,6 +34,20 @@ _CRONTAB_NUM_TO_NAME: dict[str, str] = {
 }
 
 
+def _default_evolution_dispatch() -> dict[str, Any]:
+    """Return a no-op dispatch payload for evolution cron jobs."""
+    return {
+        "type": "channel",
+        "channel": "",
+        "target": {
+            "user_id": "",
+            "session_id": "",
+        },
+        "mode": "stream",
+        "meta": {},
+    }
+
+
 def _crontab_dow_to_name(field: str) -> str:
     """Convert the day-of-week field from crontab numbers to abbreviations.
 
@@ -141,6 +155,40 @@ class CronJobSpec(BaseModel):
 
     runtime: JobRuntimeSpec = Field(default_factory=JobRuntimeSpec)
     meta: Dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_evolution_dispatch(cls, data: Any) -> Any:
+        if not isinstance(data, dict) or data.get("task_type") != "evolution":
+            return data
+
+        normalized = dict(data)
+        dispatch = _default_evolution_dispatch()
+        raw_dispatch = normalized.get("dispatch")
+
+        if isinstance(raw_dispatch, dict):
+            dispatch.update(
+                {
+                    key: value
+                    for key, value in raw_dispatch.items()
+                    if key != "target" and value is not None
+                }
+            )
+
+            raw_target = raw_dispatch.get("target")
+            if isinstance(raw_target, dict):
+                target = dict(dispatch["target"])
+                target.update(
+                    {
+                        key: value
+                        for key, value in raw_target.items()
+                        if value is not None
+                    }
+                )
+                dispatch["target"] = target
+
+        normalized["dispatch"] = dispatch
+        return normalized
 
     @model_validator(mode="after")
     def _validate_task_type_fields(self) -> "CronJobSpec":

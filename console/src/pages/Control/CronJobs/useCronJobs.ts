@@ -6,6 +6,41 @@ import { useAgentStore } from "../../../stores/agentStore";
 
 type CronJob = CronJobSpecOutput;
 
+function extractRequestError(error: unknown, fallback: string): string {
+  if (!(error instanceof Error) || !error.message) {
+    return fallback;
+  }
+
+  const separatorIndex = error.message.indexOf(" - ");
+  if (separatorIndex === -1) {
+    return error.message || fallback;
+  }
+
+  const responseText = error.message.slice(separatorIndex + 3).trim();
+  try {
+    const parsed = JSON.parse(responseText) as {
+      detail?: string | Array<{ loc?: Array<string | number>; msg?: string }>;
+    };
+
+    if (typeof parsed.detail === "string" && parsed.detail) {
+      return parsed.detail;
+    }
+
+    if (Array.isArray(parsed.detail) && parsed.detail.length > 0) {
+      return parsed.detail
+        .map((item) => {
+          const location = item.loc?.join(".") || "body";
+          return item.msg ? `${location}: ${item.msg}` : location;
+        })
+        .join("; ");
+    }
+  } catch {
+    return responseText || fallback;
+  }
+
+  return responseText || fallback;
+}
+
 export function useCronJobs() {
   const { selectedAgent } = useAgentStore();
   const [jobs, setJobs] = useState<CronJob[]>([]);
@@ -50,7 +85,7 @@ export function useCronJobs() {
       return true;
     } catch (error) {
       console.error("Failed to create cron job", error);
-      message.error("Failed to save");
+      message.error(extractRequestError(error, "Failed to save"));
       return false;
     }
   };
@@ -72,7 +107,7 @@ export function useCronJobs() {
       if (original) {
         setJobs((prev) => prev.map((j) => (j.id === jobId ? original : j)));
       }
-      message.error("Failed to save");
+      message.error(extractRequestError(error, "Failed to save"));
       return false;
     }
   };
@@ -109,7 +144,7 @@ export function useCronJobs() {
     } catch (error) {
       console.error("Failed to toggle cron job", error);
       setJobs((prev) => prev.map((j) => (j.id === job.id ? job : j)));
-      message.error("Operation failed");
+      message.error(extractRequestError(error, "Operation failed"));
       return false;
     }
   };

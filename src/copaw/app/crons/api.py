@@ -29,6 +29,26 @@ async def get_cron_manager(
     return workspace.cron_manager
 
 
+async def _sync_auto_evolution_enabled_state(
+    request: Request,
+    mgr: CronManager,
+    *,
+    job_id: str,
+    enabled: bool,
+) -> None:
+    if job_id != AUTO_EVOLUTION_JOB_ID:
+        return
+
+    job = await mgr.get_job(job_id)
+    if job is not None:
+        await mgr.create_or_replace_job(job.model_copy(update={"enabled": enabled}))
+
+    from ..agent_context import get_agent_for_request
+
+    workspace = await get_agent_for_request(request)
+    await sync_evolution_config_with_cron(workspace)
+
+
 @router.get("/jobs", response_model=list[CronJobSpec])
 async def list_jobs(mgr: CronManager = Depends(get_cron_manager)):
     return await mgr.list_jobs()
@@ -95,9 +115,21 @@ async def delete_job(
 
 
 @router.post("/jobs/{job_id}/pause")
-async def pause_job(job_id: str, mgr: CronManager = Depends(get_cron_manager)):
+async def pause_job(
+    request: Request,
+    job_id: str,
+    mgr: CronManager = Depends(get_cron_manager),
+):
     try:
-        await mgr.pause_job(job_id)
+        if job_id == AUTO_EVOLUTION_JOB_ID:
+            await _sync_auto_evolution_enabled_state(
+                request,
+                mgr,
+                job_id=job_id,
+                enabled=False,
+            )
+        else:
+            await mgr.pause_job(job_id)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     return {"paused": True}
@@ -105,11 +137,20 @@ async def pause_job(job_id: str, mgr: CronManager = Depends(get_cron_manager)):
 
 @router.post("/jobs/{job_id}/resume")
 async def resume_job(
+    request: Request,
     job_id: str,
     mgr: CronManager = Depends(get_cron_manager),
 ):
     try:
-        await mgr.resume_job(job_id)
+        if job_id == AUTO_EVOLUTION_JOB_ID:
+            await _sync_auto_evolution_enabled_state(
+                request,
+                mgr,
+                job_id=job_id,
+                enabled=True,
+            )
+        else:
+            await mgr.resume_job(job_id)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     return {"resumed": True}
